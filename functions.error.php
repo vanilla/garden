@@ -3,7 +3,7 @@
 /**
  * An ErrorException that also contains the context from the error.
  */
-class ExceptionFromError  extends ErrorException {
+class ExceptionFromError extends ErrorException {
    protected $context;
    
    public function __construct($message, $errno, $file, $line, $context) {
@@ -13,6 +13,22 @@ class ExceptionFromError  extends ErrorException {
    
    public function getContext() {
       return $this->context;
+   }
+}
+
+class NotImplementedException extends Exception {
+   public function __construct($class, $method = null, $static = false) {
+      if ($method !== null) {
+         if ($static)
+            $sep = '::';
+         else
+            $sep = '->';
+
+         $message = "{$class}$sep{$method}() has not been implemented.";
+      } else {
+         $message = $class;
+      }
+      parent::__construct($message, 501);
    }
 }
 
