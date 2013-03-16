@@ -137,6 +137,8 @@ function decho($value, $prefix = 'debug') {
 function ensureDir($dir, $mode = 0777) {
    if (!file_exists($dir)) {
       mkdir($dir, $mode, true);
+   } elseif (!is_dir($dir)) {
+      throw new Exception("The specified directory already exists as a file. ($dir)", 400);
    }
 }
 
