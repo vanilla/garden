@@ -32,6 +32,22 @@ define('CMDLINE_OPTIONS', 'options');
  */
 
 /**
+ * Return the options common to connecting to a database.
+ * @return array An array of options definitions suitable to pass to parseCommandline().
+ */
+function dbOpts() {
+   $opts = array(
+      'host' => array('Connect to host.', CMDLINE_SHORT => 'h', CMDLINE_DEFAULT => '127.0.0.1'),
+      'dbname' => array('Database to use.', CMDLINE_SHORT => 'd', CMDLINE_FLAGS => CMDLINE_REQUIRED),
+      'user' => array('User for login if not current user.', CMDLINE_SHORT => 'u', CMDLINE_DEFAULT => ''),
+      'password' => array('Password to use when connecting to server.', CMDLINE_SHORT => 'p', CMDLINE_DEFAULT => ''),
+      'mode' => array('What mode to use to dump the data.', 'valid' => array(Db::MODE_ECHO, Db::MODE_EXEC), CMDLINE_DEFAULT => Db::MODE_EXEC)
+   );
+   
+   return $opts;
+}
+
+/**
  * 
  * @param type $options The options to get.
  * @param type $sections Whether or not to split the options into sections.
@@ -143,6 +159,7 @@ function _validateCommandLine($values, $command, $options, $files = array()) {
    // Validate the files.
    if (!empty($files)) {
       $argv2 = $argv;
+      $files = (array)$files;
       
       foreach ($files as $file) {
          $arg = array_pop($argv2);
