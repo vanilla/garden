@@ -1,9 +1,45 @@
-<?php
+<?php defined('APPLICATION') or die('@!');
 
-if (!defined('APPLICATION'))
-   exit();
+/**
+ * 
+ * @author Todd Burry <todd@vanillaforums.com>
+ * @package Vanilla Framework
+ * @subpackage Core Functions
+ */
 
+
+/**
+ * The global config array.
+ */
 $config = array();
+
+/**
+ * Take all of the items in an array and make a new array with them specified by mappings.
+ *
+ * @param array $array The input array to translate.
+ * @param array $mappings The mappings to translate the array.
+ * @return array
+ * 
+ * @category Array Functions
+ */
+function arrayTranslate($array, $mappings) {
+  $array = (array)$array;
+  $result = array();
+  foreach ($mappings as $index => $value) {
+     if (is_numeric($index)) {
+        $key = $value;
+        $newkey = $value;
+     } else {
+        $key = $index;
+        $newkey = $value;
+     }
+     if (isset($array[$key]))
+        $result[$newkey] = $array[$key];
+     else
+        $result[$newkey] = NULL;
+  }
+  return $result;
+}
 
 /**
  * Simple autoloader that looks at a single directory.
@@ -121,6 +157,55 @@ function config($key, $default = null) {
 }
 
 /**
+ * Get the values of a column of data as an array.
+ * This function is useful for grabbing the values of a column to generate an in clause for another query.
+ * 
+ * @param data $data The data to grab the column from.
+ * @param string $column
+ * @return array The column values.
+ * 
+ * @category Data Functions
+ */
+function dataColumn($data, $column) {
+   $result = array();
+   
+   foreach ($data as $row) {
+      if (!isset($row[$column]))
+         continue;
+      
+      $result[$row[$column]] = 1;
+   }
+   
+   return array_keys($result);
+}
+
+/**
+ * Compare two dates formatted as either timestamps or strings.
+ * 
+ * @param mixed $date1
+ * @param mixed $date2
+ * @return int
+ */
+function dateCompare($date1, $date2) {
+   if (is_numeric($date1))
+      $timestamp1 = $date1;
+   else
+      $timestamp1 = strtotime($date1);
+   
+   if (is_numeric($date2))
+      $timestamp2 = $date2;
+   else
+      $timestamp2 = strtotime($date2);
+   
+   if ($timestamp1 == $timestamp2)
+      return 0;
+   elseif ($timestamp1 > $timestamp2)
+      return 1;
+   else
+      return -1;
+}
+
+/**
  * @param type $value
  * @param type $prefix
  */
@@ -187,39 +272,78 @@ function forceInt($value) {
    return intval($value);
 }
 
-$urlTranslations = array('–' => '-', '—' => '-', 'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'Ae', 'Ä' => 'A', 'Å' => 'A', 'Ā' => 'A', 'Ą' => 'A', 'Ă' => 'A', 'Æ' => 'Ae', 'Ç' => 'C', 'Ć' => 'C', 'Č' => 'C', 'Ĉ' => 'C', 'Ċ' => 'C', 'Ď' => 'D', 'Đ' => 'D', 'Ð' => 'D', 'È' => 'E', 'É' => 'E', 'Ê' => 'E', 'Ë' => 'E', 'Ē' => 'E', 'Ě' => 'E', 'Ĕ' => 'E', 'Ė' => 'E', 'Ĝ' => 'G', 'Ğ' => 'G', 'Ġ' => 'G', 'Ģ' => 'G', 'Ĥ' => 'H', 'Ħ' => 'H', 'Ì' => 'I', 'Í' => 'I', 'Î' => 'I', 'Ï' => 'I', 'Ī' => 'I', 'Ĩ' => 'I', 'Ĭ' => 'I', 'Į' => 'I', 'İ' => 'I', 'Ĳ' => 'IJ', 'Ĵ' => 'J', 'Ķ' => 'K', 'Ł' => 'K', 'Ľ' => 'K', 'Ĺ' => 'K', 'Ļ' => 'K', 'Ŀ' => 'K', 'Ñ' => 'N', 'Ń' => 'N', 'Ň' => 'N', 'Ņ' => 'N', 'Ŋ' => 'N', 'Ò' => 'O', 'Ó' => 'O', 'Ô' => 'O', 'Õ' => 'O', 'Ö' => 'Oe', 'Ö' => 'Oe', 'Ō' => 'O', 'Ő' => 'O', 'Ŏ' => 'O', 'Œ' => 'OE', 'Ŕ' => 'R', 'Ŗ' => 'R', 'Ś' => 'S', 'Š' => 'S', 'Ş' => 'S', 'Ŝ' => 'S', 'Ť' => 'T', 'Ţ' => 'T', 'Ŧ' => 'T', 'Ț' => 'T', 'Ù' => 'U', 'Ú' => 'U', 'Û' => 'U', 'Ü' => 'Ue', 'Ū' => 'U', 'Ü' => 'Ue', 'Ů' => 'U', 'Ű' => 'U', 'Ŭ' => 'U', 'Ũ' => 'U', 'Ų' => 'U', 'Ŵ' => 'W', 'Ý' => 'Y', 'Ŷ' => 'Y', 'Ÿ' => 'Y', 'Ź' => 'Z', 'Ž' => 'Z', 'Ż' => 'Z', 'Þ' => 'T', 'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'ae', 'ä' => 'ae', 'å' => 'a', 'ā' => 'a', 'ą' => 'a', 'ă' => 'a', 'æ' => 'ae', 'ç' => 'c', 'ć' => 'c', 'č' => 'c', 'ĉ' => 'c', 'ċ' => 'c', 'ď' => 'd', 'đ' => 'd', 'ð' => 'd', 'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e', 'ē' => 'e', 'ę' => 'e', 'ě' => 'e', 'ĕ' => 'e', 'ė' => 'e', 'ƒ' => 'f', 'ĝ' => 'g', 'ğ' => 'g', 'ġ' => 'g', 'ģ' => 'g', 'ĥ' => 'h', 'ħ' => 'h', 'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i', 'ī' => 'i', 'ĩ' => 'i', 'ĭ' => 'i', 'į' => 'i', 'ı' => 'i', 'ĳ' => 'ij', 'ĵ' => 'j', 'ķ' => 'k', 'ĸ' => 'k', 'ł' => 'l', 'ľ' => 'l', 'ĺ' => 'l', 'ļ' => 'l', 'ŀ' => 'l', 'ñ' => 'n', 'ń' => 'n', 'ň' => 'n', 'ņ' => 'n', 'ŉ' => 'n', 'ŋ' => 'n', 'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'oe', 'ö' => 'oe', 'ø' => 'o', 'ō' => 'o', 'ő' => 'o', 'ŏ' => 'o', 'œ' => 'oe', 'ŕ' => 'r', 'ř' => 'r', 'ŗ' => 'r', 'š' => 's', 'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'ue', 'ū' => 'u', 'ü' => 'ue', 'ů' => 'u', 'ű' => 'u', 'ŭ' => 'u', 'ũ' => 'u', 'ų' => 'u', 'ŵ' => 'w', 'ý' => 'y', 'ÿ' => 'y', 'ŷ' => 'y', 'ž' => 'z', 'ż' => 'z', 'ź' => 'z', 'þ' => 't', 'ß' => 'ss', 'ſ' => 'ss', 'А' => 'A', 'Б' => 'B', 'В' => 'V', 'Г' => 'G', 'Д' => 'D', 'Е' => 'E', 'Ё' => 'YO', 'Ж' => 'ZH', 'З' => 'Z', 'Й' => 'Y', 'К' => 'K', 'Л' => 'L', 'М' => 'M', 'Н' => 'N', 'О' => 'O', 'П' => 'P', 'Р' => 'R', 'С' => 'S', 'ș' => 's', 'ț' => 't', 'Ț' => 'T',  'Т' => 'T', 'У' => 'U', 'Ф' => 'F', 'Х' => 'H', 'Ц' => 'C', 'Ч' => 'CH', 'Ш' => 'SH', 'Щ' => 'SCH', 'Ъ' => '', 'Ы' => 'Y', 'Ь' => '', 'Э' => 'E', 'Ю' => 'YU', 'Я' => 'YA', 'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'е' => 'e', 'ё' => 'yo', 'ж' => 'zh', 'з' => 'z', 'и' => 'i', 'й' => 'y', 'к' => 'k', 'л' => 'l', 'м' => 'm', 'н' => 'n', 'о' => 'o', 'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u', 'ф' => 'f', 'х' => 'h', 'ц' => 'c', 'ч' => 'ch', 'ш' => 'sh', 'щ' => 'sch', 'ъ' => '', 'ы' => 'y', 'ь' => '', 'э' => 'e', 'ю' => 'yu', 'я' => 'ya');
-
+/**
+ * Like implode() but joins array keys and values.
+ * @param string $elemglue The string that seperates each element of the array.
+ * @param string $keyglue The string that seperates keys and values.
+ * @param array $pieces The array of strings to implode.
+ * 
+ * @category Array Functions
+ * @category String Functions
+ */
+function implodeAssoc($elemglue, $keyglue, $pieces) {
+   $result = '';
+   
+   foreach ($pieces as $key => $value) {
+      if ($result)
+         $result .= $elemglue;
+      
+      $result .= $key.$keyglue.$value;
+   }
+   return $result;
+}
 
 /**
- * Replaces all non-url-friendly characters with dashes.
- *
- * @param string $str An object, array, or string to be formatted.
- * @return string
+ * Encode an array in ini format.
+ * The resulting array will work with parse_ini_file() and parse_ini_string().
+ * 
+ * @param array $data A flat, associative array of data.
+ * @return string The data in ini format.
  */
-function formatUrl($str) {
-   global $urlTranslations;
+function iniEncode($data) {
+   ksort($data, SORT_NATURAL | SORT_FLAG_CASE);
    
-   $str = trim($str);
-   $str = strip_tags(html_entity_decode($str, ENT_COMPAT, 'UTF-8'));
-   $str = strtr($str, $urlTranslations);
-   $str = preg_replace('`([^\PP.\-_])`u', '', $str); // get rid of punctuation
-   $str = preg_replace('`([^\PS+])`u', '', $str); // get rid of symbols
-   $str = preg_replace('`[\s\-/+.]+`u', '-', $str); // replace certain characters with dashes
-   $str = rawurlencode(strtolower($str));
-   $str = trim($str, '.-');
-   return $str;
+   $result = '';
+   
+   $lastSection = null;
+   
+   foreach ($data as $key => $value) {
+      $section = trim(strstr($key, '.', true), '.');
+      
+      if ($section !== $lastSection) {
+         if ($section) {
+            $result .= "\n[$section]\n";
+         }
+         $lastSection = $section;
+      }
+      
+      $result .= $key.' = ';
+      
+      if (is_bool($value)) {
+         $str = $value ? 'true' : 'false';
+      } elseif (is_numeric($value)) {
+         $str = $value;
+      } elseif (is_string($value)) {
+         $str = '"'.addcslashes($value, "\"").'"';
+      }
+      $result .= $str."\n";
+   }
+   
+   return $result;
 }
 
 /**
  * Load configuration information from an ini file.
  * 
- * @global array $config The global config array.
- * 
- * @param string $path
- * @param bool $merge
+ * @param string $path The path to the config file.
+ * @param array $array The array to load the data into.
+ * If this parameter is left blank then the file will be loaded into the global config array.
  */
-function loadConfig($path, $merge = true) {
+function loadConfig($path, &$array = null) {
    global $config;
+   
+   if ($array === null)
+      $array =& $config;
 
    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
    switch ($ext) {
@@ -239,10 +363,22 @@ function loadConfig($path, $merge = true) {
    if (empty($loaded))
       return;
 
-   if ($merge && !empty($config))
-      $config = array_merge($config, $loaded);
-   else
-      $config = $loaded;
+   $array = array_merge($array, $loaded);
+}
+
+/**
+ * Strip a substring from the beginning of a string.
+ * 
+ * @param string $mainstr
+ * @param string $substr
+ * @return string
+ * 
+ * @category String Functions
+ */
+function ltrimString($mainstr, $substr) {
+   if (strncasecmp($mainstr, $substr, strlen($substr)) === 0)
+      return substr($mainstr, strlen($substr));
+   return $mainstr;
 }
 
 /**
@@ -271,13 +407,18 @@ function mimeToExt($mime, $ext = null) {
    return $result;
 }
 
+/**
+ * Calculate the polynomial distribution of a probability.
+ * @param float $qn A probability between 0 and 1.
+ * @return real
+ */
 function pnormaldist($qn) {
    $b = array(1.570796288, 0.03706987906, -0.8364353589e-3, -0.2250947176e-3, 0.6841218299e-5,
       0.5824238515e-5, -0.104527497e-5, 0.8360937017e-7, -0.3231081277e-8, 0.3657763036e-10, 0.6936233982e-12);
 
    if ($qn < 0.0 || 1.0 < $qn)
       return 0.0;
-
+   
    if ($qn == 0.5)
       return 0.0;
 
@@ -378,6 +519,148 @@ function route($request) {
    $result->PathArgs($indexedArgs);
 
    return $result;
+}
+
+/**
+ * Strip a substring rom the end of a string.
+ * 
+ * @param string $mainstr
+ * @param string $substr
+ * @return string
+ */
+function rtrimString($mainstr, $substr) {
+   if (strcasecmp(substr($mainstr, -strlen($substr)), $substr) === 0)
+      return substr($mainstr, -strlen($substr));
+   return $substr;
+}
+
+function saveConfig($path, $values, $val = null) {
+   if (!is_array($values)) {
+      $values = array($values => $val);
+   }
+   
+   // Load the config into a temporary array so we know what to save.
+   loadConfig($path, $array);
+   
+   foreach ($values as $key => $value) {
+      if ($value === null)
+         unset($array[$key]);
+      else
+         $array[$key] = $value;
+   }
+   
+   $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+   $basename = basename($path, $ext);
+   $tmpPath = tempnam(dirname($path), $basename);
+   
+   switch ($ext) {
+      case 'ini':
+         $ini = iniEncode($array);
+         file_put_contents($tmpPath, $ini);
+         break;
+      case 'json':
+         $json = json_encode($array);
+         file_put_contents($tmpPath, $json);
+         break;
+      case 'php':
+         $php = '$'.$basename.' = '.var_export($array, true);
+         file_put_contents($tmpPath, $php);
+      case 'ser':
+         $ser = serialize($array);
+         file_put_contents($tmpPath, $php);
+         break;
+   }
+   
+}
+
+/**
+ * Returns whether or not a string begins with another string.
+ * This function is not case-sensitive.
+ * 
+ * @param string $string The string to test.
+ * @param string $with The substring to test against.
+ * @return bool Whether or not `$string` begins with `$with`.
+ */
+function stringBeginsWith($string, $with) {
+   return strncasecmp($string, $with, strlen($with)) === 0;
+}
+
+/**
+ * Returns whether or not a string ends with another string.
+ * This function is not case-sensitive.
+ * 
+ * @param string $string The string to test.
+ * @param string $with The substring to test against.
+ * @return bool Whether or not `$string` ends with `$with`.
+ */
+function stringEndsWith($string, $with) {
+   return strcasecmp(substr($string, -strlen($with)), $with) === 0;
+}
+
+$timers = array();
+
+/**
+ * Start a timer to time a piece of code.
+ * 
+ * @global array $timers All of the active timers.
+ * @param string $name The name of the timer.
+ */
+function timerStart($name) {
+   global $timers;
+   
+   $str = '';
+   
+   $count = count($timers);
+   
+   // Mark my parent timer as such so it knows how to format.
+   if ($count) {
+      if (!isset($timers[$count - 1]['parent'])) {
+         $timers[$count - 1]['parent'] = true;
+         $str .= "\n";
+      }
+   }
+   
+   $timer = array('name' => $name, 'start' => microtime(true));
+   $timers[] = $timer;
+   
+   $str .= str_repeat('  ', $count).
+      "start $name";
+   
+   fwrite(STDERR, $str);
+}
+
+/**
+ * Stop a timer that was called with timerStart().
+ * 
+ * @global array $timers All of the active timers.
+ */
+function timerStop($data = null) {
+   global $timers;
+   
+   $stop = microtime(true);
+   $timer = array_pop($timers);
+   
+   if ($timer) {
+      $timespan = $stop - $timer['start'];
+      
+      if (isset($timer['parent'])) {
+         // This was a nested timer.
+         $str = str_repeat('  ', count($timers)).
+            "stop {$timer['name']}...".formatTimespan($timespan);
+         fwrite(STDERR, $str);
+      } else {
+         // Not a nested timer.
+         fwrite(STDERR, '...'.formatTimespan($timespan));
+      }
+      
+      if (is_array($data) && count($data))
+         fwrite(STDERR, ' '.implodeAssoc(', ', ': ', $data));
+      
+      fwrite(STDERR, "\n");
+   } else {
+      // This really is an error, but probably isn't worth taking out the entire script for.
+      trigger_error("timerStop() called without calling timerStart() first.", E_USER_NOTICE);
+   }
 }
 
 /**

@@ -232,7 +232,7 @@ function writeCommandLineHelp($command, $options, $files = array(), $onlyusage =
    // Write the usage.
    echo "Usage: $command [OPTIONS]";
    if (!empty($files))
-      echo ' '.implode(' ', $files);
+      echo ' '.implode(' ', (array)$files);
    echo "\n";
    
    if ($onlyusage)

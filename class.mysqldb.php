@@ -17,8 +17,6 @@ class MySqlDb extends Db {
     */
    public $pdo;
    
-   public $px = 'gdn_';
-   
    /// Methods ///
    
    public function __construct($host, $username, $password, $dbname, $port = null) {
@@ -44,49 +42,6 @@ class MySqlDb extends Db {
       if (val('primary', $def)) {
          $result .= ' primary key';
       }
-      return $result;
-   }
-   
-   /**
-    * Get the index definitions for a table.
-    * 
-    * @param string $table The name of the table
-    * @return array An array in the form:
-    * 
-    *     array (
-    *        index name => array('columns' => array('column'), 'type' => Db::INDEX_TYPE)
-    *     )
-    */
-   public function indexDefinitions($table) {
-      // Keep an internal cache for repeated calls to this function.
-      static $cache = array();
-      
-      if (isset($cache[$table]))
-         return $cache[$table];
-      
-      // Query the indexes from the database.
-      $rawdata = $this->query("show indexes from `{$this->px}$table`");
-      
-      // Parse them into their correct place.
-      $result = array();
-      foreach ($rawdata as $row) {
-         $name = $row['Key_name'];
-         
-         // Figure out the type.
-         if (strcasecmp($name, 'PRIMARY') === 0)
-            $type = Db::INDEX_PK;
-         elseif ($row['Non_unique'] == 0)
-            $type = Db::INDEX_UNIQUE;
-         elseif (strcasecmp(substr($name, 0, 2), 'fk') === 0)
-            $type = Db::INDEX_FK;
-         else
-            $type = Db::INDEX_IX;
-         
-         $result[$name]['columns'][] = $row['Column_name'];
-         $result[$name]['type'] = $type;
-      }
-      $cache[$table] = $result;
-      
       return $result;
    }
    
@@ -187,34 +142,12 @@ class MySqlDb extends Db {
       return $name;
    }
    
-   public function defineTable($table, $columns, $options = array()) {
-      // Go through the table and build the indexes.
-      $indexes = array();
-      foreach ($columns as $name => $def) {
-         $index = val('index', $def);
-         if ($index) {
-            // The column has one or more indexes on them.
-            foreach ((array)$index as $typeString) {
-               $parts = explode('.', $typeString, 2);
-               $type = strtolower($parts[0]);
-               $suffix = val(1, $parts);
-               
-               if ($type == Db::INDEX_PK)
-                  $columns[$name]['required'] = true;
-               
-               // Save the index for later.
-               if ($type == Db::INDEX_PK || $type == Db::INDEX_UNIQUE || $suffix) {
-                  // There is only one index of this type.
-                  $indexes[$typeString]['columns'][] = $name;
-                  $indexes[$typeString]['type'] = $type;
-                  $indexes[$typeString]['suffix'] = $suffix;
-               } else {
-                  // One columns, one index.
-                  $indexes[] = array('columns' => $name, 'type' => $type);
-               }
-            }
-         }
-      }
+   public function defineTable($tabledef, $options = array()) {
+      $tabledef = $this->fixTableDef($tabledef);
+      
+      $table = $tabledef['name'];
+      $columns = $tabledef['columns'];
+      $indexes = $tabledef['indexes'];
       
       // Get the current definition.
       $currentDef = $this->tableDefinition($table);
@@ -290,7 +223,7 @@ class MySqlDb extends Db {
       $sql .= "select *";
       
       // Build the from clause.
-      $sql .= "\nfrom `$table`";
+      $sql .= "\nfrom `{$this->px}$table`";
       
       // Build the where clause.
       $whereString = $this->whereString($where);
@@ -334,7 +267,55 @@ class MySqlDb extends Db {
             $sql .= "\nlimit $limit offset $offset";
          }
       }
+      
+      $result = $this->query($sql, Db::QUERY_READ, $options);
+      return $result;
    }
+   
+   
+   /**
+    * Get the index definitions for a table.
+    * 
+    * @param string $table The name of the table
+    * @return array An array in the form:
+    * 
+    *     array (
+    *        index name => array('columns' => array('column'), 'type' => Db::INDEX_TYPE)
+    *     )
+    */
+   public function indexDefinitions($table) {
+      // Keep an internal cache for repeated calls to this function.
+      static $cache = array();
+      
+      if (isset($cache[$table]))
+         return $cache[$table];
+      
+      // Query the indexes from the database.
+      $rawdata = $this->query("show indexes from `{$this->px}$table`");
+      
+      // Parse them into their correct place.
+      $result = array();
+      foreach ($rawdata as $row) {
+         $name = $row['Key_name'];
+         
+         // Figure out the type.
+         if (strcasecmp($name, 'PRIMARY') === 0)
+            $type = Db::INDEX_PK;
+         elseif ($row['Non_unique'] == 0)
+            $type = Db::INDEX_UNIQUE;
+         elseif (strcasecmp(substr($name, 0, 2), 'fk') === 0)
+            $type = Db::INDEX_FK;
+         else
+            $type = Db::INDEX_IX;
+         
+         $result[$name]['columns'][] = $row['Column_name'];
+         $result[$name]['type'] = $type;
+      }
+      $cache[$table] = $result;
+      
+      return $result;
+   }
+   
    
    public function insert($table, $row, $options = array()) {
       $result = $this->insertMulti($table, array($row), $options);
@@ -384,10 +365,6 @@ class MySqlDb extends Db {
       return $result;
    }
    
-   public function join(&$data, $on, $childcolumns = array(), $options = array()) {
-      parent::join($data, $on, $childcolumns, $options);
-   }
-   
    /**
     * Execute a query on the database.
     * 
@@ -435,10 +412,14 @@ class MySqlDb extends Db {
       }
       
       if ($type == Db::QUERY_READ) {
-         $result->setFetchMode(PDO::FETCH_ASSOC);
+         if (isset($options[Db::GET_COLUMN])) {
+            $result->setFetchMode(PDO::FETCH_COLUMN, $options[Db::GET_COLUMN]);
+         } else {
+            $result->setFetchMode(PDO::FETCH_ASSOC);
+         }
+         
          if (!val(Db::GET_UNBUFFERED, $options)) {
             $result = $result->fetchAll();
-//            $result = $result->fetch_all(MYSQLI_ASSOC);
          }
       }
       
@@ -451,7 +432,7 @@ class MySqlDb extends Db {
     * @param string $typeString
     * @return string
     */
-   public function parseType($typeString) {
+   protected function parseType($typeString) {
       $type = null;
 
       if (substr($type, 0, 4) === 'enum') {
@@ -503,7 +484,7 @@ class MySqlDb extends Db {
       if (!$this->tableExists($table))
          return null;
       
-      $result = array();
+      $result = array('name' => $table);
       
       // Load all of the column definitions from the table.
       $coldata = $this->query("describe `{$this->px}$table`");
@@ -527,6 +508,26 @@ class MySqlDb extends Db {
       return (count($data) > 0);
    }
    
+   public function tables($withdefs = false) {
+      // Get the table names.
+      $tables = $this->query("show tables", Db::QUERY_READ, array(Db::GET_COLUMN => 0));
+      
+      // Strip the table prefixes.
+      $tables = array_filter($tables, function($name) { return stringBeginsWith($name, $this->px); });
+      $tables = array_map(function($name) { return ltrimString($name, $this->px); }, $tables);
+      
+      if (!$withdefs)
+         return $tables;
+      
+      $result = array();
+      foreach ($tables as $table) {
+         $tabledef = $this->tableDefinition($table);
+         $tabledef['indexes'] = $this->indexDefinitions($table);
+         $result[$table] = $tabledef;
+      }
+      return $result;
+   }
+   
    public function update($table, $row, $where, $options = array()) {
       trigger_error(__CLASS__.'->'.__FUNCTION__.'() not implemented', E_USER_ERROR);
    }
@@ -539,6 +540,9 @@ class MySqlDb extends Db {
    protected function whereString($where, $op = OP_AND) {
       static $map = array(OP_GT => '>', OP_GTE => '>=', OP_LT => '<', OP_LTE => '<=');
       $result = '';
+      
+      if (!$where)
+         return $result;
       
       foreach ($where as $column => $value) {
          if ($result)
@@ -585,6 +589,7 @@ class MySqlDb extends Db {
                $result .= "`$column` = ".$this->pdo->quote($value);
          }
       }
+      return $result;
    }
 }
 

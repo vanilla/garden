@@ -21,6 +21,8 @@ abstract class Db {
    /// Constants ///
    
    const GET_UNBUFFERED = 'unbuffered';
+   const GET_COLUMN = 'getcolumn';
+   
    const INSERT_REPLACE = 'replace';
    const INSERT_IGNORE = 'ignore';
    const UPDATE_UPSERT = 'upsert';
@@ -38,8 +40,215 @@ abstract class Db {
    const QUERY_READ = 'read';
    const QUERY_WRITE = 'write';
    
+   /// Properties ///
+   
+   /**
+    * @var string The database table prefix.
+    */
+   public $px = 'gdn_';
+
+   /**
+    * Context data for tables that are currently loading.
+    * 
+    * @var array An array in the form:
+    * 
+    *     array(
+    *        tablename => array([context information]) 
+    *     )
+    */
+   protected $loadContexts;
+   
+   /**
+    * The name of the currently loading table.
+    * @var string 
+    */
+   protected $loadCurrent;
+   
    /// Methods ///
    
+   /**
+    * Define an index in the database.
+    * 
+    * Db->defineIndex() will check to see if the index already exists, and if it doesn't then it will create it.
+    * 
+    * @param string $table The name of the table that the index is on.
+    * @param array|string $column The name(s) of the columns in the index.
+    * @param string $type One of the Db::INDEX_* constants.
+    * 
+    * Db::INDEX_PK
+    * : This index is the primary key
+    * 
+    * Db::INDEX_FK
+    * : This index is a foreign key. Its column(s) point to the primary key of another table.
+    * 
+    * Db::INDEX_IX
+    * : This is a regular index.
+    * 
+    * Db::INDEX_UNIQUE
+    * : This is a unique index.
+    * 
+    * @param string $suffix By default the index will be named based on the column that it's on.  
+    *    This suffix overrides that.
+    * @return array The index definition. This array will have the following keys.
+    * 
+    * name
+    * : The name of the index.
+    * 
+    * type
+    * : The type of the index.
+    * 
+    * columns
+    * : The names of the columns in the index.
+    */
+   public function defineIndex($table, $column, $type, $suffix = null) {
+      $columns = (array)$column;
+      
+      // Determine the name of the new index.
+      if ($type === Db::INDEX_PK) {
+         $name = 'PRIMARY';
+      } else {
+         $prefixes = array(Db::INDEX_FK => 'FK_', Db::INDEX_IX => 'IX_', Db::INDEX_UNIQUE => 'UX_');
+         $px = val($type, $prefixes, 'IX_');
+         if (!$suffix && $type != Db::INDEX_UNIQUE)
+            $suffix = implode('', $columns);
+         $name = "{$px}{$table}".($suffix ? "_{$suffix}" : '');
+      }
+      
+      $result = array(
+         'name' => $name,
+         'type' => $type,
+         'columns' => $columns);
+      
+      return $result;
+   }
+   
+   /**
+    * Define a table in the database.
+    * 
+    * @param array $table The table structure definition. The array should have the following keys:
+    * 
+    * name
+    * : The name of the table.
+    * 
+    * columns
+    * : The table's columns. This array should have the following format:
+    *     <pre>
+    *     array(
+    *        columnName => array('type' => 'dbtype' [,'required' => bool] [, 'index' => string|array])
+    *     )
+    *     </pre>
+    * 
+    * indexes
+    * : Any additional indexes the table should have.
+    * 
+    * @param array $options Additional options for the table.
+    * 
+    * collate
+    * : The database collation for the table. Not all database drivers support this option.
+    */
+   abstract public function defineTable($tabledef, $options = array());
+   
+   /**
+    * Delete data from a table.
+    * 
+    * @param string $table The table to delete from.
+    * @param array $where An array specifying the where clause.
+    */
+   abstract public function delete($table, $where);
+   
+   protected function fixTableDef($table, $columns = null) {
+      $tabledef = array();
+      $columns = array();
+      $indexes = array();
+      
+      if (is_array($table)) {
+         $tabledef = $table;
+         if (isset($tabledef['columns']))
+            $columns = $tabledef['columns'];
+      } else {
+         $tabledef = array('name' => $table);
+      }
+      
+      foreach ($columns as $name => $def) {
+         $index = val('index', $def);
+         if ($index) {
+            // The column has one or more indexes on them.
+            foreach ((array)$index as $typeString) {
+               $parts = explode('.', $typeString, 2);
+               $type = strtolower($parts[0]);
+               $suffix = val(1, $parts);
+               
+               if ($type == Db::INDEX_PK)
+                  $columns[$name]['required'] = true;
+               
+               // Save the index for later.
+               if ($type == Db::INDEX_PK || $type == Db::INDEX_UNIQUE || $suffix) {
+                  // There is only one index of this type.
+                  $indexes[$typeString]['columns'][] = $name;
+                  $indexes[$typeString]['type'] = $type;
+                  $indexes[$typeString]['suffix'] = $suffix;
+               } else {
+                  // One columns, one index.
+                  $indexes[] = array('columns' => $name, 'type' => $type);
+               }
+            }
+         }
+      }
+      
+      $tabledef['columns'] = $columns;
+      $tabledef['indexes'] = $indexes;
+      
+      return $tabledef;
+   }
+   
+   abstract public function get($table, $where, $order = array(), $limit = false, $options = array());
+   
+   /**
+    * Guess a database type from a value.
+    * @param mixed $value
+    * @return string
+    */
+   public function guessType($value) {
+      $type = 'varchar(255)';
+      
+      if (is_bool($value))
+         $type = 'tinyint';
+      elseif (is_int($value))
+         $type = 'int';
+      elseif (is_float ($value))
+         $type = 'float';
+      elseif (is_double($value))
+         $type = 'double';
+      elseif (preg_match('`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)Z?`', $value))
+         $type = 'datetime';
+      elseif (is_string($value)) {
+         if (strlen($value) > 255)
+            $type = 'text';
+      }
+      
+      return $type;
+   }
+   
+   /**
+    * Get the index definitions for a table.
+    * 
+    * @param string $table The name of the table
+    * @return array An array in the form:
+    * 
+    *     array (
+    *        index name => array('columns' => array('column'), 'type' => Db::INDEX_TYPE)
+    *     )
+    */
+   abstract public function indexDefinitions($table);
+   
+   /**
+    * Insert a row into the database.
+    * @param string $table The name of the table to insert into.
+    * @param array $row The row to insert into the table.
+    * @param array $options Options to modify the insert.
+    */
+   abstract public function insert($table, $row, $options = array());
+      
    /**
     * Join data from the database to a result array. This is the basic code join.
     * In a scalable system doing joins in the database can be costly and thus moving
@@ -50,24 +259,64 @@ abstract class Db {
     * @param array $childcolumns
     * @param array $options
     */
-   function join(&$data, $on, $childcolumns = array(), $options = array()) {
+   public function join(&$data, $on, $childcolumns = array(), $options = array()) {
       
    }
    
    /**
-    * Define a table in the database.
+    * Start loading a table.
+    * This method is part of the data loading api.
+    * The loadStart(), loadRow(), and loadFinish() methods are meant to be used together for this.
+    * 
+    * @param string $table The name of the table to load.
+    */
+   public function loadStart($table) {
+      $this->loadContexts = (array)$this->loadContexts;
+      touchValue($table, $this->loadContexts, array('calls' => 0, 'count' => 0));
+      $this->loadContexts[$table]['calls']++;
+      
+      $this->loadCurrent = $table;
+   }
+   
+   /**
+    * Load a row in a table.
+    * This method is part of the data loading api.
+    * The loadStart(), loadRow(), and loadFinish() methods are meant to be used together for this.
+    * 
+    * @param array $row The row to load.
+    */
+   public function loadRow($row) {
+      $this->insert($this->loadCurrent, $row);
+      $this->loadContexts[$this->loadCurrent]['count']++;
+   }
+   
+   /**
+    * Finish loading a table.
+    * 
+    * This method is part of the data loading api.
+    * The loadStart(), loadRow(), and loadFinish() methods are meant to be used together for this.
+    */
+   public function loadFinish() {
+      $context = $this->loadContexts[$this->loadCurrent];
+      $this->loadContexts[$this->loadCurrent]['calls']--;
+      $this->loadCurrent = null;
+      
+      return $context;
+   }
+   
+   /**
+    * Return the definition for a table.
     * 
     * @param string $table The name of the table.
-    * @param array $columns An array of columns in the following format:
-    * 
-    *  array(
-    *      columnName => array('type' => 'dbtype' [,'required' => bool] [, 'index' => string|array])
-    *  )
-    * 
-    * @param array $options Additional options for the table.
-    * 
-    * collate
-    * : The database collation for the table.
+    * @return array
     */
-   abstract function defineTable($table, $columns, $options = array());
+   abstract public function tableDefinition($table);
+   
+   public function tableExists($table) {
+      return $this->tableDefinition($table) !== null;
+   }
+   
+   abstract public function tables($withdefs = false);
+   
+   abstract public function update($table, $row, $where, $options = array());
 }
