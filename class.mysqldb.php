@@ -529,7 +529,29 @@ class MySqlDb extends Db {
    }
    
    public function update($table, $row, $where, $options = array()) {
-      trigger_error(__CLASS__.'->'.__FUNCTION__.'() not implemented', E_USER_ERROR);
+      if (empty($row))
+         return 0; // no rows updated.
+      
+      $sql = "update `{$this->px}$table`";
+      
+      // Build the set.
+      $sets = array();
+      foreach ($row as $column => $value) {
+         $sets[] = "`$column` = ".$this->pdo->quote($value);
+      }
+      $sql .= " set\n  ".implode(",\n  ", $sets);
+      
+      // Build the where clause.
+      $whereString = $this->whereString($where);
+      if ($whereString)
+         $sql .= "\nwhere ".$whereString;
+      
+      $result = $this->query($sql, Db::QUERY_WRITE, $options);
+      
+      if ($this->mode === Db::MODE_EXEC)
+         return $result->rowCount();
+      else
+         return true;
    }
    
    /**
