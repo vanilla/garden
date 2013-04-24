@@ -210,7 +210,10 @@ function dateCompare($date1, $date2) {
  * @param type $prefix
  */
 function decho($value, $prefix = 'debug') {
-   fwrite(STDERR, "$prefix: " . var_export($value, true) . "\n");
+   if (PHP_SAPI === 'cli')
+      fwrite(STDERR, "$prefix: " . var_export($value, true) . "\n");
+   else
+      echo '<pre class="decho">'.$prefix.': '.htmlspecialchars(var_export($value, true)).'</pre>';
 }
 
 /**

@@ -17,6 +17,8 @@ class MySqlDb extends Db {
     */
    public $pdo;
    
+   public $time = 0;
+   
    /// Methods ///
    
    public function __construct($host, $username, $password, $dbname, $port = null) {
@@ -360,7 +362,9 @@ class MySqlDb extends Db {
      
       $result = $this->query($sql, Db::QUERY_WRITE, $options);
       if (is_a($result, 'PDOStatement')) {
-         $result = $result->rowCount();
+         $result = $this->rowCount = $result->rowCount();
+      } else {
+         $this->rowCount = 0;
       }
       return $result;
    }
@@ -393,6 +397,8 @@ class MySqlDb extends Db {
     * - false: When the query was not successful.
     */
    protected function query($sql, $type = Db::QUERY_READ, $options = array()) {
+      $startTime = microtime(true);
+      
       $this->pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, !val(Db::GET_UNBUFFERED, $options, false));
       
       if ($this->mode === Db::MODE_ECHO && $type != Db::QUERY_READ) {
@@ -422,6 +428,12 @@ class MySqlDb extends Db {
             $result = $result->fetchAll();
          }
       }
+      
+      if (method_exists($result, 'rowCount'))
+         $this->rowCount = $result->rowCount();
+      
+      
+      $this->time += microtime(true) - $startTime;
       
       return $result;
    }

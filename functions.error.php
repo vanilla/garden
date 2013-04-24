@@ -68,7 +68,7 @@ function errorHandler($errno, $message, $file, $line, $context) {
 //      return FALSE;
 //   }
    
-   var_dump($context);
+   print_r($context);
    
    throw new ExceptionFromError($message, $errno, $file, $line, $context);
 }
