@@ -538,7 +538,7 @@ class MySqlDb extends Db {
     * @param array $where
     */
    protected function whereString($where, $op = OP_AND) {
-      static $map = array(OP_GT => '>', OP_GTE => '>=', OP_LT => '<', OP_LTE => '<=');
+      static $map = array(OP_GT => '>', OP_GTE => '>=', OP_LT => '<', OP_LTE => '<=', OP_LIKE => 'like');
       $result = '';
       
       if (!$where)
@@ -549,37 +549,43 @@ class MySqlDb extends Db {
             $result .= ' and ';
          
          if (is_array($value)) {
-            $op = array_shift($value);
-            $rval = array_shift($value);
-            
-            switch ($op) {
-               case OP_AND:
-               case OP_OR:
-                  $result .= '('.$this->whereString($rval, $op).')';
-                  break;
-               case OP_EQ:
-                  if ($value === null)
-                     $result .= "`$column` is null";
-                  else
-                     $result .= "`$column` = ".$this->pdo->quote($rval);
-                  break;
-               case OP_GT:
-               case OP_GTE:
-               case OP_LT:
-               case OP_LTE:
-                  $result .= "`$column` {$map[$op]} ".$this->pdo->quote($rval);
-                  break;
-               case OP_IN:
-                  // Quote the in values.
-                  $rval = array_map(array($this->pdo, 'quote'), (array)$rval);
-                  $result .= "`$column` in (".implode(', ', $rval).')';
-                  break;
-               case OP_NE:
-                  if ($value === null)
-                     $result .= "`$column` is null";
-                  else
-                     $result .= "`$column` = ".$this->pdo->quote($rval);
-                  break;
+            foreach ($value as $op => $rval) {
+               switch ($op) {
+                  case OP_AND:
+                  case OP_OR:
+                     $result .= '('.$this->whereString($rval, $op).')';
+                     break;
+                  case OP_EQ:
+                     if ($value === null)
+                        $result .= "`$column` is null";
+                     elseif (is_array($rval)) {
+                        $rval = array_map(array($this->pdo, 'quote'), $rval);
+                        $result .= "`$column` in (".implode(',', $rval).')';
+                     } else
+                        $result .= "`$column` = ".$this->pdo->quote($rval);
+                     break;
+                  case OP_GT:
+                  case OP_GTE:
+                  case OP_LT:
+                  case OP_LTE:
+                  case OP_LIKE:
+                     $result .= "`$column` {$map[$op]} ".$this->pdo->quote($rval);
+                     break;
+                  case OP_IN:
+                     // Quote the in values.
+                     $rval = array_map(array($this->pdo, 'quote'), (array)$rval);
+                     $result .= "`$column` in (".implode(', ', $rval).')';
+                     break;
+                  case OP_NE:
+                     if ($value === null)
+                        $result .= "`$column` is null";
+                     elseif (is_array($rval)) {
+                        $rval = array_map(array($this->pdo, 'quote'), $rval);
+                        $result .= "`$column` not in (".implode(',', $rval).')';
+                     } else
+                        $result .= "`$column` = ".$this->pdo->quote($rval);
+                     break;
+               }
             }
          } else {
             // This is just an equality operator.

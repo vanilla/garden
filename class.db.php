@@ -4,6 +4,7 @@ define('OP_EQ', 'eq');
 define('OP_GT', 'gt');
 define('OP_GTE', 'gte');
 define('OP_IN', 'in');
+define('OP_LIKE', 'like');
 define('OP_LT', 'lt');
 define('OP_LTE', 'lte');
 define('OP_NE', 'ne');
