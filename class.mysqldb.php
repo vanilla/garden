@@ -216,11 +216,28 @@ class MySqlDb extends Db {
       trigger_error(__CLASS__.'->'.__FUNCTION__.'() not implemented', E_USER_ERROR);
    }
    
-   public function get($table, $where, $order = array(), $limit = false, $options = array()) {
+   /**
+    * 
+    * @param array $args
+    * @return MySqlDb
+    */
+   public static function fromArgs($args) {
+      return new MySqlDb($args['host'], $args['user'], val('password', $args, ''), $args['dbname'], val('port', $args));
+   }
+   
+   public function get($table, $where, $options = array()) {
       $sql = '';
       
       // Build the select clause.
-      $sql .= "select *";
+      if (isset($options[Db::COLUMNS])) {
+        $columns = array();
+        foreach ($options[Db::COLUMNS] as $key => $value) {
+           $columns[] = "`$value`";
+        }
+        $sql .= 'select '.implode(', ', $columns);
+      } else {
+         $sql .= "select *";
+      }
       
       // Build the from clause.
       $sql .= "\nfrom `{$this->px}$table`";
@@ -231,7 +248,8 @@ class MySqlDb extends Db {
          $sql .= "\nwhere ".$whereString;
       
       // Build the order.
-      if (!empty($order)) {
+      if (isset($options[Db::ORDERBY])) {
+         $order = $options[Db::ORDERBY];
          $orders = array();
          foreach ($order as $key => $value) {
             if (is_int($key)) {
@@ -254,7 +272,9 @@ class MySqlDb extends Db {
       }
       
       // Build the limit, offset.
-      if ($limit) {
+      if (isset($options[Db::LIMIT])) {
+         $limit = $options[Db::LIMIT];
+         
          if (is_numeric($limit))
             $sql .= "\nlimit $limit";
          elseif (is_array($limit)) {
@@ -393,6 +413,8 @@ class MySqlDb extends Db {
     * - false: When the query was not successful.
     */
    protected function query($sql, $type = Db::QUERY_READ, $options = array()) {
+//      echo $sql."\n\n";
+      
       $this->pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, !val(Db::GET_UNBUFFERED, $options, false));
       
       if ($this->mode === Db::MODE_ECHO && $type != Db::QUERY_READ) {

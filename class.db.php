@@ -40,6 +40,10 @@ abstract class Db {
    const QUERY_DEFINE = 'define';
    const QUERY_READ = 'read';
    const QUERY_WRITE = 'write';
+
+   const COLUMNS = 'columns';
+   const LIMIT = 'limit';
+   const ORDERBY = 'orderby';
    
    /// Properties ///
    
@@ -202,7 +206,7 @@ abstract class Db {
       return $tabledef;
    }
    
-   abstract public function get($table, $where, $order = array(), $limit = false, $options = array());
+   public abstract function get($table, $where, $options = array());
    
    /**
     * Guess a database type from a value.
