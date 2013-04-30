@@ -218,11 +218,28 @@ class MySqlDb extends Db {
       trigger_error(__CLASS__.'->'.__FUNCTION__.'() not implemented', E_USER_ERROR);
    }
    
-   public function get($table, $where, $order = array(), $limit = false, $options = array()) {
+   /**
+    * 
+    * @param array $args
+    * @return MySqlDb
+    */
+   public static function fromArgs($args) {
+      return new MySqlDb($args['host'], $args['user'], val('password', $args, ''), $args['dbname'], val('port', $args));
+   }
+   
+   public function get($table, $where, $options = array()) {
       $sql = '';
       
       // Build the select clause.
-      $sql .= "select *";
+      if (isset($options[Db::COLUMNS])) {
+        $columns = array();
+        foreach ($options[Db::COLUMNS] as $key => $value) {
+           $columns[] = "`$value`";
+        }
+        $sql .= 'select '.implode(', ', $columns);
+      } else {
+         $sql .= "select *";
+      }
       
       // Build the from clause.
       $sql .= "\nfrom `{$this->px}$table`";
@@ -233,7 +250,8 @@ class MySqlDb extends Db {
          $sql .= "\nwhere ".$whereString;
       
       // Build the order.
-      if (!empty($order)) {
+      if (isset($options[Db::ORDERBY])) {
+         $order = $options[Db::ORDERBY];
          $orders = array();
          foreach ($order as $key => $value) {
             if (is_int($key)) {
@@ -256,7 +274,9 @@ class MySqlDb extends Db {
       }
       
       // Build the limit, offset.
-      if ($limit) {
+      if (isset($options[Db::LIMIT])) {
+         $limit = $options[Db::LIMIT];
+         
          if (is_numeric($limit))
             $sql .= "\nlimit $limit";
          elseif (is_array($limit)) {
@@ -541,7 +561,29 @@ class MySqlDb extends Db {
    }
    
    public function update($table, $row, $where, $options = array()) {
-      trigger_error(__CLASS__.'->'.__FUNCTION__.'() not implemented', E_USER_ERROR);
+      if (empty($row))
+         return 0; // no rows updated.
+      
+      $sql = "update `{$this->px}$table`";
+      
+      // Build the set.
+      $sets = array();
+      foreach ($row as $column => $value) {
+         $sets[] = "`$column` = ".$this->pdo->quote($value);
+      }
+      $sql .= " set\n  ".implode(",\n  ", $sets);
+      
+      // Build the where clause.
+      $whereString = $this->whereString($where);
+      if ($whereString)
+         $sql .= "\nwhere ".$whereString;
+      
+      $result = $this->query($sql, Db::QUERY_WRITE, $options);
+      
+      if ($this->mode === Db::MODE_EXEC)
+         return $result->rowCount();
+      else
+         return true;
    }
    
    /**
@@ -550,7 +592,7 @@ class MySqlDb extends Db {
     * @param array $where
     */
    protected function whereString($where, $op = OP_AND) {
-      static $map = array(OP_GT => '>', OP_GTE => '>=', OP_LT => '<', OP_LTE => '<=');
+      static $map = array(OP_GT => '>', OP_GTE => '>=', OP_LT => '<', OP_LTE => '<=', OP_LIKE => 'like');
       $result = '';
       
       if (!$where)
@@ -561,37 +603,43 @@ class MySqlDb extends Db {
             $result .= ' and ';
          
          if (is_array($value)) {
-            $op = array_shift($value);
-            $rval = array_shift($value);
-            
-            switch ($op) {
-               case OP_AND:
-               case OP_OR:
-                  $result .= '('.$this->whereString($rval, $op).')';
-                  break;
-               case OP_EQ:
-                  if ($value === null)
-                     $result .= "`$column` is null";
-                  else
-                     $result .= "`$column` = ".$this->pdo->quote($rval);
-                  break;
-               case OP_GT:
-               case OP_GTE:
-               case OP_LT:
-               case OP_LTE:
-                  $result .= "`$column` {$map[$op]} ".$this->pdo->quote($rval);
-                  break;
-               case OP_IN:
-                  // Quote the in values.
-                  $rval = array_map(array($this->pdo, 'quote'), (array)$rval);
-                  $result .= "`$column` in (".implode(', ', $rval).')';
-                  break;
-               case OP_NE:
-                  if ($value === null)
-                     $result .= "`$column` is null";
-                  else
-                     $result .= "`$column` = ".$this->pdo->quote($rval);
-                  break;
+            foreach ($value as $op => $rval) {
+               switch ($op) {
+                  case OP_AND:
+                  case OP_OR:
+                     $result .= '('.$this->whereString($rval, $op).')';
+                     break;
+                  case OP_EQ:
+                     if ($value === null)
+                        $result .= "`$column` is null";
+                     elseif (is_array($rval)) {
+                        $rval = array_map(array($this->pdo, 'quote'), $rval);
+                        $result .= "`$column` in (".implode(',', $rval).')';
+                     } else
+                        $result .= "`$column` = ".$this->pdo->quote($rval);
+                     break;
+                  case OP_GT:
+                  case OP_GTE:
+                  case OP_LT:
+                  case OP_LTE:
+                  case OP_LIKE:
+                     $result .= "`$column` {$map[$op]} ".$this->pdo->quote($rval);
+                     break;
+                  case OP_IN:
+                     // Quote the in values.
+                     $rval = array_map(array($this->pdo, 'quote'), (array)$rval);
+                     $result .= "`$column` in (".implode(', ', $rval).')';
+                     break;
+                  case OP_NE:
+                     if ($value === null)
+                        $result .= "`$column` is null";
+                     elseif (is_array($rval)) {
+                        $rval = array_map(array($this->pdo, 'quote'), $rval);
+                        $result .= "`$column` not in (".implode(',', $rval).')';
+                     } else
+                        $result .= "`$column` = ".$this->pdo->quote($rval);
+                     break;
+               }
             }
          } else {
             // This is just an equality operator.

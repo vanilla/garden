@@ -41,6 +41,7 @@ function dbOpts() {
       'dbname' => array('Database to use.', CMDLINE_SHORT => 'd', CMDLINE_FLAGS => CMDLINE_REQUIRED),
       'user' => array('User for login if not current user.', CMDLINE_SHORT => 'u', CMDLINE_DEFAULT => ''),
       'password' => array('Password to use when connecting to server.', CMDLINE_SHORT => 'p', CMDLINE_DEFAULT => ''),
+      'port' => array('Port number to use for connection.'),
       'mode' => array('What mode to use to dump the data.', 'valid' => array(Db::MODE_ECHO, Db::MODE_EXEC), CMDLINE_DEFAULT => Db::MODE_EXEC)
    );
    
