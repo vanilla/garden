@@ -68,9 +68,18 @@ function errorHandler($errno, $message, $file, $line, $context) {
 //      return FALSE;
 //   }
    
-   var_dump($context);
-   
    throw new ExceptionFromError($message, $errno, $file, $line, $context);
 }
 
+/**
+ * 
+ * @param Exception $ex
+ */
+function exceptionHandler($ex) {
+   echo $ex->getMessage(),
+      "\n\n",
+      $ex->getTraceAsString();
+}
+
 set_error_handler('errorHandler', E_ALL);
+set_exception_handler('exceptionHandler');

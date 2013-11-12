@@ -1,5 +1,35 @@
 <?php defined('APPLICATION') or die('@!');
 
+/** Format a number of bytes with the largest unit.
+ * @param int $bytes The number of bytes.
+ * @param int $precision The number of decimal places in the formatted number.
+ * @return string the formatted filesize.
+ */
+function formatFileSize($bytes, $precision = 1) {
+  $units = array('B', 'K', 'M', 'G', 'T');
+
+  $bytes = max((int)$bytes, 0);
+  $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+  $pow = min($pow, count($units) - 1);
+
+  $bytes /= pow(1024, $pow);
+
+  $result = round($bytes, $precision).$units[$pow];
+  return $result;
+}
+
+
+/**
+ * Format a string of markdown text to html.
+ * 
+ * @param string $markdown The markdown text to format.
+ * @return type
+ */
+function formatMarkdown($markdown) {
+   require_once __DIR__.'/vendors/markdown/markdown.php';
+   return Markdown($markdown);
+}
+
 /**
  * Format a span of time.
  * 

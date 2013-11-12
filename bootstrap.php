@@ -4,12 +4,11 @@
 require_once __DIR__.'/functions.core.php';
 require_once __DIR__.'/functions.error.php';
 
-spl_autoload_register('autoloadDir');
+spl_autoload_register('autoloadDir'); // core
+spl_autoload_register('autoloadPSR0'); // vendors
 
 define('FEATURE_COMMANDLINE', 'commandline');
 define('FEATURE_FORMATTING', 'formatting');
-define('FEATURE_SIMPLEHTMLDOM', 'simplehtmldom');
-define('FEATURE_GANON', 'ganon');
 
 function requireFeatures($name) {
    $names = func_get_args();
@@ -24,12 +23,6 @@ function requireFeatures($name) {
             break;
          case FEATURE_FORMATTING:
             require_once __DIR__.'/functions.formatting.php';
-            break;
-         case FEATURE_GANON:
-            require_once __DIR__.'/functions.ganon.php';
-            break;
-         case FEATURE_SIMPLEHTMLDOM:
-            require_once __DIR__.'/vendors/simple_html_dom.php';
             break;
          default:
             trigger_error("Unknown feature: $name.", E_USER_ERROR);

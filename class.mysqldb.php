@@ -144,6 +144,7 @@ class MySqlDb extends Db {
    
    public function defineTable($tabledef, $options = array()) {
       $tabledef = $this->fixTableDef($tabledef);
+      $options = (array)$options;
       
       $table = $tabledef['name'];
       $columns = $tabledef['columns'];
@@ -415,6 +416,8 @@ class MySqlDb extends Db {
    protected function query($sql, $type = Db::QUERY_READ, $options = array()) {
 //      echo $sql."\n\n";
       
+      $start_time = microtime(true);
+      
       $this->pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, !val(Db::GET_UNBUFFERED, $options, false));
       
       if ($this->mode === Db::MODE_ECHO && $type != Db::QUERY_READ) {
@@ -444,6 +447,8 @@ class MySqlDb extends Db {
             $result = $result->fetchAll();
          }
       }
+      
+      $this->time += microtime(true) - $start_time;
       
       return $result;
    }

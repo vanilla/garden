@@ -35,10 +35,12 @@ define('CMDLINE_OPTIONS', 'options');
  * Return the options common to connecting to a database.
  * @return array An array of options definitions suitable to pass to parseCommandline().
  */
-function dbOpts() {
+function dbOpts($optional = false) {
+   $required = $optional ? 0 : CMDLINE_REQUIRED;
+   
    $opts = array(
       'host' => array('Connect to host.', CMDLINE_SHORT => 'h', CMDLINE_DEFAULT => '127.0.0.1'),
-      'dbname' => array('Database to use.', CMDLINE_SHORT => 'd', CMDLINE_FLAGS => CMDLINE_REQUIRED),
+      'dbname' => array('Database to use.', CMDLINE_SHORT => 'd', CMDLINE_FLAGS => $required),
       'user' => array('User for login if not current user.', CMDLINE_SHORT => 'u', CMDLINE_DEFAULT => ''),
       'password' => array('Password to use when connecting to server.', CMDLINE_SHORT => 'p', CMDLINE_DEFAULT => ''),
       'port' => array('Port number to use for connection.'),

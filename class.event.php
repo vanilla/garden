@@ -3,16 +3,31 @@
 class Event {
    const PRIORITY_LOW = 20;
    const PRIORITY_MEDIUM = 10;
-   const PRIORITY_HIGH = 1;
+   const PRIORITY_HIGH = 5;
    
    /// Properties ///
    
+   /**
+    * All of the event handlers that have been registered.
+    * @var array 
+    */
    protected static $handlers = array();
    
+   /**
+    * All of the event handlers that still need to be sorted by priority.
+    * @var type 
+    */
    protected static $toSort = array();
    
    /// Methods ///
    
+   /**
+    * Bind an event handler to an event.
+    * 
+    * @param string $event The naame of the event to bind to.
+    * @param callback $callback The callback of the event.
+    * @param int $priority The priority of the event.
+    */
    public static function bind($event, $callback, $priority = self::PRIORITY_MEDIUM) {
       self::$handlers[$event][$priority][] = $callback;
       self::$toSort[$event] = true;
@@ -47,11 +62,11 @@ class Event {
     * to the next event handler and so on. A chained event handler can have more than one parameter,
     * but must have at least one parameter.
     * 
-    * @param string $name
-    * @param mixed The value to pass into the filter.
+    * @param string $event The name of the event to fire.
+    * @param mixed $value The value to pass into the filter.
     * @return mixed The result of the chained event or `$value` if there were no handlers.
     */
-   public static function fireChained($event, $value) {
+   public static function fireFilter($event, $value) {
       $handlers = self::getHandlers($event);
       if ($handlers === false)
          return $value;
