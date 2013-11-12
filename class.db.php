@@ -69,6 +69,11 @@ abstract class Db {
     */
    protected $loadCurrent;
    
+   /**
+    * @var int
+    */
+   protected $rowCount;
+   
    /// Methods ///
    
    /**
@@ -307,6 +312,14 @@ abstract class Db {
       $this->loadCurrent = null;
       
       return $context;
+   }
+   
+   /**
+    * Returns the number of rows affected by the last query.
+    * @return int
+    */
+   public function rowCount() {
+      return $this->rowCount;
    }
    
    /**
