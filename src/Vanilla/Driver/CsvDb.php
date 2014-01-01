@@ -1,4 +1,4 @@
-<?php defined('APPLICATION') or die('@!');
+<?php namespace Vanilla\Driver;
 
 
 class CsvDb extends Db {
@@ -9,64 +9,64 @@ class CsvDb extends Db {
    const NEWLINE = "\n";
    const NULL = '\N';
    const QUOTE = '"';
-   
-   
+
+
    /// Properties ///
-   
+
    /**
     * How many rows to buffer before writing to a csv file.
     * Specifying a value of 1 or less means no buffering.
-    * @var int 
+    * @var int
     */
    public $buffer = 100;
-   
-   
+
+
    /// Protected Properties ///
-   
+
    /**
     * The directory that the csv files are in.
-    * @var string 
+    * @var string
     */
    protected $dir;
-   
+
    /**
     * The names of the currently loading columns.
-    * 
+    *
     * @var array
     */
    protected $loadColumns;
-   
+
    /**
     * A pointer to the currently loading table.
-    * 
+    *
     * @var resource
     */
    protected $loadfp;
-   
+
    /**
     * Whether or not the mb_* functions are supported.
-    * 
-    * @var bool 
+    *
+    * @var bool
     */
    protected static $mb = false;
-   
+
    /**
-    * 
-    * @var array 
+    *
+    * @var array
     */
    protected $structure = array();
-   
+
    /// Methods ///
-   
+
    public function __construct($dir) {
       $dir = rtrim($dir, '/');
-      
+
       // Create the directory.
       ensureDir($dir);
-      
+
       $this->dir = $dir;
       $this->loadStructure();
-      
+
       self::$mb = function_exists('mb_detect_encoding');
    }
 
@@ -79,12 +79,12 @@ class CsvDb extends Db {
    public function defineTable($tabledef, $options = array()) {
       $tabledef = $this->fixTableDef($tabledef, $options);
       $table = $tabledef['name'];
-      
+
       $path = $this->tablePath($table);
-      
-      
+
+
       $currentDef = $this->tableDefinition($table);
-      
+
       if ($currentDef) {
          // There is already a definition which won't work if there is already data in the table.
          if (file_exists($path)) {
@@ -93,13 +93,13 @@ class CsvDb extends Db {
                throw new Exception("You can't change the definition of the $table.csv table after it has data in it.", 400);
             }
          }
-         
+
          // We can merge indexes.
          if (isset($currentDef['indexes'])) {
             $tabledef['indexes'] = array_merge($currentDef['indexes'], $tabledef['indexes']);
          }
       }
-      
+
       $this->structure[$tabledef['name']] = $tabledef;
       $this->saveStructure();
    }
@@ -112,7 +112,7 @@ class CsvDb extends Db {
       if (file_exists($path))
          unlink($path);
    }
-   
+
    static function formatValue($value) {
       // Format the value for writing.
       if (is_null($value)) {
@@ -135,7 +135,7 @@ class CsvDb extends Db {
       }
       return $value;
    }
-   
+
    public function get($table, $where, $order = array(), $limit = false, $options = array()) {
       throw NotImplementedException(__CLASS__, 'get');
    }
@@ -151,7 +151,7 @@ class CsvDb extends Db {
       if ($this->buffer > 1) {
          // Buffer the insert.
          $this->insertBuffer[$table][] = $row;
-         
+
          // Check to see if the insert buffer is full.
          if (count($this->insertBuffer[$table]) >= $this->buffer) {
             $this->insertMulti($table, $this->insertBuffer[$table], $options);
@@ -161,7 +161,7 @@ class CsvDb extends Db {
          return $this->insertMulti($table, array($row), $options);
       }
    }
-   
+
    public function insertMulti($table, $rows, $options = array()) {
 //      if (!$tabledef) {
 //         // Try and define the table from the row.
@@ -169,7 +169,7 @@ class CsvDb extends Db {
 //         foreach ($row as $column => $value) {
 //            $columns[$column] = array('type' => $this->guessType($value));
 //         }
-//         
+//
 //         $this->defineTable($table, $columns, $options);
 //         $tabledef = $this->tableDefinition($table);
 //      }
@@ -179,33 +179,33 @@ class CsvDb extends Db {
       foreach ($rows as $row) {
          fwrite($fp, self::format($row, $columns));
       }
-      
+
       fclose($fp);
    }
-   
+
    public static function formatRow($row, $columns) {
       $outrow = array_fill_keys($columns, null);
-         
+
       foreach ($columns as $column) {
          if (isset($row[$column])) {
             $outrow[$column] = self::formatValue($row[$column]);
          }
       }
-      
+
       return implode(self::DELIM, $outrow).self::NEWLINE;
    }
-   
+
    public function loadStart($table) {
       parent::loadStart($table);
-      
+
       // Grab the table definition.
       $tabledef = $this->tableDefinition($table);
-      
+
       if (!$tabledef)
          throw Exception("Table $table does not exist.");
-      
+
       $context =& $this->loadContexts[$table];
-      
+
       if (isset($context['fp']))
          $fp = $context['fp'];
       else {
@@ -219,33 +219,33 @@ class CsvDb extends Db {
          }
          $context['fp'] = $fp;
       }
-      
+
       $this->loadfp = $fp;
       $this->loadColumns = array_keys($tabledef['columns']);
    }
-   
+
    public function loadRow($row) {
       $line = self::formatRow($row, $this->loadColumns);
       fwrite($this->loadfp, $line);
       $this->loadContexts[$this->loadCurrent]['count']++;
    }
-   
+
    public function loadFinish() {
       $table = $this->loadCurrent;
       $context =& $this->loadContexts[$table];
       parent::loadFinish();
-      
+
       if ($context['calls'] <= 0 && is_resource($this->loadfp)) {
          fclose($this->loadfp);
          unset($context['fp']);
       }
-      
+
       $this->loadfp = null;
       $this->loadColumns = null;
-      
+
       return $context;
    }
-   
+
    protected function loadStructure() {
       $path = $this->dir.'/structure.json';
       if (file_exists($path))
@@ -253,7 +253,7 @@ class CsvDb extends Db {
       else
          $this->structure = array();
    }
-   
+
    protected function saveStructure() {
       $path = $this->dir.'/structure.json';
       file_put_contents($path, json_encode($this->structure));
@@ -262,7 +262,7 @@ class CsvDb extends Db {
    public function tableDefinition($table) {
       return val($table, $this->structure, null);
    }
-   
+
    protected function tablePath($table) {
       return $this->dir."/$table.csv";
    }
@@ -278,11 +278,11 @@ class CsvDb extends Db {
    public function update($table, $row, $where, $options = array()) {
       throw new NotImplementedException(__CLASS__, 'update');
    }
-   
+
    protected function writeHeaderRow($fp, $table) {
       if (is_string($table))
          $table = $this->tableDefinition($table);
-      
+
       $columns = array_keys($table['columns']);
       fwrite($fp, implode(self::DELIM, $columns));
       fwrite($fp, self::NEWLINE);

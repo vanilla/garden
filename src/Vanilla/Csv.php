@@ -1,4 +1,4 @@
-<?php
+<?php namespace Vanilla;
 
 class Csv {
    /// Constants ///
@@ -12,14 +12,14 @@ class Csv {
    /// Properties ///
 
    /**
-    * @var MySqlDb 
+    * @var MySqlDb
     */
    public $db;
-   
+
    protected static $mb = false;
 
    /// Methods ///
-   
+
    public function __construct($db = null) {
       $this->db = $db;
       self::$mb = function_exists('mb_detect_encoding');
@@ -58,14 +58,14 @@ class Csv {
    }
 
    /**
-    * 
+    *
     * @param MySqlDb $db
     * @param string|array $table
     * @param string $path
     */
    function dumpTable($table, $path) {
       $db = $this->db;
-      
+
       // Get the table structure.
       if (is_string($table)) {
          $table = $db->tableDefinition($table);
@@ -85,7 +85,7 @@ class Csv {
 
       // Grab the data and write.
       $result = $db->get($table['name'], null, null, null, array(Db::GET_UNBUFFERED => true));
-      
+
       foreach ($result as $row) {
          $outrow = array_fill_keys($columns, null);
 

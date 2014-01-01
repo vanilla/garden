@@ -1,0 +1,27 @@
+{
+   "name": "vanillaforums/framework",
+   "description": "The vanilla framework.",
+   "keywords": ["vanilla", "framework", "vanilla forums", "php"],
+   "license": "LGPL-2.1",
+   "authors": [
+      { "name": "Todd Burry", "email": "todd@vanillaforums.com" },
+      { "name": "Tim Gunter", "email": "tim@vanillaforums.com" }
+   ],
+   "require": {
+      "php": ">=5.3.0",
+      "ext-json": "*",
+      "ext-PDO": "*",
+      "ext-pdo_mysql": "*",
+      "ext-Reflection": "*",
+      "lib-curl": "*",
+      "lib-pcre": "*"
+   },
+   "autoload": {
+      "classmap": [ "src/" ],
+      "files": [
+         "src/functions/functions.core.php",
+         "src/functions/functions.error.php"
+      ]
+   },
+   "minimum-stability": "dev"
+}
