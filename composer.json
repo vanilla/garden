@@ -19,7 +19,7 @@
    "autoload": {
       "classmap": [ "/Vanilla" ],
       "files": [
-         "functions/functions.core.php"
+         "functions/functions.php"
       ]
    },
    "minimum-stability": "dev"
