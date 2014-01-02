@@ -19,8 +19,7 @@
    "autoload": {
       "classmap": [ "src/" ],
       "files": [
-         "src/functions/functions.core.php",
-         "src/functions/functions.error.php"
+         "functions/functions.core.php"
       ]
    },
    "minimum-stability": "dev"
