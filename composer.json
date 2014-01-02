@@ -17,7 +17,7 @@
       "lib-pcre": "*"
    },
    "autoload": {
-      "classmap": [ "src/" ],
+      "classmap": [ "/Vanilla" ],
       "files": [
          "functions/functions.core.php"
       ]
