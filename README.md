@@ -1,2 +1,1 @@
-framework
-=========
+# The Vanilla Framework

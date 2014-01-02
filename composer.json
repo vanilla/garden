@@ -1,12 +1,18 @@
 {
    "name": "vanillaforums/framework",
    "description": "The vanilla framework.",
+   "type": "library",
    "keywords": ["vanilla", "framework", "vanilla forums", "php"],
    "license": "LGPL-2.1",
    "authors": [
-      { "name": "Todd Burry", "email": "todd@vanillaforums.com" },
-      { "name": "Tim Gunter", "email": "tim@vanillaforums.com" }
+      { "name": "Todd Burry", "email": "todd@vanillaforums.com", "role": "developer" },
+      { "name": "Tim Gunter", "email": "tim@vanillaforums.com", "role": "developer" }
    ],
+   "support": {
+       "issues": "https://github.com/vanillaforums/framework/issues",
+       "forum": "http://vanillaforums.org/discussions",
+       "source": "https://github.com/vanillaforums/framework"
+   },
    "require": {
       "php": ">=5.3.0",
       "ext-json": "*",
@@ -17,10 +23,9 @@
       "lib-pcre": "*"
    },
    "autoload": {
-      "classmap": [ "/Vanilla" ],
+      "psr-0": { "Vanilla": "." },
       "files": [
-         "functions/functions.php"
+         "autoload_files.php"
       ]
-   },
-   "minimum-stability": "dev"
+   }
 }
