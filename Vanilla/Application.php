@@ -10,6 +10,12 @@ class Application {
     public $request;
 
     /**
+     *
+     * @var Response The current response.
+     */
+    public $response;
+
+    /**
      * @var array An array of route objects.
      */
     protected $routes;

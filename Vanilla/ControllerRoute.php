@@ -74,7 +74,7 @@ class ControllerRoute extends Route {
      * - /controlleritem/{id}/method[/args][.ext]
      * @param Request $request
      */
-    public function matches(Request $request) {
+    public function matches(Request $request, Application $app) {
         $path = $request->path();
 
         // If this route is off of a root then check that first.

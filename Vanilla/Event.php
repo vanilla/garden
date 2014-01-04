@@ -158,11 +158,14 @@ class Event {
             switch (end($parts)) {
                 case 'handler':
                 case 'create':
-
+                case 'override':
+                    array_pop($parts);
+                    $event_name = implode('_', $parts);
                     break;
                 case 'before':
                 case 'after':
-
+                default:
+                    $event_name = implode('_', $parts);
                     break;
             }
             // Bind the event if we have one.
@@ -170,6 +173,25 @@ class Event {
                 static::bind($event_name, array($instance, $method_name), $priority);
             }
         }
+    }
+
+    /**
+     * Dumps all of the bound handlers.
+     *
+     * This method is meant for debugging.
+     * @return array Returns an array of all handlers indexed by event name.
+     */
+    public static function dumpHandlers() {
+//        return self::$handlers;
+
+        $result = array();
+
+        foreach (self::$handlers as $event_name => $nested) {
+            $handlers = call_user_func_array('array_merge', $nested);
+            $result[$event_name] = array_map('formatCallback', $handlers);
+        }
+
+        return $result;
     }
 
     /**

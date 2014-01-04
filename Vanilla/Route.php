@@ -36,7 +36,7 @@ abstract class Route {
      * @return array|null Whether or not the route matches the request.
      * If the route matches an array of args is returned, otherwise the function returns null.
      */
-    public abstract function matches(\Vanilla\Request $request);
+    public abstract function matches(Request $request, Application $app);
 
     public function pattern($pattern = null) {
         if ($pattern !== null) {

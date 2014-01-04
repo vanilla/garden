@@ -46,6 +46,7 @@ class Config {
         if (!$default_path) {
             $default_path = PATH_ROOT . '/conf/config.json.php';
         }
+        $this->defaultPath = $default_path;
         $this->data = array();
     }
 
@@ -179,9 +180,10 @@ class Config {
     /**
      * Load configuration data from a file.
      * @param string $path An optional path to load the file from.
+     * @param string $path If true the config will be put under the current config, not over it.
      * @param string $php_var The name of the php variable to load from if using the php file type.
      */
-    public function load($path = '', $php_var = 'config') {
+    public function load($path = '', $underlay = false, $php_var = 'config') {
         if (!$path) {
             $path = $this->defaultPath;
         }
@@ -191,7 +193,11 @@ class Config {
         if (empty($loaded))
             return;
 
-        $this->data = array_merge($this->data, $loaded);
+        if ($underlay) {
+            $this->data = array_replace($loaded, $this->data);
+        } else {
+            $this->data = array_replace($this->data, $loaded);
+        }
     }
 
     /**
@@ -286,7 +292,7 @@ class Config {
             case '.json':
             case '.json.php':
                 if (defined('JSON_PRETTY_PRINT')) {
-                    $json = json_encode($data, JSON_PRETTY_PRINT);
+                    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                 } else {
                     $json = json_encode($data);
                 }
