@@ -335,6 +335,27 @@ function decho($value, $prefix = 'debug') {
 }
 
 /**
+ * Mark a something as deprecated.
+ *
+ * Try using the following naming convention for names.
+ *
+ * - Functions: function_name()
+ * - Classes: ClassName
+ * - Static methods: ClassName::methodName()
+ * - Instance methods: ClassName->methodName()
+ *
+ * @param string $name The name of the deprecated function.
+ * @param string $new_name The name of the new function that should be used instead.
+ */
+function deprecated($name, $new_name = FALSE) {
+  $msg = $name.' is deprecated.';
+  if ($new_name)
+     $msg .= " Use $new_name instead.";
+
+  trigger_error($msg, E_USER_DEPRECATED);
+}
+
+/**
  * Query a string of html similar to jQuery.
  * This function uses the [ganon library](https://code.google.com/p/ganon/) for its functionality.
  *
@@ -654,7 +675,7 @@ function reflectArgs($callback, $args, $get = null) {
  */
 function rtrim_substr($mainstr, $substr) {
    if (strcasecmp(substr($mainstr, -strlen($substr)), $substr) === 0)
-      return substr($mainstr, -strlen($substr));
+      return substr($mainstr, 0, -strlen($substr));
    return $mainstr;
 }
 
@@ -812,7 +833,7 @@ function touch_val($key, &$array, $default) {
  * @param mixed $default The default value to return if the key doesn't exist.
  * @return mixed The item from the array or `$default` if the array key doesn't exist.
  */
-function val($key, $array, $default = null) {
+function val($key, array $array, $default = null) {
    if (array_key_exists($key, $array))
       return $array[$key];
    return $default;
@@ -827,7 +848,7 @@ function val($key, $array, $default = null) {
 * @param mixed $default The value to return if the key does not exist.
 * @return mixed The value from the array or object.
 */
-function vvalr($keys, $array, $default = null) {
+function vvalr($keys, array $array, $default = null) {
   $value = $array;
   for($i = 0; $i < count($keys); ++$i) {
      $SubKey = $keys[$i];
