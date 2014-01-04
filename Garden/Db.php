@@ -1,4 +1,4 @@
-<?php namespace Vanilla;
+<?php namespace Garden;
 
 define('OP_EQ', 'eq');
 define('OP_GT', 'gt');

@@ -1,6 +1,6 @@
 <?php
 
-namespace Vanilla\Exception;
+namespace Garden\Exception;
 
 /*
  * Represents an error caused by something the user did.
@@ -18,6 +18,5 @@ namespace Vanilla\Exception;
  * @package Vanilla
  * @since 1.0
  */
-class UserException extends \Exception {
+class UserException extends ClientException {
 }
-

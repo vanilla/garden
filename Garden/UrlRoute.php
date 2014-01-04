@@ -1,6 +1,6 @@
 <?php
 
-namespace Vanilla;
+namespace Garden;
 
 class UrlRoute extends Route {
     /// Properties ///
@@ -37,7 +37,7 @@ class UrlRoute extends Route {
         return $result;
     }
 
-    public function matches(Request $request) {
+    public function matches(Request $request, Application $app) {
         $path = $request->path();
         $regex = static::patternRegex($this->pattern());
 

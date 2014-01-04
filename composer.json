@@ -23,7 +23,10 @@
       "lib-pcre": "*"
    },
    "autoload": {
-      "psr-0": { "Vanilla": "." },
+      "psr-0": { 
+          "Garden": ".",
+          "Gdn": "."
+          },
       "files": [
          "autoload_files.php"
       ]

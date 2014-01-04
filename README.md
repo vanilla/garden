@@ -1,1 +1,1 @@
-# The Vanilla Framework
+# The Garden Framework

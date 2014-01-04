@@ -19,8 +19,8 @@
 function autoload_vanilla($class_name) {
     $class_name = ltrim($class_name, '\\');
 
-    // Only load classes in the Vanilla\ namespace.
-    if (strpos($class_name, 'Vanilla\\') !== 0)
+    // Only load classes in the Garden\ namespace.
+    if (strpos($class_name, 'Garden\\') !== 0)
         return;
 
     $fileName  = '';

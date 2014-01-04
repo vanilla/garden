@@ -1,4 +1,4 @@
-<?php namespace Vanilla;
+<?php namespace Garden;
 
 abstract class Route {
     /// Properties ///
@@ -12,7 +12,7 @@ abstract class Route {
      *
      * @param string $pattern The pattern for the route.
      * @param mixed $callback
-     * @return \Vanilla\Route Returns the new route.
+     * @return \Garden\Route Returns the new route.
      */
     public static function create($pattern, $callback) {
         if (is_callable($callback)) {
@@ -36,7 +36,7 @@ abstract class Route {
      * @return array|null Whether or not the route matches the request.
      * If the route matches an array of args is returned, otherwise the function returns null.
      */
-    public abstract function matches(\Vanilla\Request $request);
+    public abstract function matches(Request $request, Application $app);
 
     public function pattern($pattern = null) {
         if ($pattern !== null) {
