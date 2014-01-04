@@ -1,5 +1,25 @@
 <?php
 
+/**
+ * Format a callback function.
+ *
+ * @param callable $callback
+ * @return string Returns a string representation of the callback.
+ */
+function formatCallback(callable $callback) {
+    if (is_string($callback)) {
+        return $callback.'()';
+    } elseif (is_array($callback)) {
+        if (is_object($callback[0])) {
+            return get_class($callback[0]).'->'.$callback[1].'()';
+        } else {
+            return $callback[0].'::'.$callback[1].'()';
+        }
+    } elseif (is_a($callback, '\Closure')) {
+        return 'closure()';
+    }
+}
+
 /** Format a number of bytes with the largest unit.
  * @param int $bytes The number of bytes.
  * @param int $precision The number of decimal places in the formatted number.
