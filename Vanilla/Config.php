@@ -191,7 +191,7 @@ class Config {
         if (empty($loaded))
             return;
 
-        $this->data = array_merge($this->data, $loaded);
+        $this->data = array_replace($this->data, $loaded);
     }
 
     /**
