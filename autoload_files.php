@@ -12,7 +12,7 @@
  * @since 1.0
  */
 
-use \Vanilla\Event;
+use \Garden\Event;
 
 // Include the core functions.
 require_once __DIR__.'/functions/core-functions.php';

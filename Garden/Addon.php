@@ -1,6 +1,6 @@
 <?php
 
-namespace Vanilla;
+namespace Garden;
 
 /**
  * Contains functionality that allows addons to be be enabled and disabled within the application to

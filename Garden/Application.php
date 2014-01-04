@@ -1,4 +1,6 @@
-<?php namespace Vanilla;
+<?php
+
+namespace Garden;
 
 class Application {
     /// Properties ///
@@ -39,14 +41,14 @@ class Application {
     /**
      * Get all of the matched routes for a request.
      *
-     * @param \Vanilla\Request $request
+     * @param \Garden\Request $request
      * @return array An array of arrays corresponding to matching routes and their args.
      */
-    public function matchRoutes(\Vanilla\Request $request) {
+    public function matchRoutes(\Garden\Request $request) {
         $result = array();
 
         foreach ($this->routes as $route) {
-            $matches = $route->matches($request);
+            $matches = $route->matches($request, $this);
             if ($matches)
                 $result[] = array($route, $matches);
         }
@@ -60,7 +62,7 @@ class Application {
      * @param mixed $callback
      */
     public function route($path, $callback = null) {
-        if (is_a($path, '\Vanilla\Route')) {
+        if (is_a($path, '\Garden\Route')) {
             $route = $path;
         } else {
             $route = Route::create($path, $callback);
@@ -87,7 +89,7 @@ class Application {
                 // Once a route has been successfully dispatched we break and don't dispatch anymore.
                 $dispatched = true;
                 break;
-            } catch (\Vanilla\Exception\Pass $pex) {
+            } catch (\Garden\Exception\Pass $pex) {
                 // If the route throws a pass then continue on to the next route.
                 continue;
             }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Vanilla;
+namespace Garden;
 
 /**
  * A route that maps urls to controller actions.

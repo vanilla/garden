@@ -271,7 +271,7 @@ function c($key, $default) {
  * @return string The config value.
  */
 function config($key, $default = null) {
-    return Vanilla\Config::instance()->get($key, $default);
+    return Garden\Config::instance()->get($key, $default);
 }
 
 /**

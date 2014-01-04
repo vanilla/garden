@@ -1,6 +1,6 @@
 <?php
 
-namespace Vanilla\Exception;
+namespace Garden\Exception;
 
 class Pass extends \Exception {
 }

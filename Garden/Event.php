@@ -1,6 +1,6 @@
 <?php
 
-namespace Vanilla;
+namespace Garden;
 
 /**
  * Contains methods for binding and firing to events.

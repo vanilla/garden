@@ -1,4 +1,4 @@
-<?php namespace Vanilla\Driver;
+<?php namespace Garden\Driver;
 
 /**
  * A connection between Vanilla and MySQL.

@@ -1,6 +1,6 @@
 <?php
 
-namespace Vanilla;
+namespace Garden;
 
 class UrlRoute extends Route {
     /// Properties ///

@@ -1,4 +1,4 @@
-<?php namespace Vanilla\Driver;
+<?php namespace Garden\Driver;
 
 
 class CsvDb extends Db {

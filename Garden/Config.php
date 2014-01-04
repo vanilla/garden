@@ -1,6 +1,6 @@
 <?php
 
-namespace Vanilla;
+namespace Garden;
 
 /**
  * Application configuration management.
@@ -52,7 +52,7 @@ class Config {
 
     /**
      * Return the singleton instance of this class.
-     * @return \Vanilla\Config
+     * @return \Garden\Config
      */
     public function __invoke() {
         return self::instance();

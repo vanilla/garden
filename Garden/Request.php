@@ -1,4 +1,4 @@
-<?php namespace Vanilla;
+<?php namespace Garden;
 
 if (!defined('APP'))
     return;
