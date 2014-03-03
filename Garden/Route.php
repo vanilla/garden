@@ -3,6 +3,8 @@
 abstract class Route {
     /// Properties ///
 
+    protected $methods;
+
     protected $pattern;
 
     /// Methods ///

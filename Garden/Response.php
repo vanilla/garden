@@ -100,14 +100,11 @@ class Response {
 
     /// Methods ///
 
-    public function data($name, $default) {
-        return val($name, $this->data, $default);
-    }
+    public function cookie($name, $value = false, $expires = 0, $path = null, $domain = null, $secure = false, $httponly = false) {
+        if ($value === false) {
+            return val($name, $this->cookies);
+        }
 
-    public function header($name, $value = null, $replace = true) {
-    }
-
-    public function setCookie($name, $value = null, $expires = 0, $path = null, $domain = null, $secure = false, $httponly = false) {
         // Set the defaults.
         if ($path === null)
             $path = $this->defaultCookiePath;
@@ -115,6 +112,13 @@ class Response {
             $domain = $this->defaultCookieDomain;
 
         $this->cookies[$name] = array($value, $expires, $path, $domain, $secure, $httponly);
+    }
+
+    public function data($name, $default) {
+        return val($name, $this->data, $default);
+    }
+
+    public function header($name, $value = null, $replace = true) {
     }
 
     public function setData($name, $value) {

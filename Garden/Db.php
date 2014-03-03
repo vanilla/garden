@@ -282,7 +282,7 @@ abstract class Db {
     */
    public function loadStart($table) {
       $this->loadContexts = (array)$this->loadContexts;
-      touch_val($table, $this->loadContexts, array('calls' => 0, 'count' => 0));
+      touchval($table, $this->loadContexts, array('calls' => 0, 'count' => 0));
       $this->loadContexts[$table]['calls']++;
 
       $this->loadCurrent = $table;

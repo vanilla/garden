@@ -281,8 +281,8 @@ class Addon {
         }
         if (!$info)
             $info = array();
-        touch_val('name', $info, $addon_key);
-        touch_val('version', $info, '0.0');
+        touchval('name', $info, $addon_key);
+        touchval('version', $info, '0.0');
 
         // Look for the boostrap.
         $boostrap = $dir.'/boostrap.php';

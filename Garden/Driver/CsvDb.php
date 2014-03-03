@@ -62,7 +62,7 @@ class CsvDb extends Db {
       $dir = rtrim($dir, '/');
 
       // Create the directory.
-      ensureDir($dir);
+      touch_dir($dir);
 
       $this->dir = $dir;
       $this->loadStructure();

@@ -131,7 +131,7 @@ class ControllerRoute extends Route {
 
         // If we are requesting an html endpoint then we just request the naked controller.
         // Otherwise we request the api controller.
-        if (in_array($ext, array('', '.htm', '.htm', '.txt'))) {
+        if (in_array($ext, array('', '.htm', '.html', '.txt'))) {
             // This is a regular endpoint. It will check for the api endpoint, but will fall back to the api controller.
             $alt_controller_name = $controller_name . 'ApiController';
             $controller_name .= 'Controller';

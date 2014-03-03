@@ -335,7 +335,7 @@ function decho($value, $prefix = 'debug') {
 }
 
 /**
- * Mark a something as deprecated.
+ * Mark something as deprecated.
  *
  * Try using the following naming convention for names.
  *
@@ -353,45 +353,6 @@ function deprecated($name, $new_name = FALSE) {
      $msg .= " Use $new_name instead.";
 
   trigger_error($msg, E_USER_DEPRECATED);
-}
-
-/**
- * Query a string of html similar to jQuery.
- * This function uses the [ganon library](https://code.google.com/p/ganon/) for its functionality.
- *
- * @param string $str A string of html to query.
- * @param bool $return_root
- * @return HTML_Node
- */
-function domQuery($str, $return_root = true) {
-   require_once __DIR__.'/vendors/ganon.php';
-   return str_get_dom($str, $return_root);
-}
-
-/**
- * Query an html file similar to jQuery.
- *
- * @param string $file The path of the file.
- * @param bool $return_root
- * @return HTML_Node
- */
-function domQueryFile($file, $return_root = true) {
-   require_once __DIR__.'/vendors/ganon.php';
-   return file_get_dom($file, $return_root);
-}
-
-/**
- * Make sure that a directory exists.
- *
- * @param string $dir The name of the directory.
- * @param int $mode The file permissions on the folder if it's created.
- */
-function ensureDir($dir, $mode = 0777) {
-   if (!file_exists($dir)) {
-      mkdir($dir, $mode, true);
-   } elseif (!is_dir($dir)) {
-      throw new Exception("The specified directory already exists as a file. ($dir)", 400);
-   }
 }
 
 /**
@@ -809,13 +770,27 @@ function timerStop($data = null) {
 }
 
 /**
+ * Make sure that a directory exists.
+ *
+ * @param string $dir The name of the directory.
+ * @param int $mode The file permissions on the folder if it's created.
+ */
+function touch_dir($dir, $mode = 0777) {
+   if (!file_exists($dir)) {
+      mkdir($dir, $mode, true);
+   } elseif (!is_dir($dir)) {
+      throw new Exception("The specified directory already exists as a file. ($dir)", 400);
+   }
+}
+
+/**
  * Make sure that a key exists in an array.
  *
  * @param string|int $key The array key to ensure.
  * @param array $array The array to modify.
  * @param mixed $default The default value to set if key does not exist.
  */
-function touch_val($key, &$array, $default) {
+function touchval($key, &$array, $default) {
    if (!array_key_exists($key, $array))
       $array[$key] = $default;
 }
@@ -828,15 +803,25 @@ function touch_val($key, &$array, $default) {
  * It's much preferable to use this function if your not sure whether or not an array key exists rather than
  * using @ error suppression.
  *
+ * This function uses optimizations found in the [facebook libphputil library](https://github.com/facebook/libphutil).
+ *
  * @param string|int $key The array key.
  * @param array $array The array to get the value from.
  * @param mixed $default The default value to return if the key doesn't exist.
  * @return mixed The item from the array or `$default` if the array key doesn't exist.
  */
 function val($key, array $array, $default = null) {
-   if (array_key_exists($key, $array))
-      return $array[$key];
-   return $default;
+    // isset() is a micro-optimization - it is fast but fails for null values.
+    if (isset($array[$key])) {
+        return $array[$key];
+    }
+
+    // Comparing $default is also a micro-optimization.
+    if ($default === null || array_key_exists($key, $array)) {
+        return null;
+    }
+
+    return $default;
 }
 
 /**
