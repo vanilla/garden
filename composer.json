@@ -1,8 +1,8 @@
 {
-   "name": "vanillaforums/framework",
-   "description": "The vanilla framework.",
+   "name": "vanilla/garden",
+   "description": "The garden framework.",
    "type": "library",
-   "keywords": ["vanilla", "framework", "vanilla forums", "php"],
+   "keywords": ["vanilla", "garden", "framework", "vanilla forums", "php"],
    "license": "LGPL-2.1",
    "authors": [
       { "name": "Todd Burry", "email": "todd@vanillaforums.com", "role": "developer" },
