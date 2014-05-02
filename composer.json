@@ -24,7 +24,7 @@
    },
    "autoload": {
       "psr-4": {
-          "Garden\": "src"
+          "Garden\\": "src"
           },
       "files": [
          "autoload_files.php"
