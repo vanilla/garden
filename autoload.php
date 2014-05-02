@@ -19,8 +19,8 @@
 function autoload_vanilla($class_name) {
     $class_name = ltrim($class_name, '\\');
 
-    // Only load classes in the Garden\ namespace.
-    if (strpos($class_name, 'Garden\\') !== 0)
+    // Only load classes in the src\ namespace.
+    if (strpos($class_name, 'src\\') !== 0)
         return;
 
     $fileName  = '';
@@ -40,4 +40,4 @@ function autoload_vanilla($class_name) {
 spl_autoload_register('autoload_vanilla');
 
 // The autoload files must be loaded after the autoloader.
-require_once __DIR__.'/autoload_files.php';
+require_once __DIR__ . '/autoload_files.php';

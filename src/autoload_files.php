@@ -15,9 +15,9 @@
 use \Garden\Event;
 
 // Include the core functions.
-require_once __DIR__.'/functions/core-functions.php';
+require_once __DIR__ . '/functions/core-functions.php';
 
 // Load the framework's overrideable functions late so that addons can override them.
 Event::bind('bootstrap', function() {
-    require_once __DIR__.'/functions/formatting-functions.php';
+    require_once __DIR__ . '/functions/formatting-functions.php';
 }, Event::PRIORITY_LOW);
