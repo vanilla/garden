@@ -401,13 +401,13 @@ class Cli {
     /**
      * Adds an option (opt) to the current schema.
      * @param string $name The long name of the parameter.
-     * @param $description A human-readable description for the column.
+     * @param string $description A human-readable description for the column.
      * @param bool $required Whether or not the opt is required.
-     * @param string $shortname The short name of the opt.
+     * @param string $short The short name of the opt.
      * @return Cli Returns this object for fluent calls.
      */
-    public function opt($name, $description, $required = false, $shortname = '') {
-        $this->currentSchema[$name] = [$description, 'required' => $required, 'short' => $shortname];
+    public function opt($name, $description, $required = false, $short = '') {
+        $this->currentSchema[$name] = [$description, 'required' => $required, 'short' => $short];
         return $this;
     }
 
