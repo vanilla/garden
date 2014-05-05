@@ -3,7 +3,7 @@
 namespace Garden\Cli;
 
 /**
- * Push arguments parser
+ * A general purpose command line parser.
  *
  * @author Todd Burry <todd@vanillaforums.com>
  * @license MIT
@@ -11,19 +11,24 @@ namespace Garden\Cli;
  */
 class Cli {
     /// Properties ///
+    /**
+     * @var array All of the schemas, indexed by command pattern.
+     */
     protected $commandSchemas;
 
+    /**
+     * @var array A pointer to the current schema.
+     */
     protected $currentSchema;
 
 
     /// Methods ///
 
-    public function __construct($defaultSchema = []) {
+    /**
+     * Creates a {@see Cli} instance representing a command line parser for a given schema.
+     */
+    public function __construct() {
         $this->commandSchemas = ['*' => []];
-
-        if (!empty($defaultSchema)) {
-            $this->commandSchemas['*'] = $defaultSchema;
-        }
 
         // Select the current schema.
         $this->currentSchema =& $this->commandSchemas['*'];
@@ -154,11 +159,17 @@ class Cli {
         return strpos($pattern, '*') === false;
     }
 
+    /**
+     * Parses and validates a set of command line arguments the schema.
+     * @param array $argv The command line arguments a form compatible with the global `$argv` variable.
+     *
+     * Note that the `$argv` array must have at least one element and it must represent the path to the command that
+     * invoked the command. This is used to write usage information.
+     * @param bool $exit Whether to exit the application when there is an error or when writing help.
+     * @return Args|null Returns an {@see Args} instance when a command should be executed or `null` when one shouldn't.
+     */
     public function parse($argv = null, $exit = true) {
         $args = $this->parseRaw($argv);
-
-//        print_r($args);
-//        echo "\n";
 
         $hasCommand = $this->hasCommand();
 
@@ -166,13 +177,13 @@ class Cli {
         if ($hasCommand && !$args->command()) {
             $this->writeUsage($args);
             $this->writeCommands();
-            $result = false;
+            $result = null;
         }
         // Write the help.
         elseif ($args->getOpt('help')) {
             $this->writeUsage($args);
             $this->writeHelp($this->getSchema($args->command()));
-            $result = false;
+            $result = null;
         }
         // Validate the arguments against the schema.
         else {
@@ -189,8 +200,8 @@ class Cli {
     /**
      * Parse an array of arguments
      *
-     * If the first item in the array is in the form of a command (no preceeding
-     * - or --), 'command' is filled with its value.
+     * If the first item in the array is in the form of a command (no preceeding - or --),
+     * 'command' is filled with its value.
      *
      * @param array $argv An array of arguments passed in a form compatible with the global `$argv` variable.
      * @return Args Returns the raw parsed arguments.
@@ -362,48 +373,6 @@ class Cli {
     }
 
     /**
-     * Build schema help
-     *
-     * @param array $schema
-     * @return string
-     */
-    public function help($schema) {
-        $help = '';
-        foreach ($schema as $key => $definition) {
-            $longKey = "--{$key}";
-            $shortKey = ($shortKey = val('short', $definition, false)) ? "-{$shortKey}" : null;
-            $keys = $longKey;
-            if (!is_null($shortKey))
-                $keys = "{$shortKey}, {$keys}";
-            $type = val('value', $definition, 'flag');
-            if ($type == 'opt')
-                $keys .= " <{$key}>";
-
-            // Output argument
-            $required = val('required', $definition, false);
-            if ($required)
-                $keys = Cli::bold($keys);
-            $w = strlen($keys) + 7;
-            $help .= sprintf("%{$w}s\n", $keys);
-
-            // Output justified description
-            $description = $definition[0];
-            $l = strlen($description);
-            $chunk = 77;
-            $i = 0;
-            do {
-                $snippet = substr($description, $i, $chunk);
-                $i += $chunk;
-                $len = strlen($snippet);
-                $w = $len + 11;
-                $help .= sprintf("%{$w}s\n", $snippet);
-            } while ($i < $l);
-            $help .= "\n";
-        }
-        return rtrim($help);
-    }
-
-    /**
      * Gets/sets the value for a current meta item.
      * @param string $name
      * @param mixed $value
@@ -546,6 +515,10 @@ class Cli {
         $table->write();
     }
 
+    /**
+     * Writes the help for a given schema.
+     * @param array $schema A command line scheme returned from {@see Cli::getSchema()}.
+     */
     protected function writeHelp($schema) {
         // Write the command description.
         $meta = val('__meta', $schema, []);
@@ -589,7 +562,7 @@ class Cli {
 
     /**
      * Writes the basic usage information of the command.
-     * @param Args $args The parsed args returned from {@link Cli::parse()}.
+     * @param Args $args The parsed args returned from {@link Cli::parseRaw()}.
      */
     protected function writeUsage(Args $args) {
         if ($filename = $args->getMeta('filename')) {
