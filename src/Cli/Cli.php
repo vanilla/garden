@@ -124,6 +124,28 @@ class Cli {
     }
 
     /**
+     * Determins whether a command has options.
+     * @param string $command The name of the command or an empty string for any command.
+     */
+    public function hasOptions($command = '') {
+        if ($command) {
+            $def = $this->getSchema($command);
+            if (count($def) > 1 || (count($def) > 0 && !isset($def['__meta']))) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            foreach ($this->commandSchemas as $pattern => $def) {
+                if (count($def) > 1 || (count($def) > 0 && !isset($def['__meta']))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * Finds our whether a pattern is a command.
      * @param string $pattern The pattern being evaluated.
      * @return bool Returns `true` if `$pattern` is a command, `false` otherwise.
@@ -457,7 +479,7 @@ class Cli {
 
     /**
      * Selects the current schema name.
-     * @param $pattern The schema pattern.
+     * @param string $pattern The schema pattern.
      * @return Cli Returns this object for fluent calls.
      */
     public function schema($pattern) {
@@ -548,7 +570,7 @@ class Cli {
                 // Write the keys.
                 $keys = "--{$key}";
                 if ($shortKey = val('short', $definition, false)) {
-                    $keys = "-$shortKey, $keys";
+                    $keys .= ", -$shortKey";
                 }
                 if (val('required', $definition)) {
                     $table->bold($keys);
@@ -561,6 +583,7 @@ class Cli {
             }
 
             $table->write();
+            echo "\n";
         }
     }
 
@@ -584,7 +607,7 @@ class Cli {
                 }
             }
 
-            if (count($schema)) {
+            if ($this->hasOptions($args->command())) {
                 echo " <options>";
             }
 

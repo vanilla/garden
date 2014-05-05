@@ -35,7 +35,7 @@ class Table {
     /**
      * @var int The left indent on the table.
      */
-    public $indent = 3;
+    public $indent = 2;
 
 
     /// Methods ///
