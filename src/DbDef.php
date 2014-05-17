@@ -1,5 +1,9 @@
-<?php namespace Garden;
+<?php
+namespace Garden;
 
+/**
+ * A helper class for creating database tables.
+ */
 class DbDef {
    /// Properties ///
 
