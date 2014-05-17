@@ -117,15 +117,20 @@ class Cli {
 
     /**
      * Determines whether or not the schema has a command.
+     * @param string $name Check for the specific command name.
      * @return bool Returns true if the schema has a command.
      */
-    public function hasCommand() {
-        foreach ($this->commandSchemas as $pattern => $opts) {
-            if (strpos($pattern, '*') === false) {
-                return true;
+    public function hasCommand($name = '') {
+        if ($name) {
+            return array_key_exists($name, $this->commandSchemas);
+        } else {
+            foreach ($this->commandSchemas as $pattern => $opts) {
+                if (strpos($pattern, '*') === false) {
+                    return true;
+                }
             }
+            return false;
         }
-        return false;
     }
 
     /**
@@ -191,7 +196,7 @@ class Cli {
             $result = $validArgs;
         }
 
-        if ($result === false && $exit) {
+        if ($result === null && $exit) {
             exit();
         }
         return $result;
@@ -236,7 +241,6 @@ class Cli {
             // Parse opts.
             for ($i = 0; $i < count($argv); $i++) {
                 $str = $argv[$i];
-
 
                 // --
                 if ($str === '--') {
@@ -298,42 +302,76 @@ class Cli {
      * Validates arguments against the schema.
      *
      * @param Args $args
-     * @return Args
+     * @return Args|null
      */
     public function validate(Args $args) {
-        $valid = new Args($args->command());
-        $schema = $this->getSchema($valid->command());
+        $isValid = true;
+        $command = $args->command();
+        $valid = new Args($command);
+        $schema = $this->getSchema($command);
         unset($schema['__meta']);
         $opts = $args->opts();
         $missing = [];
 
+        // Check to see if the command is correct.
+        if ($command && !$this->hasCommand($command) && $this->hasCommand()) {
+            echo Cli::red("Invalid command: $command.\n");
+            $isValid = false;
+        }
+
+
         foreach ($schema as $key => $definition) {
             // No Parameter (default)
             $required = val('required', $definition, false);
+            $type = val('type', $definition, 'string');
             $value = null;
 
             // Check for --key.
             if (isset($opts[$key])) {
-                $valid->setOpt($key, $opts[$key]);
+                $value = $opts[$key];
+                if ($this->validateType($value, $type)) {
+                    $valid->setOpt($key, $value);
+                } else {
+                    echo Cli::red("The value of --$key is not a valid $type.\n");
+                    $isValid = false;
+                }
                 unset($opts[$key]);
             }
             // Check for -s.
             elseif (isset($definition['short']) && isset($opts[$definition['short']])) {
-                $valid->setOpt($key, $args->getOpt($opts[$definition['short']]));
-                unset($opts[$opts[$definition['short']]]);
+                $value = $opts[$definition['short']];
+                if ($this->validateType($value, $type)) {
+                    $valid->setOpt($key, $value);
+                } else {
+                    echo Cli::red("The value of --$key (-{$definition['short']}) is not a valid $type.\n");
+                    $isValid = false;
+                }
+                unset($opts[$definition['short']]);
             }
             // Check for --no-key.
             elseif (isset($opts['no-'.$key])) {
-                $valid->setOpt($key, !(bool)$opts['no-'.$key]);
+                $value = $opts['no-'.$key];
+
+                if ($type !== 'bool') {
+                    Cli::red("Cannont apply the --no- prefix on the non boolean --$key.\n");
+                    $isValid = false;
+                } elseif ($this->validateType($value, $type)) {
+                    $valid->setOpt($key, !$value);
+                } else {
+                    Cli::red("The value of --no-$key is not a valid $type.\n");
+                    $isValid = false;
+                }
                 unset($opts['no-'.$key]);
             }
             // The key was not supplied. Is it required?
             elseif ($definition['required']) {
                 $missing[$key] = true;
             }
+            // The value os not required, but can maybe be coerced into a type.
+            elseif ($type === 'bool') {
+                $valid->setOpt($key, false);
+            }
         }
-
-        $isValid = true;
 
         if (count($missing)) {
             $isValid = false;
@@ -353,7 +391,7 @@ class Cli {
             return $valid;
         } else {
             echo "\n";
-            return false;
+            return null;
         }
     }
 
@@ -394,11 +432,16 @@ class Cli {
      * @param string $name The long name of the parameter.
      * @param string $description A human-readable description for the column.
      * @param bool $required Whether or not the opt is required.
+     * @param string $type The type of parameter.
+     * This must be one of string, bool, int.
      * @param string $short The short name of the opt.
      * @return Cli Returns this object for fluent calls.
      */
-    public function opt($name, $description, $required = false, $short = '') {
-        $this->currentSchema[$name] = [$description, 'required' => $required, 'short' => $short];
+    public function opt($name, $description, $required = false, $type = 'string', $short = '') {
+        if (!in_array($type, ['string', 'bool', 'int'])) {
+            throw new \Exception("Invalid type: $type. Must be one of string, bool, or int.", 400);
+        }
+        $this->currentSchema[$name] = [$description, 'required' => $required, 'type' => $type, 'short' => $short];
         return $this;
     }
 
@@ -498,6 +541,49 @@ class Cli {
     }
 
     /**
+     * Validate the type of a value an coerce it into the proper type.
+     * @param mixed $value The value to validate.
+     * @param string $type One of: bool, int, string.
+     * @return bool Returns `true` if the value is the correct type.
+     * @throws \Exception Throws an exception when {@see $type} is not a known value.
+     */
+    protected function validateType(&$value, $type) {
+        switch ($type) {
+            case 'bool':
+                if (is_bool($value)) {
+                    return true;
+                }
+                // 0 doesn't work well with in_array() so check it seperately.
+                elseif ($value === 0) {
+                    $value = false;
+                    return true;
+                } elseif (in_array($value, [null, '', '0', 'false', 'no'])) {
+                    $value = false;
+                    return true;
+                } elseif (in_array($value, [1, '1', 'true', 'yes'])) {
+                    $value = true;
+                    return true;
+                } else {
+                    return false;
+                }
+            break;
+            case 'int':
+                if (is_numeric($value)) {
+                    $value = (int)$value;
+                } else {
+                    return false;
+                }
+            break;
+            case 'string':
+                $value = (string)$value;
+                return true;
+            break;
+            default:
+                throw new \Exception("Unknown type: $type.", 400);
+        }
+    }
+
+    /**
      * Writes a lis of all of the commands.
      */
     protected function writeCommands() {
@@ -581,7 +667,7 @@ class Cli {
             }
 
             if ($this->hasOptions($args->command())) {
-                echo " <options>";
+                echo " [<options>]";
             }
 
             echo "\n\n";
