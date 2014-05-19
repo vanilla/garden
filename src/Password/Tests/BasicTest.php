@@ -1,0 +1,65 @@
+<?php
+/**
+ * @author Todd Burry <todd@vanillaforums.com>
+ * @copyright 2009-2014 Vanilla Forums Inc.
+ * @license MIT
+ */
+
+namespace Garden\Password\Tests;
+
+use Garden\Password\IPassword;
+
+/**
+ * Basic tests for the password objects.
+ */
+class BasicTest extends \PHPUnit_Framework_TestCase {
+
+    /**
+     * Tests that a password will hash and verify against that hash.
+     *
+     * @param IPassword $alg The class to test.
+     * @dataProvider getPasswordClasses
+     */
+    public function testHashAndVerify(IPassword $alg) {
+        $password = 'Iñtërnâtiônàlizætiøn'; // unicode password.
+
+        $hash = $alg->hash($password);
+        $this->assertTrue($alg->verify($password, $hash));
+    }
+
+    /**
+     * Tests to make sure that generated passwords don't require a regeneration.
+     *
+     * @param IPassword $alg The class to test.
+     * @dataProvider getPasswordClasses
+     */
+    public function testNoRehash(IPassword $alg) {
+        $password = 'somePassword!!!';
+
+        $hash = $alg->hash($password);
+        $this->assertFalse($alg->needsRehash($hash));
+    }
+
+    /**
+     * Gets an array of all the password classes.
+     *
+     * @return array Returns all of the php classes indexed by base class name.
+     */
+    public function getPasswordClasses() {
+        $paths = glob(__DIR__.'/../*.php');
+        $result = [];
+
+        foreach ($paths as $path) {
+            $classname = basename($path, '.php');
+            if ($classname != 'IPassword') {
+                $full_classname = "\Garden\Password\\$classname";
+                $obj = new $full_classname();
+                if ($obj instanceof IPassword) {
+                    $result[$classname] = [$obj];
+                }
+            }
+        }
+        return $result;
+    }
+}
+ 
