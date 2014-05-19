@@ -28,6 +28,20 @@ class BasicTest extends \PHPUnit_Framework_TestCase {
     }
 
     /**
+     * Tests that a wrong password fails verification.
+     *
+     * @param IPassword $alg The class to test.
+     * @dataProvider getPasswordClasses
+     */
+    public function testWrongPassword(IPassword $alg) {
+        $password = 'password';
+        $wrongPassword = 'letmein';
+
+        $hash = $alg->hash($password);
+        $this->assertFalse($alg->verify($wrongPassword, $hash));
+    }
+
+    /**
      * Tests to make sure that generated passwords don't require a regeneration.
      *
      * @param IPassword $alg The class to test.
@@ -38,6 +52,16 @@ class BasicTest extends \PHPUnit_Framework_TestCase {
 
         $hash = $alg->hash($password);
         $this->assertFalse($alg->needsRehash($hash));
+    }
+
+    /**
+     * Tests to make sure a null password hash never verifies.
+     *
+     * @param IPassword $alg The class to test.
+     * @dataProvider getPasswordClasses
+     */
+    public function testNullHash(IPassword $alg) {
+        $this->assertFalse($alg->verify('password', null));
     }
 
     /**
