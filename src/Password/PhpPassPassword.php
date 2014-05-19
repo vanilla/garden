@@ -13,7 +13,7 @@ namespace Garden\Password;
  * The code in this class is copied from the phppass library version 0.3 located at http://www.openwall.com/phpass/.
  * Any code copied from the phppass library is copyright the original owner.
  */
-class PhpPass implements IPassword {
+class PhpPassPassword implements IPassword {
     protected $itoa64;
     protected $iteration_count_log2;
     protected $portable;
@@ -296,11 +296,11 @@ class PhpPass implements IPassword {
      * {@inheritdoc}
      */
     public function verify($password, $hash) {
-        $hash = $this->cryptPrivate($password, $hash);
-        if ($hash[0] == '*') {
-            $hash = crypt($password, $hash);
+        $calc_hash = $this->cryptPrivate($password, $hash);
+        if ($calc_hash[0] === '*') {
+            $calc_hash = crypt($password, $hash);
         }
 
-        return $hash == $hash;
+        return $calc_hash === $hash;
     }
 }
