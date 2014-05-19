@@ -19,11 +19,10 @@ class PhpbbPassword implements IPassword {
     const ITOA64 = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
     /**
-     * Check for correct password
+     * Check for a correct password.
      *
-     * @param string $password The password in plain text
-     * @param string $hash The stored password hash
-     *
+     * @param string $password The password in plain text.
+     * @param string $hash The stored password hash.
      * @return bool Returns true if the password is correct, false if not.
      */
     public function verify($password, $hash) {
@@ -38,8 +37,13 @@ class PhpbbPassword implements IPassword {
 
     /**
      * The crypt function/replacement.
+     *
+     * @param string $password The password to encrypt.
+     * @param string $setting The hash prefix setting. It should start with $H$.
+     * @return string The encypted password.
      */
-    private function cryptPrivate($password, $setting, $itoa64 = PhpbbPassword::ITOA64) {
+    private function cryptPrivate($password, $setting) {
+        $itoa64 = PhpbbPassword::ITOA64;
         $output = '*';
 
         // Check for correct hash
@@ -91,10 +95,10 @@ class PhpbbPassword implements IPassword {
      *
      * @param string $input The input to encode.
      * @param int $count The number of characters to encode.
-     * @param string $itoa64 The base 64 character space.
      * @return string The encoded string.
      */
-    protected function encode64($input, $count, $itoa64 = PhpbbPassword::ITOA64) {
+    protected function encode64($input, $count) {
+        $itoa64 = PhpbbPassword::ITOA64;
         $output = '';
         $i = 0;
 
