@@ -1,10 +1,13 @@
 <?php
+/**
+ * @author Todd Burry <todd@vanillaforums.com>
+ * @copyright 2009-2014 Vanilla Forums Inc.
+ * @license MIT
+ */
 
 namespace Garden\Cli;
 
 /**
- * Arguments
- *
  * This class represents the parsed and validated argument list.
  */
 class Args implements \JsonSerializable {
@@ -13,6 +16,13 @@ class Args implements \JsonSerializable {
     protected $args;
     protected $meta;
 
+    /**
+     * Initialize the {@link Args} instance.
+     *
+     * @param string $command The name of the command.
+     * @param array $opts An array of command line options.
+     * @param array $args A numeric array of command line args.
+     */
     public function __construct($command = '', $opts = [], $args = []) {
         $this->command = $command;
         $this->opts = $opts;
@@ -20,6 +30,10 @@ class Args implements \JsonSerializable {
         $this->meta = [];
     }
 
+    /**
+     * Add an argument to the args array.
+     * @param string $value The argument to add.
+     */
     public function addArg($value) {
         $this->args[] = $value;
     }
