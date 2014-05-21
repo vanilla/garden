@@ -10,7 +10,7 @@ namespace Garden\Password;
 /**
  * Implements the default Vanilla password algorithm.
  */
-class VanillaPassword extends PhpPassPassword {
+class VanillaPassword extends PhpassPassword {
     /**
      * Initialize an instance of the {@link VanillaPassword} class.
      */
