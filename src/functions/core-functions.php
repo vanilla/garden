@@ -1,9 +1,8 @@
 <?php
-
 /**
- *
  * @author Todd Burry <todd@vanillaforums.com>
- * @package Vanilla Framework
+ * @copyright 2009-2014 Vanilla Forums Inc.
+ * @package Garden Framework
  * @subpackage Core Functions
  */
 
@@ -35,6 +34,7 @@ if (!function_exists('array_column')) {
      *                        the returned array. This value may be the integer key
      *                        of the column, or it may be the string key name.
      * @return array
+     * @category Array Functions
      */
     function array_column($input = null, $columnKey = null, $indexKey = null)
     {
@@ -150,55 +150,6 @@ function array_translate($array, $mappings) {
 }
 
 /**
- * Simple autoloader that looks at a single directory.
- *
- * This autoloader can load the following classes.
- *
- * - Any [PSR-0](//github.com/php-fig/fig-standards/blob/master/accepted/PSR-0.md) named class.
- * - Any other class should be in the directory named as `class.classname.php`. Make sure to use all lowercase in the filename.
- *
- * @param string $class The name of the class to autoload.
- * @param string $dir The directory to look in.
- */
-function autoLoadDir($class, $dir = null) {
-   if ($dir === null)
-      $dir = __DIR__;
-
-   // Support namespaces and underscore classes.
-   $class = str_replace(array('\\', '_'), '/', $class);
-
-   $pos = strrpos($class, '/');
-   if ($pos !== false) {
-      // Load as a PSR0 compliant class.
-      $subdir = '/' . substr($class, 0, $pos + 1);
-      $filename = substr($class, $pos + 1) . '.php';
-   } else {
-      $subdir = '/';
-      $filename = strtolower("class.$class.php");
-   }
-
-   $path = $dir . $subdir . $filename;
-   if (file_exists($path)) {
-      require_once $path;
-      return true;
-   }
-}
-
-//function autoloadPSR0($class, $dir = null) {
-//   if ($dir === null)
-//      $dir = __DIR__.'/vendors';
-//
-//   // Support namespaces and underscore classes.
-//   $class = str_replace(array('\\', '_'), '/', $class);
-//
-//   $path = $dir.'/'.$class.'.php';
-//   if (file_exists($path)) {
-//      require_once $path;
-//      return true;
-//   }
-//}
-
-/**
  * Returns the average rating based in the Wilson score interval.
  *
  *
@@ -210,34 +161,40 @@ function autoLoadDir($class, $dir = null) {
  * @see http://stackoverflow.com/questions/9478741/mysql-php-for-wilson-score-interval-with-time-gravity
  * @see http://evanmiller.org/how-not-to-sort-by-average-rating.html
  */
-function averageRating($positive, $total, $confidence = 0.95) {
-   if ($total == 0)
-      return 0;
-
-   if ($confidence == 0.95)
-      $z = 1.96;
-   else
-      $z = pnormaldist(1 - (1 - $confidence) / 2, 0, 1);
-   $p = 1.0 * $positive / $total;
-   $s = ($p + $z * $z / (2 * $total) - $z * sqrt(($p * (1 - $p) + $z * $z / (4 * $total)) / $total)) / (1 + $z * $z / $total);
-   return $s;
-}
+//function averageRating($positive, $total, $confidence = 0.95) {
+//   if ($total == 0)
+//      return 0;
+//
+//   if ($confidence == 0.95)
+//      $z = 1.96;
+//   else
+//      $z = pnormaldist(1 - (1 - $confidence) / 2, 0, 1);
+//   $p = 1.0 * $positive / $total;
+//   $s = ($p + $z * $z / (2 * $total) - $z * sqrt(($p * (1 - $p) + $z * $z / (4 * $total)) / $total)) / (1 + $z * $z / $total);
+//   return $s;
+//}
 
 /**
  * Base64 Encode a string, but make it suitable to be passed in a url.
  *
  * @param string $str The string to encode.
- * @return string The encoded string.
+ * @return string Returns the encoded string.
+ * @category String Functions
+ * @see base64_urldecode()
+ * @see base64_encode()
  */
 function base64_urlencode($str) {
     return strtr(base64_encode($str), '+/', '-_');
 }
 
 /**
- * Decode a string that was encoded using base64UrlEncode().
+ * Decode a string that was encoded using {@link base64_urlencode()}
  *
  * @param string $str The encoded string.
  * @return string The decoded string.
+ * @category String Functions
+ * @see base64_urldecode()
+ * @see base64_decode()
  */
 function base64_urldecode($str) {
     return base64_decode(strtr($str, '-_', '+/'));
@@ -250,6 +207,7 @@ function base64_urldecode($str) {
  * @param string $key The config key.
  * @param string $default The default value if the config setting isn't available.
  * @return string The config value.
+ * @see config()
  */
 function c($key, $default) {
    return config($key, $default);
@@ -268,41 +226,20 @@ function c($key, $default) {
  *
  * @param string $key The config key.
  * @param string $default The default value if the config setting isn't available.
- * @return string The config value.
+ * @return mixed The config value.
  */
 function config($key, $default = null) {
     return Garden\Config::instance()->get($key, $default);
 }
 
 /**
- * Get the values of a column of data as an array.
- * This function is useful for grabbing the values of a column to generate an in clause for another query.
- *
- * @param data $data The data to grab the column from.
- * @param string $column
- * @return array The column values.
- *
- * @category Data Functions
- */
-function dataColumn($data, $column) {
-   $result = array();
-
-   foreach ($data as $row) {
-      if (!isset($row[$column]))
-         continue;
-
-      $result[$row[$column]] = 1;
-   }
-
-   return array_keys($result);
-}
-
-/**
  * Compare two dates formatted as either timestamps or strings.
  *
- * @param mixed $date1
- * @param mixed $date2
- * @return int
+ * @param mixed $date1 The first date to compare expressed as an integer timestamp or a string date.
+ * @param mixed $date2 The second date to compare expressed as an integer timestamp or a string date.
+ * @return int Returns `1` if {@link $date1} > {@link $date2}, `-1` if {@link $date1} > {@link $date2},
+ * or `0` if the two dates are equal.
+ * @category Date/Time Functions
  */
 function datecmp($date1, $date2) {
    if (is_numeric($date1))
@@ -337,7 +274,7 @@ function decho($value, $prefix = 'debug') {
 /**
  * Mark something as deprecated.
  *
- * Try using the following naming convention for names.
+ * When passing the {@link $name} argument, try using the following naming convention for names.
  *
  * - Functions: function_name()
  * - Classes: ClassName
@@ -345,14 +282,15 @@ function decho($value, $prefix = 'debug') {
  * - Instance methods: ClassName->methodName()
  *
  * @param string $name The name of the deprecated function.
- * @param string $new_name The name of the new function that should be used instead.
+ * @param string $newname The name of the new function that should be used instead.
  */
-function deprecated($name, $new_name = FALSE) {
-  $msg = $name.' is deprecated.';
-  if ($new_name)
-     $msg .= " Use $new_name instead.";
+function deprecated($name, $newname = '') {
+    $msg = $name.' is deprecated.';
+    if ($newname) {
+        $msg .= " Use $newname instead.";
+    }
 
-  trigger_error($msg, E_USER_DEPRECATED);
+    trigger_error($msg, E_USER_DEPRECATED);
 }
 
 /**
@@ -362,6 +300,7 @@ function deprecated($name, $new_name = FALSE) {
  * @param mixed $data The data to write. Can be either a string, an array or a stream resource.
  * @param int $mode The permissions to set on a new file.
  * @return boolean
+ * @category Filesystem Functions
  * @see http://php.net/file_put_contents
  */
 function file_put_contents_safe($filename, $data, $mode = 0644) {
@@ -391,7 +330,7 @@ function file_put_contents_safe($filename, $data, $mode = 0644) {
  * Force a value into a boolean.
  *
  * @param mixed $value The value to force.
- * @return boolean
+ * @return boolean Returns the boolean value of {@link $value}.
  */
 function force_bool($value) {
    if (is_string($value)) {
@@ -412,7 +351,7 @@ function force_bool($value) {
  * Force a value to be an integer.
  *
  * @param mixed $value The value to force.
- * @return int
+ * @return int Returns the integer value of {@link $value}.
  */
 function force_int($value) {
    if (is_string($value)) {
@@ -432,41 +371,35 @@ function force_int($value) {
    return intval($value);
 }
 
-/*
- * @ingroup querypath_core
- * @return \QueryPath\DOMQuery
- * @see qp()
- */
-function htmlqp($document = NULL, $selector = NULL, $options = array()) {
-    return QueryPath::withHTML($document, $selector, $options);
-}
-
 /**
- * Like implode() but joins array keys and values.
- * @param string $elemglue The string that seperates each element of the array.
- * @param string $keyglue The string that seperates keys and values.
+ * Like {@link implode()}, but joins array keys and values.
+ *
+ * @param string $elemglue The string that separates each element of the array.
+ * @param string $keyglue The string that separates keys and values.
  * @param array $pieces The array of strings to implode.
+ * @return string Returns the imploded array as a string.
  *
  * @category Array Functions
  * @category String Functions
  */
 function implode_assoc($elemglue, $keyglue, $pieces) {
-   $result = '';
+    $result = '';
 
-   foreach ($pieces as $key => $value) {
-      if ($result)
-         $result .= $elemglue;
+    foreach ($pieces as $key => $value) {
+        if ($result)
+            $result .= $elemglue;
 
-      $result .= $key.$keyglue.$value;
-   }
-   return $result;
+        $result .= $key.$keyglue.$value;
+    }
+    return $result;
 }
 
 /**
  * Finds whether the type given variable is a database id.
+ *
  * @param mixed $val The variable being evaluated.
  * @param bool $allow_slugs Whether or not slugs are allowed in the url.
- * @return bool Returns true if the variable is a database id or false if it isn't.
+ * @return bool Returns `true` if the variable is a database id or `false` if it isn't.
  */
 function is_id($val, $allow_slugs = false) {
    return is_numeric($val);
@@ -546,25 +479,14 @@ function pnormaldist($qn) {
    return -sqrt($w1 * $w3);
 }
 
-/*
- * @param mixed $document
- *  A document in one of the forms listed above.
- * @param string $string
- *  A CSS 3 selector.
- * @param array $options
- *  An associative array of options. Currently supported options are listed above.
- * @return \QueryPath\DOMQuery
- */
-function qp($document = NULL, $string = NULL, $options = array()) {
-    return QueryPath::with($document, $string, $options);
-}
-
 /**
  * Reflect the arguments on a callback and returns them as an associative array.
+ *
  * @param callback $callback A callback to the function.
  * @param array $args An array of arguments.
  * @param array $get An optional other array of arguments.
  * @return array The arguments in an associative array, in order ready to be passed to call_user_func_array().
+ * @throws Exception Throws an exception when {@link callback} isn't a valid callback.
  */
 function reflectArgs($callback, $args, $get = null) {
    $result = array();
@@ -633,6 +555,7 @@ function reflectArgs($callback, $args, $get = null) {
  * @param string $mainstr
  * @param string $substr
  * @return string
+ * @category String Functions
  */
 function rtrim_substr($mainstr, $substr) {
    if (strcasecmp(substr($mainstr, -strlen($substr)), $substr) === 0)
@@ -646,6 +569,7 @@ function saveConfig($path, $values, $val = null) {
    }
 
    // Load the config into a temporary array so we know what to save.
+   $array = [];
    loadConfig($path, $array);
 
    foreach ($values as $key => $value) {
@@ -671,6 +595,7 @@ function saveConfig($path, $values, $val = null) {
       case 'php':
          $php = '$'.$basename.' = '.var_export($array, true);
          file_put_contents($tmpPath, $php);
+         break;
       case 'ser':
          $ser = serialize($array);
          file_put_contents($tmpPath, $php);
@@ -686,6 +611,7 @@ function saveConfig($path, $values, $val = null) {
  * @param string $haystack The string to test.
  * @param string $needle The substring to test against.
  * @return bool Whether or not `$string` begins with `$with`.
+ * @category String Functions
  */
 function str_begins($haystack, $needle) {
    return strncasecmp($haystack, $needle, strlen($needle)) === 0;
@@ -698,6 +624,7 @@ function str_begins($haystack, $needle) {
  * @param string $haystack The string to test.
  * @param string $needle The substring to test against.
  * @return bool Whether or not `$string` ends with `$with`.
+ * @category String Functions
  */
 function str_ends($haystack, $needle) {
    return strcasecmp(substr($haystack, -strlen($needle)), $needle) === 0;
@@ -774,6 +701,8 @@ function timerStop($data = null) {
  *
  * @param string $dir The name of the directory.
  * @param int $mode The file permissions on the folder if it's created.
+ * @throws Exception Throws an exception with {@link $dir} is a file.
+ * @category Filesystem Functions
  */
 function touch_dir($dir, $mode = 0777) {
    if (!file_exists($dir)) {
@@ -789,6 +718,7 @@ function touch_dir($dir, $mode = 0777) {
  * @param string|int $key The array key to ensure.
  * @param array $array The array to modify.
  * @param mixed $default The default value to set if key does not exist.
+ * @category Array Functions
  */
 function touchval($key, &$array, $default) {
    if (!array_key_exists($key, $array))
@@ -809,6 +739,7 @@ function touchval($key, &$array, $default) {
  * @param array $array The array to get the value from.
  * @param mixed $default The default value to return if the key doesn't exist.
  * @return mixed The item from the array or `$default` if the array key doesn't exist.
+ * @category Array Functions
  */
 function val($key, array $array, $default = null) {
     // isset() is a micro-optimization - it is fast but fails for null values.
