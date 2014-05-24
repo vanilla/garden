@@ -36,8 +36,7 @@ if (!function_exists('array_column')) {
      * @return array
      * @category Array Functions
      */
-    function array_column($input = null, $columnKey = null, $indexKey = null)
-    {
+    function array_column($input = null, $columnKey = null, $indexKey = null) {
         // Using func_get_args() in order to check for proper number of
         // parameters and trigger errors exactly as the built-in array_column()
         // does in PHP 5.5.
@@ -50,7 +49,7 @@ if (!function_exists('array_column')) {
         }
 
         if (!is_array($params[0])) {
-            trigger_error('array_column() expects parameter 1 to be array, ' . gettype($params[0]) . ' given', E_USER_WARNING);
+            trigger_error('array_column() expects parameter 1 to be array, '.gettype($params[0]).' given', E_USER_WARNING);
             return null;
         }
 
@@ -75,14 +74,14 @@ if (!function_exists('array_column')) {
         }
 
         $paramsInput = $params[0];
-        $paramsColumnKey = ($params[1] !== null) ? (string) $params[1] : null;
+        $paramsColumnKey = ($params[1] !== null) ? (string)$params[1] : null;
 
         $paramsIndexKey = null;
         if (isset($params[2])) {
             if (is_float($params[2]) || is_int($params[2])) {
-                $paramsIndexKey = (int) $params[2];
+                $paramsIndexKey = (int)$params[2];
             } else {
-                $paramsIndexKey = (string) $params[2];
+                $paramsIndexKey = (string)$params[2];
             }
         }
 
@@ -95,7 +94,7 @@ if (!function_exists('array_column')) {
 
             if ($paramsIndexKey !== null && array_key_exists($paramsIndexKey, $row)) {
                 $keySet = true;
-                $key = (string) $row[$paramsIndexKey];
+                $key = (string)$row[$paramsIndexKey];
             }
 
             if ($paramsColumnKey === null) {
@@ -131,22 +130,22 @@ if (!function_exists('array_column')) {
  * @category Array Functions
  */
 function array_translate($array, $mappings) {
-  $array = (array)$array;
-  $result = array();
-  foreach ($mappings as $index => $value) {
-     if (is_numeric($index)) {
-        $key = $value;
-        $newkey = $value;
-     } else {
-        $key = $index;
-        $newkey = $value;
-     }
-     if (isset($array[$key]))
-        $result[$newkey] = $array[$key];
-     else
-        $result[$newkey] = NULL;
-  }
-  return $result;
+    $array = (array)$array;
+    $result = array();
+    foreach ($mappings as $index => $value) {
+        if (is_numeric($index)) {
+            $key = $value;
+            $newkey = $value;
+        } else {
+            $key = $index;
+            $newkey = $value;
+        }
+        if (isset($array[$key]))
+            $result[$newkey] = $array[$key];
+        else
+            $result[$newkey] = NULL;
+    }
+    return $result;
 }
 
 /**
@@ -210,7 +209,7 @@ function base64_urldecode($str) {
  * @see config()
  */
 function c($key, $default) {
-   return config($key, $default);
+    return config($key, $default);
 }
 
 //function checkRoute($className, $methodName, &$routed) {
@@ -242,22 +241,22 @@ function config($key, $default = null) {
  * @category Date/Time Functions
  */
 function datecmp($date1, $date2) {
-   if (is_numeric($date1))
-      $timestamp1 = $date1;
-   else
-      $timestamp1 = strtotime($date1);
+    if (is_numeric($date1))
+        $timestamp1 = $date1;
+    else
+        $timestamp1 = strtotime($date1);
 
-   if (is_numeric($date2))
-      $timestamp2 = $date2;
-   else
-      $timestamp2 = strtotime($date2);
+    if (is_numeric($date2))
+        $timestamp2 = $date2;
+    else
+        $timestamp2 = strtotime($date2);
 
-   if ($timestamp1 == $timestamp2)
-      return 0;
-   elseif ($timestamp1 > $timestamp2)
-      return 1;
-   else
-      return -1;
+    if ($timestamp1 == $timestamp2)
+        return 0;
+    elseif ($timestamp1 > $timestamp2)
+        return 1;
+    else
+        return -1;
 }
 
 /**
@@ -265,10 +264,10 @@ function datecmp($date1, $date2) {
  * @param type $prefix
  */
 function decho($value, $prefix = 'debug') {
-   if (PHP_SAPI === 'cli')
-      fwrite(STDERR, "$prefix: " . var_export($value, true) . "\n");
-   else
-      echo '<pre class="decho">'.$prefix.': '.htmlspecialchars(var_export($value, true)).'</pre>';
+    if (PHP_SAPI === 'cli')
+        fwrite(STDERR, "$prefix: ".var_export($value, true)."\n");
+    else
+        echo '<pre class="decho">'.$prefix.': '.htmlspecialchars(var_export($value, true)).'</pre>';
 }
 
 /**
@@ -333,18 +332,18 @@ function file_put_contents_safe($filename, $data, $mode = 0644) {
  * @return boolean Returns the boolean value of {@link $value}.
  */
 function force_bool($value) {
-   if (is_string($value)) {
-      switch (strtolower($value)) {
-         case 'disabled':
-         case 'false':
-         case 'no':
-         case 'off':
-         case '':
-            return false;
-      }
-      return true;
-   }
-   return (bool)$value;
+    if (is_string($value)) {
+        switch (strtolower($value)) {
+            case 'disabled':
+            case 'false':
+            case 'no':
+            case 'off':
+            case '':
+                return false;
+        }
+        return true;
+    }
+    return (bool)$value;
 }
 
 /**
@@ -354,21 +353,21 @@ function force_bool($value) {
  * @return int Returns the integer value of {@link $value}.
  */
 function force_int($value) {
-   if (is_string($value)) {
-      switch (strtolower($value)) {
-         case 'disabled':
-         case 'false':
-         case 'no':
-         case 'off':
-         case '':
-            return 0;
-         case 'true':
-         case 'yes':
-         case 'on':
-            return 1;
-      }
-   }
-   return intval($value);
+    if (is_string($value)) {
+        switch (strtolower($value)) {
+            case 'disabled':
+            case 'false':
+            case 'no':
+            case 'off':
+            case '':
+                return 0;
+            case 'true':
+            case 'yes':
+            case 'on':
+                return 1;
+        }
+    }
+    return intval($value);
 }
 
 /**
@@ -402,7 +401,7 @@ function implode_assoc($elemglue, $keyglue, $pieces) {
  * @return bool Returns `true` if the variable is a database id or `false` if it isn't.
  */
 function is_id($val, $allow_slugs = false) {
-   return is_numeric($val);
+    return is_numeric($val);
 }
 
 /**
@@ -415,9 +414,9 @@ function is_id($val, $allow_slugs = false) {
  * @category String Functions
  */
 function ltrim_substr($mainstr, $substr) {
-   if (strncasecmp($mainstr, $substr, strlen($substr)) === 0)
-      return substr($mainstr, strlen($substr));
-   return $mainstr;
+    if (strncasecmp($mainstr, $substr, strlen($substr)) === 0)
+        return substr($mainstr, strlen($substr));
+    return $mainstr;
 }
 
 /**
@@ -427,23 +426,23 @@ function ltrim_substr($mainstr, $substr) {
  * @return string The file extension without the dot.
  */
 function mime2ext($mime, $ext = null) {
-   static $known = array('text/plain' => 'txt', 'image/jpeg' => 'jpg');
-   $mime = strtolower($mime);
+    static $known = array('text/plain' => 'txt', 'image/jpeg' => 'jpg');
+    $mime = strtolower($mime);
 
-   if ($ext !== null) {
-      $known[$mime] = ltrim($ext, '.');
-   }
+    if ($ext !== null) {
+        $known[$mime] = ltrim($ext, '.');
+    }
 
-   if (array_key_exists($mime, $known))
-      return $known[$mime];
+    if (array_key_exists($mime, $known))
+        return $known[$mime];
 
-   // We don't know the mime type so we need to just return the second part as the extension.
-   $result = trim(strrchr($mime, '/'), '/');
+    // We don't know the mime type so we need to just return the second part as the extension.
+    $result = trim(strrchr($mime, '/'), '/');
 
-   if (substr($result, 0, 2) === 'x-')
-      $result = substr($result, 2);
+    if (substr($result, 0, 2) === 'x-')
+        $result = substr($result, 2);
 
-   return $result;
+    return $result;
 }
 
 /**
@@ -452,31 +451,31 @@ function mime2ext($mime, $ext = null) {
  * @return real
  */
 function pnormaldist($qn) {
-   $b = array(1.570796288, 0.03706987906, -0.8364353589e-3, -0.2250947176e-3, 0.6841218299e-5,
-      0.5824238515e-5, -0.104527497e-5, 0.8360937017e-7, -0.3231081277e-8, 0.3657763036e-10, 0.6936233982e-12);
+    $b = array(1.570796288, 0.03706987906, -0.8364353589e-3, -0.2250947176e-3, 0.6841218299e-5,
+        0.5824238515e-5, -0.104527497e-5, 0.8360937017e-7, -0.3231081277e-8, 0.3657763036e-10, 0.6936233982e-12);
 
-   if ($qn < 0.0 || 1.0 < $qn)
-      return 0.0;
+    if ($qn < 0.0 || 1.0 < $qn)
+        return 0.0;
 
-   if ($qn == 0.5)
-      return 0.0;
+    if ($qn == 0.5)
+        return 0.0;
 
-   $w1 = $qn;
+    $w1 = $qn;
 
-   if ($qn > 0.5)
-      $w1 = 1.0 - $w1;
+    if ($qn > 0.5)
+        $w1 = 1.0 - $w1;
 
-   $w3 = -log(4.0 * $w1 * (1.0 - $w1));
-   $w1 = $b[0];
+    $w3 = -log(4.0 * $w1 * (1.0 - $w1));
+    $w1 = $b[0];
 
-   for ($i = 1; $i <= 10; $i++) {
-      $w1 += $b[$i] * pow($w3, $i);
-   }
+    for ($i = 1; $i <= 10; $i++) {
+        $w1 += $b[$i] * pow($w3, $i);
+    }
 
-   if ($qn > 0.5)
-      return sqrt($w1 * $w3);
+    if ($qn > 0.5)
+        return sqrt($w1 * $w3);
 
-   return -sqrt($w1 * $w3);
+    return -sqrt($w1 * $w3);
 }
 
 /**
@@ -489,64 +488,64 @@ function pnormaldist($qn) {
  * @throws Exception Throws an exception when {@link callback} isn't a valid callback.
  */
 function reflectArgs($callback, $args, $get = null) {
-   $result = array();
+    $result = array();
 
-   if (is_string($callback) && !function_exists($callback))
-       throw new Exception("Function $callback does not exist");
+    if (is_string($callback) && !function_exists($callback))
+        throw new Exception("Function $callback does not exist");
 
-   if (is_array($callback) && !method_exists($callback[0], $callback[1]))
-       throw new Exception("Method {$callback[1]} does not exist.");
+    if (is_array($callback) && !method_exists($callback[0], $callback[1]))
+        throw new Exception("Method {$callback[1]} does not exist.");
 
-   if (is_array($get))
-       $args = array_merge($get, $args);
-   $args = array_change_key_case($args);
+    if (is_array($get))
+        $args = array_merge($get, $args);
+    $args = array_change_key_case($args);
 
-   if (is_string($callback) || is_a($callback, 'Closure')) {
-       $meth = new ReflectionFunction($callback);
-       $meth_name = $meth;
-   } else {
-       $meth = new ReflectionMethod($callback[0], $callback[1]);
-       if (is_string($callback[0])) {
-           $meth_name = $callback[0] . '::' . $meth->getName();
-       } else {
-           $meth_name = get_class($callback[0]) . '->' . $meth->getName();
-       }
-   }
+    if (is_string($callback) || is_a($callback, 'Closure')) {
+        $meth = new ReflectionFunction($callback);
+        $meth_name = $meth;
+    } else {
+        $meth = new ReflectionMethod($callback[0], $callback[1]);
+        if (is_string($callback[0])) {
+            $meth_name = $callback[0].'::'.$meth->getName();
+        } else {
+            $meth_name = get_class($callback[0]).'->'.$meth->getName();
+        }
+    }
 
-   $meth_params = $meth->getParameters();
+    $meth_params = $meth->getParameters();
 
-   $call_args = array();
-   $missing_args = array();
+    $call_args = array();
+    $missing_args = array();
 
-   // Set all of the parameters.
-   foreach ($meth_params as $index => $meth_param) {
-       $param_name = $meth_param->getName();
-       $param_namel = strtolower($param_name);
+    // Set all of the parameters.
+    foreach ($meth_params as $index => $meth_param) {
+        $param_name = $meth_param->getName();
+        $param_namel = strtolower($param_name);
 
-       if (isset($args[$param_namel]))
-           $param_value = $args[$param_namel];
-       elseif (isset($args[$index]))
-           $param_value = $args[$index];
-       elseif ($meth_param->isDefaultValueAvailable())
-           $param_value = $meth_param->getDefaultValue();
-       else {
-           $param_value = NULL;
-           $missing_args[] = '$' . $param_name;
-       }
+        if (isset($args[$param_namel]))
+            $param_value = $args[$param_namel];
+        elseif (isset($args[$index]))
+            $param_value = $args[$index];
+        elseif ($meth_param->isDefaultValueAvailable())
+            $param_value = $meth_param->getDefaultValue();
+        else {
+            $param_value = NULL;
+            $missing_args[] = '$'.$param_name;
+        }
 
-       $call_args[$param_name] = $param_value;
-   }
+        $call_args[$param_name] = $param_value;
+    }
 
-   // Add optional parameters so that methods that use get_func_args() will still work.
-   for ($index = count($call_args); array_key_exists($index, $args); $index++) {
-       $call_args[$index] = $args[$index];
-   }
+    // Add optional parameters so that methods that use get_func_args() will still work.
+    for ($index = count($call_args); array_key_exists($index, $args); $index++) {
+        $call_args[$index] = $args[$index];
+    }
 
-   if (count($missing_args) > 0) {
-       trigger_error("$meth_name() expects the following parameters: " . implode(', ', $missing_args) . '.', E_USER_NOTICE);
-   }
+    if (count($missing_args) > 0) {
+        trigger_error("$meth_name() expects the following parameters: ".implode(', ', $missing_args).'.', E_USER_NOTICE);
+    }
 
-   return $call_args;
+    return $call_args;
 }
 
 /**
@@ -558,49 +557,49 @@ function reflectArgs($callback, $args, $get = null) {
  * @category String Functions
  */
 function rtrim_substr($mainstr, $substr) {
-   if (strcasecmp(substr($mainstr, -strlen($substr)), $substr) === 0)
-      return substr($mainstr, 0, -strlen($substr));
-   return $mainstr;
+    if (strcasecmp(substr($mainstr, -strlen($substr)), $substr) === 0)
+        return substr($mainstr, 0, -strlen($substr));
+    return $mainstr;
 }
 
 function saveConfig($path, $values, $val = null) {
-   if (!is_array($values)) {
-      $values = array($values => $val);
-   }
+    if (!is_array($values)) {
+        $values = array($values => $val);
+    }
 
-   // Load the config into a temporary array so we know what to save.
-   $array = [];
-   loadConfig($path, $array);
+    // Load the config into a temporary array so we know what to save.
+    $array = [];
+    loadConfig($path, $array);
 
-   foreach ($values as $key => $value) {
-      if ($value === null)
-         unset($array[$key]);
-      else
-         $array[$key] = $value;
-   }
+    foreach ($values as $key => $value) {
+        if ($value === null)
+            unset($array[$key]);
+        else
+            $array[$key] = $value;
+    }
 
-   $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-   $basename = basename($path, $ext);
-   $tmpPath = tempnam(dirname($path), $basename);
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $basename = basename($path, $ext);
+    $tmpPath = tempnam(dirname($path), $basename);
 
-   switch ($ext) {
-      case 'ini':
-         $ini = ini_encode($array);
-         file_put_contents($tmpPath, $ini);
-         break;
-      case 'json':
-         $json = json_encode($array);
-         file_put_contents($tmpPath, $json);
-         break;
-      case 'php':
-         $php = '$'.$basename.' = '.var_export($array, true);
-         file_put_contents($tmpPath, $php);
-         break;
-      case 'ser':
-         $ser = serialize($array);
-         file_put_contents($tmpPath, $php);
-         break;
-   }
+    switch ($ext) {
+        case 'ini':
+            $ini = ini_encode($array);
+            file_put_contents($tmpPath, $ini);
+            break;
+        case 'json':
+            $json = json_encode($array);
+            file_put_contents($tmpPath, $json);
+            break;
+        case 'php':
+            $php = '$'.$basename.' = '.var_export($array, true);
+            file_put_contents($tmpPath, $php);
+            break;
+        case 'ser':
+            $ser = serialize($array);
+            file_put_contents($tmpPath, $ser);
+            break;
+    }
 
 }
 
@@ -614,7 +613,7 @@ function saveConfig($path, $values, $val = null) {
  * @category String Functions
  */
 function str_begins($haystack, $needle) {
-   return strncasecmp($haystack, $needle, strlen($needle)) === 0;
+    return strncasecmp($haystack, $needle, strlen($needle)) === 0;
 }
 
 /**
@@ -627,7 +626,7 @@ function str_begins($haystack, $needle) {
  * @category String Functions
  */
 function str_ends($haystack, $needle) {
-   return strcasecmp(substr($haystack, -strlen($needle)), $needle) === 0;
+    return strcasecmp(substr($haystack, -strlen($needle)), $needle) === 0;
 }
 
 $timers = array();
@@ -639,27 +638,27 @@ $timers = array();
  * @param string $name The name of the timer.
  */
 function timerStart($name) {
-   global $timers;
+    global $timers;
 
-   $str = '';
+    $str = '';
 
-   $count = count($timers);
+    $count = count($timers);
 
-   // Mark my parent timer as such so it knows how to format.
-   if ($count) {
-      if (!isset($timers[$count - 1]['parent'])) {
-         $timers[$count - 1]['parent'] = true;
-         $str .= "\n";
-      }
-   }
+    // Mark my parent timer as such so it knows how to format.
+    if ($count) {
+        if (!isset($timers[$count - 1]['parent'])) {
+            $timers[$count - 1]['parent'] = true;
+            $str .= "\n";
+        }
+    }
 
-   $timer = array('name' => $name, 'start' => microtime(true));
-   $timers[] = $timer;
+    $timer = array('name' => $name, 'start' => microtime(true));
+    $timers[] = $timer;
 
-   $str .= str_repeat('  ', $count).
-      "start $name";
+    $str .= str_repeat('  ', $count).
+        "start $name";
 
-   fwrite(STDERR, $str);
+    fwrite(STDERR, $str);
 }
 
 /**
@@ -668,32 +667,32 @@ function timerStart($name) {
  * @global array $timers All of the active timers.
  */
 function timerStop($data = null) {
-   global $timers;
+    global $timers;
 
-   $stop = microtime(true);
-   $timer = array_pop($timers);
+    $stop = microtime(true);
+    $timer = array_pop($timers);
 
-   if ($timer) {
-      $timespan = $stop - $timer['start'];
+    if ($timer) {
+        $timespan = $stop - $timer['start'];
 
-      if (isset($timer['parent'])) {
-         // This was a nested timer.
-         $str = str_repeat('  ', count($timers)).
-            "stop {$timer['name']}...".formatTimespan($timespan);
-         fwrite(STDERR, $str);
-      } else {
-         // Not a nested timer.
-         fwrite(STDERR, '...'.formatTimespan($timespan));
-      }
+        if (isset($timer['parent'])) {
+            // This was a nested timer.
+            $str = str_repeat('  ', count($timers)).
+                "stop {$timer['name']}...".formatTimespan($timespan);
+            fwrite(STDERR, $str);
+        } else {
+            // Not a nested timer.
+            fwrite(STDERR, '...'.formatTimespan($timespan));
+        }
 
-      if (is_array($data) && count($data))
-         fwrite(STDERR, ' '.implode_assoc(', ', ': ', $data));
+        if (is_array($data) && count($data))
+            fwrite(STDERR, ' '.implode_assoc(', ', ': ', $data));
 
-      fwrite(STDERR, "\n");
-   } else {
-      // This really is an error, but probably isn't worth taking out the entire script for.
-      trigger_error("timerStop() called without calling timerStart() first.", E_USER_NOTICE);
-   }
+        fwrite(STDERR, "\n");
+    } else {
+        // This really is an error, but probably isn't worth taking out the entire script for.
+        trigger_error("timerStop() called without calling timerStart() first.", E_USER_NOTICE);
+    }
 }
 
 /**
@@ -705,11 +704,11 @@ function timerStop($data = null) {
  * @category Filesystem Functions
  */
 function touch_dir($dir, $mode = 0777) {
-   if (!file_exists($dir)) {
-      mkdir($dir, $mode, true);
-   } elseif (!is_dir($dir)) {
-      throw new Exception("The specified directory already exists as a file. ($dir)", 400);
-   }
+    if (!file_exists($dir)) {
+        mkdir($dir, $mode, true);
+    } elseif (!is_dir($dir)) {
+        throw new Exception("The specified directory already exists as a file. ($dir)", 400);
+    }
 }
 
 /**
@@ -721,8 +720,8 @@ function touch_dir($dir, $mode = 0777) {
  * @category Array Functions
  */
 function touchval($key, &$array, $default) {
-   if (!array_key_exists($key, $array))
-      $array[$key] = $default;
+    if (!array_key_exists($key, $array))
+        $array[$key] = $default;
 }
 
 /**
@@ -756,28 +755,28 @@ function val($key, array $array, $default = null) {
 }
 
 /**
-* Return the value from an associative array.
-* This function differs from val() in that $key can be an array that will be used to walk a nested array.
-*
-* @param string $keys The key or property name of the value.
-* @param mixed $array The array or object to search.
-* @param mixed $default The value to return if the key does not exist.
-* @return mixed The value from the array or object.
-*/
+ * Return the value from an associative array.
+ * This function differs from val() in that $key can be an array that will be used to walk a nested array.
+ *
+ * @param string $keys The key or property name of the value.
+ * @param mixed $array The array or object to search.
+ * @param mixed $default The value to return if the key does not exist.
+ * @return mixed The value from the array or object.
+ */
 function vvalr($keys, array $array, $default = null) {
-  $value = $array;
-  for($i = 0; $i < count($keys); ++$i) {
-     $SubKey = $keys[$i];
+    $value = $array;
+    for ($i = 0; $i < count($keys); ++$i) {
+        $SubKey = $keys[$i];
 
-     if(is_array($value) && isset($value[$SubKey])) {
-        $value = $value[$SubKey];
-     } elseif(is_object($value) && isset($value->$SubKey)) {
-        $value = $value->$SubKey;
-     } else {
-        return $default;
-     }
-  }
-  return $value;
+        if (is_array($value) && isset($value[$SubKey])) {
+            $value = $value[$SubKey];
+        } elseif (is_object($value) && isset($value->$SubKey)) {
+            $value = $value->$SubKey;
+        } else {
+            return $default;
+        }
+    }
+    return $value;
 }
 
 /**
@@ -791,10 +790,10 @@ function vvalr($keys, array $array, $default = null) {
  * @return mixed Either `$trueValue` or `$falseValue`.
  */
 function valif($key, $array, $trueValue, $falseValue = null, $default = false) {
-   if (!array_key_exists($key, $array))
-      return $default ? $trueValue : $falseValue;
-   elseif ($array[$key])
-      return $trueValue;
-   else
-      return $falseValue;
+    if (!array_key_exists($key, $array))
+        return $default ? $trueValue : $falseValue;
+    elseif ($array[$key])
+        return $trueValue;
+    else
+        return $falseValue;
 }
