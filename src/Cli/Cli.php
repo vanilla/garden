@@ -230,11 +230,11 @@ class Cli {
         if ($argc = count($argv)) {
             // Get possible command.
             if (substr($argv[0], 0, 1) != '-') {
+                $arg0 = array_shift($argv);
                 if ($hasCommand) {
-                    $parsed->command($argv[0]);
-                    array_shift($argv);
+                    $parsed->command($arg0);
                 } else {
-                    $parsed->addArg($argv[0]);
+                    $parsed->addArg($arg0);
                 }
             }
 
@@ -309,6 +309,7 @@ class Cli {
         $command = $args->command();
         $valid = new Args($command);
         $schema = $this->getSchema($command);
+        $meta = $schema['__meta'];
         unset($schema['__meta']);
         $opts = $args->opts();
         $missing = [];
@@ -319,6 +320,8 @@ class Cli {
             $isValid = false;
         }
 
+        // Add the args.
+        $valid->args($args->args());
 
         foreach ($schema as $key => $definition) {
             // No Parameter (default)
