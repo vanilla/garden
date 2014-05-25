@@ -562,11 +562,13 @@ function rtrim_substr($mainstr, $substr) {
     return $mainstr;
 }
 
-function saveConfig($path, $values, $val = null) {
-    if (!is_array($values)) {
-        $values = array($values => $val);
-    }
-
+/**
+ * Saves an array of configuration values to a given {@link $path}.
+ * @param string $path The path to save to.
+ * @param array $values The values to save to the config file.
+ * @throws Exception Throws an exception when the file specified by {@link $path} is not a recognized file format.
+ */
+function saveConfig($path, $values) {
     // Load the config into a temporary array so we know what to save.
     $array = [];
     loadConfig($path, $array);
@@ -583,10 +585,6 @@ function saveConfig($path, $values, $val = null) {
     $tmpPath = tempnam(dirname($path), $basename);
 
     switch ($ext) {
-        case 'ini':
-            $ini = ini_encode($array);
-            file_put_contents($tmpPath, $ini);
-            break;
         case 'json':
             $json = json_encode($array);
             file_put_contents($tmpPath, $json);
@@ -599,8 +597,10 @@ function saveConfig($path, $values, $val = null) {
             $ser = serialize($array);
             file_put_contents($tmpPath, $ser);
             break;
+        default:
+            throw new Exception("Unknown file type: $ext.", 422);
     }
-
+    rename($tmpPath, $path);
 }
 
 /**
@@ -703,7 +703,7 @@ function timerStop($data = null) {
  * @throws Exception Throws an exception with {@link $dir} is a file.
  * @category Filesystem Functions
  */
-function touch_dir($dir, $mode = 0777) {
+function touchdir($dir, $mode = 0777) {
     if (!file_exists($dir)) {
         mkdir($dir, $mode, true);
     } elseif (!is_dir($dir)) {
@@ -762,8 +762,13 @@ function val($key, array $array, $default = null) {
  * @param mixed $array The array or object to search.
  * @param mixed $default The value to return if the key does not exist.
  * @return mixed The value from the array or object.
+ * @category Array Functions
  */
-function vvalr($keys, array $array, $default = null) {
+function valr($keys, array $array, $default = null) {
+    if (is_string($keys)) {
+        $keys = explode('.', $keys);
+    }
+
     $value = $array;
     for ($i = 0; $i < count($keys); ++$i) {
         $SubKey = $keys[$i];
@@ -777,23 +782,4 @@ function vvalr($keys, array $array, $default = null) {
         }
     }
     return $value;
-}
-
-/**
- * Look up an item in an array and return a different value depending on whether or not that value is true/false.
- *
- * @param string|int $key The key of the array.
- * @param array $array The array to look at.
- * @param mixed $trueValue The value to return if we have true.
- * @param mixed $falseValue The value to return if we have true.
- * @param bool $default The default value of the key isn't in the array.
- * @return mixed Either `$trueValue` or `$falseValue`.
- */
-function valif($key, $array, $trueValue, $falseValue = null, $default = false) {
-    if (!array_key_exists($key, $array))
-        return $default ? $trueValue : $falseValue;
-    elseif ($array[$key])
-        return $trueValue;
-    else
-        return $falseValue;
 }
