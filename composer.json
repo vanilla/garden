@@ -3,7 +3,7 @@
    "description": "The garden framework.",
    "type": "library",
    "keywords": ["vanilla", "garden", "framework", "vanilla forums", "php"],
-   "license": "LGPL-2.1",
+   "license": "MIT",
    "authors": [
       { "name": "Todd Burry", "email": "todd@vanillaforums.com", "role": "developer" },
       { "name": "Tim Gunter", "email": "tim@vanillaforums.com", "role": "developer" }
