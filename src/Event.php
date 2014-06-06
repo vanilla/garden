@@ -143,7 +143,7 @@ class Event {
                 // TODO: Make the instance lazy load.
                 $instance = call_user_func(array($class, 'instance'));
             } else {
-                throw new \InvalidArgumentException('Event::bindClass(): The class for argument #1 must have an instance() method or be passed as an object.', 500);
+                throw new \InvalidArgumentException('Event::bindClass(): The class for argument #1 must have an instance() method or be passed as an object.', 422);
             }
         } else {
             $instance = $class;
