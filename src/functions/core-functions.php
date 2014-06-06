@@ -229,8 +229,8 @@ function averageRating($positive, $total, $confidence = 0.95) {
  * @param string $str The string to encode.
  * @return string The encoded string.
  */
-function base64_urlencode($str) {
-    return strtr(base64_encode($str), '+/', '-_');
+function base64url_encode($str) {
+    return trim(strtr(base64_encode($str), '+/', '-_'), '=');
 }
 
 /**
@@ -239,7 +239,7 @@ function base64_urlencode($str) {
  * @param string $str The encoded string.
  * @return string The decoded string.
  */
-function base64_urldecode($str) {
+function base64url_decode($str) {
     return base64_decode(strtr($str, '-_', '+/'));
 }
 
