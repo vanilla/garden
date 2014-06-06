@@ -5,9 +5,9 @@
  * @license MIT
  */
 
-namespace Garden\Cookie\Tests;
+namespace Garden\Security\Tests;
 
-use Garden\Cookie\SecureCookie;
+use Garden\Security\SecureCookie;
 
 
 class BasicTest extends \PHPUnit_Framework_TestCase {
@@ -142,7 +142,8 @@ class BasicTest extends \PHPUnit_Framework_TestCase {
      */
     public function testExpiredSession() {
         $cookie = $this->createCookie();
-        $encoded = $cookie->encode('data', time() - $cookie->maxAge - 10);
+        $encoded = $cookie->encode('data');
+        $encoded = $cookie->twiddle($encoded, 1, time() - $cookie->maxAge - 10);
 
         $decoded = $cookie->decode($encoded, false);
         $this->assertFalse($decoded);

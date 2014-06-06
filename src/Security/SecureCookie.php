@@ -5,7 +5,7 @@
  * @license MIT
  */
 
-namespace Garden\Cookie;
+namespace Garden\Security;
 
 /**
  * A class for creating secure cookie payloads based on SCS: KoanLogic's Secure Cookie Sessions for HTTP (rfc6896).
@@ -92,18 +92,18 @@ class SecureCookie {
      * Encode a piece of data into the secure cookie format.
      *
      * @param mixed $data The data to encode.
-     * @param int $timestamp Set a specific timestamp to stamp the cookie or pass 0 to use the current time.
+     * @param bool $throw Whether or not to throw an exception or return false on error.
      * @return string Returns the encoded cookie as a string.
      */
-    public function encode($data, $timestamp = 0, $throw = true) {
+    public function encode($data, $throw = true) {
         if (!$this->encryptionKey || !$this->signatureKey) {
             return $this->exception($throw, 'Missing the encryption key or signature key.', 400);
         }
 
-
+        // We're using aod
         $IV = openssl_random_pseudo_bytes(openssl_cipher_iv_length($this->cipher));
         $eIV = self::base64urlEncode($IV);
-        $eATIME = static::base64urlEncode(dechex($timestamp ? $timestamp : time()));
+        $eATIME = static::base64urlEncode(time());
         $eDATA = $this->encrypt($data, $IV, true);
 
         $TID = $this->cipher;
@@ -134,7 +134,7 @@ class SecureCookie {
 
         // Verify that the cookie has enough parts.
         if (count($parts) !== 5) {
-            return $this->exception($throw, 'Cookie does not have enough parts.', 400);
+            return $this->exception($throw, 'Cookie does not have the correct parts.', 400);
         }
 
         list($eDATA, $eATIME, $eTID, $eIV, $eAUTHTAG) = $parts;
@@ -152,7 +152,7 @@ class SecureCookie {
         }
 
         // Verify that the session hasn't timed out.
-        $timestamp = hexdec(static::base64urlDecode($eATIME));
+        $timestamp = (int)static::base64urlDecode($eATIME);
         if (time() - $timestamp > $this->maxAge) {
             return $this->exception($throw, 'Session expired.', 401);
         }
@@ -218,7 +218,11 @@ class SecureCookie {
      */
     public function twiddle($cookie, $index, $value, $resign = true) {
         $parts = explode(static::SEP, $cookie);
-        $parts[$index] = static::base64urlEncode($value);
+        if ($index == 1 && is_int($value)) {
+            $parts[$index] = static::base64urlEncode($value);
+        } else {
+            $parts[$index] = static::base64urlEncode($value);
+        }
 
         if ($resign) {
             array_pop($parts);
