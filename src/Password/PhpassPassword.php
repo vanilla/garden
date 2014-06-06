@@ -13,7 +13,7 @@ namespace Garden\Password;
  * The code in this class is copied from the phppass library version 0.3 located at http://www.openwall.com/phpass/.
  * Any code copied from the phppass library is copyright the original owner.
  */
-class PhpPassPassword implements IPassword {
+class PhpassPassword implements IPassword {
     protected $itoa64;
     protected $iteration_count_log2;
     protected $portable;
