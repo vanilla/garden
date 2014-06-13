@@ -19,6 +19,8 @@ abstract class Route {
     public static function create($pattern, $callback) {
         if (is_callable($callback)) {
             $route = new UrlRoute($pattern, $callback);
+        } elseif (str_begins($pattern, '/api/')) {
+            $route = new ResourceRoute($pattern, $callback);
         } else {
             $route = new ControllerRoute($pattern, $callback); // callback is ControllerRoute->controllers()
         }
@@ -28,17 +30,20 @@ abstract class Route {
     /**
      * Dispatch the route.
      *
-     * @param array $args The args to pass to the dispatch.
+     * @param array &$args The args to pass to the dispatch.
      * These are the arguments returned from {@link Route::matches()}.
      */
-    public abstract function dispatch(array $args);
+    abstract public function dispatch(array &$args);
 
     /**
      * Try matching a route to a request.
+     *
+     * @param Request $request The request to match the route with.
+     * @param Application $app The application instantiating the route.
      * @return array|null Whether or not the route matches the request.
      * If the route matches an array of args is returned, otherwise the function returns null.
      */
-    public abstract function matches(Request $request, Application $app);
+    abstract public function matches(Request $request, Application $app);
 
     public function pattern($pattern = null) {
         if ($pattern !== null) {

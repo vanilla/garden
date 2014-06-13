@@ -1,4 +1,9 @@
 <?php
+/**
+ * @author Todd Burry <todd@vanillaforums.com>
+ * @copyright 2009-2014 Vanilla Forums Inc.
+ * @license MIT
+ */
 
 namespace Garden;
 
@@ -133,11 +138,12 @@ class Event {
      *
      * @param mixed $class The class name or an object instance.
      * @param int $priority The priority of the event.
+     * @throws \InvalidArgumentException Throws an exception when binding to a class name with no `instance()` method.
      */
     public static function bindClass($class, $priority = self::PRIORITY_MEDIUM) {
         $method_names = get_class_methods($class);
 
-        // Grab a instance of the class so there is something to bind to.
+        // Grab an instance of the class so there is something to bind to.
         if (is_string($class)) {
             if (method_exists($class, 'instance')) {
                 // TODO: Make the instance lazy load.
@@ -150,8 +156,9 @@ class Event {
         }
 
         foreach ($method_names as $method_name) {
-            if (strpos($method_name, '_') === false)
+            if (strpos($method_name, '_') === false) {
                 continue;
+            }
 
             $parts = explode('_', strtolower($method_name));
             $event_name = '';
@@ -179,11 +186,10 @@ class Event {
      * Dumps all of the bound handlers.
      *
      * This method is meant for debugging.
+     *
      * @return array Returns an array of all handlers indexed by event name.
      */
     public static function dumpHandlers() {
-//        return self::$handlers;
-
         $result = array();
 
         foreach (self::$handlers as $event_name => $nested) {
@@ -202,8 +208,9 @@ class Event {
      */
     public static function fire($event) {
         $handlers = self::getHandlers($event);
-        if ($handlers === false)
+        if (!$handlers) {
             return 0;
+        }
 
         // Grab the handlers and call them.
         $args = array_slice(func_get_args(), 1);
@@ -218,6 +225,7 @@ class Event {
 
     /**
      * Chain several event handlers together.
+     *
      * This method will fire the first handler and pass its result as the first argument
      * to the next event handler and so on. A chained event handler can have more than one parameter,
      * but must have at least one parameter.
@@ -228,8 +236,9 @@ class Event {
      */
     public static function fireFilter($event, $value) {
         $handlers = self::getHandlers($event);
-        if ($handlers === false)
+        if (!$handlers) {
             return $value;
+        }
 
         $args = array_slice(func_get_args(), 1);
         foreach ($handlers as $callbacks) {
@@ -283,14 +292,15 @@ class Event {
     /**
      * Get all of the handlers bound to an event.
      *
-     * @param string $name
-     * @return boolean
+     * @param string $name The name of the event.
+     * @return array Returns the handlers that are watching {@link $name}.
      */
     public static function getHandlers($name) {
         $name = strtolower($name);
 
-        if (!isset(self::$handlers[$name]))
-            return false;
+        if (!isset(self::$handlers[$name])) {
+            return [];
+        }
 
         // See if the handlers need to be sorted.
         if (isset(self::$toSort[$name])) {
@@ -318,7 +328,8 @@ class Event {
      * @param mixed $object An object instance or a class name.
      * @param string $method_name The method name.
      * @param bool $only_events Whether or not to only check events.
-     * @return boolean Returns `true` if the method given by method_name has been defined for the given object, `false` otherwise.
+     * @return boolean Returns `true` if the method given by method_name has been defined for the given object,
+     * `false` otherwise.
      * @see http://ca1.php.net/manual/en/function.method-exists.php
      */
     public static function methodExists($object, $method_name, $only_events = false) {
