@@ -119,6 +119,99 @@ if (!function_exists('array_column')) {
     }
 }
 
+/**
+ * Load configuration data from a file into an array.
+ *
+ * @param string $path The path to load the file from.
+ * @param string $php_var The name of the php variable to load from if using the php file type.
+ * @return array The configuration data.
+ * @throws InvalidArgumentException Throws an exception when the file type isn't supported.
+ */
+function array_load($path, $php_var = 'config') {
+    if (!file_exists($path))
+        return array();
+
+    // Get the extension of the file, but allow for .ini.php, .json.php etc.
+    $ext = strstr(basename($path), '.');
+
+    switch ($ext) {
+//            case '.ini':
+//            case '.ini.php':
+//                $loaded = parse_ini_file($path, false, INI_SCANNER_RAW);
+//                break;
+        case '.json':
+        case '.json.php':
+            $loaded = json_decode(file_get_contents($path), true);
+            break;
+        case '.php':
+            include $path;
+            $loaded = $$php_var;
+            break;
+        case '.ser':
+        case '.ser.php':
+            $loaded = unserialize(file_get_contents($path));
+            break;
+        case '.yml':
+        case '.yml.php':
+            $loaded = yaml_parse_file($path);
+            break;
+        default:
+            throw new InvalidArgumentException("Invalid config extension $ext on $path.", 400);
+    }
+    return $loaded;
+}
+
+/**
+ * Save an array of data to a specified path.
+ *
+ * @param array $data The data to save.
+ * @param string $path The path to save to.
+ * @param string $php_var The name of the php variable to load from if using the php file type.
+ * @return bool Returns true if the save was successful or false otherwise.
+ * @throws InvalidArgumentException Throws an exception when the file type isn't supported.
+ */
+function array_save($data, $path, $php_var = 'config') {
+    if (!is_array($data)) {
+        throw new \InvalidArgumentException('Config::saveArray(): Argument #1 is not an array.', 400);
+    }
+
+    // Get the extension of the file, but allow for .ini.php, .json.php etc.
+    $ext = strstr(basename($path), '.');
+
+    switch ($ext) {
+//            case '.ini':
+//            case '.ini.php':
+//                $ini = static::iniEncode($config);
+//                $result = file_put_contents_safe($path, $ini);
+//                break;
+        case '.json':
+        case '.json.php':
+            if (defined('JSON_PRETTY_PRINT')) {
+                $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            } else {
+                $json = json_encode($data);
+            }
+            $result = file_put_contents_safe($path, $json);
+            break;
+        case '.php':
+            $php = "<?php\n".static::phpEncode($data, $php_var)."\n";
+            $result = file_put_contents_safe($path, $php);
+            break;
+        case '.ser':
+        case '.ser.php':
+            $ser = serialize($data);
+            $result = file_put_contents_safe($path, $ser);
+            break;
+        case '.yml':
+        case '.yml.php':
+            $yml = yaml_emit($data, YAML_UTF8_ENCODING, YAML_LN_BREAK);
+            $result = file_put_contents_safe($path, $yml);
+            break;
+        default:
+            throw new \InvalidArgumentException("Invalid config extension $ext on $path.", 400);
+    }
+    return $result;
+}
 
 /**
  * Take all of the items in an array and make a new array with them specified by mappings.

@@ -68,8 +68,10 @@ class Config {
 
     /**
      * Get a setting from the config.
+     *
      * @param string $key The config key.
      * @param mixed $default The default value if the config file doesn't exist.
+     * @return mixed The value at {@link $key} or {@link $default} if the key isn't found.
      * @see \config()
      */
     public function get($key, $default = null) {
@@ -137,47 +139,6 @@ class Config {
     }
 
     /**
-     * Load configuration data from a file into an array.
-     *
-     * @param string $path The path to load the file from.
-     * @param string $php_var The name of the php variable to load from if using the php file type.
-     * @return array The configuration data.
-     */
-    public static function loadArray($path, $php_var = 'config') {
-        if (!file_exists($path))
-            return array();
-
-        // Get the extension of the file, but allow for .ini.php, .json.php etc.
-        $ext = strstr(basename($path), '.');
-
-        switch ($ext) {
-//            case '.ini':
-//            case '.ini.php':
-//                $loaded = parse_ini_file($path, false, INI_SCANNER_RAW);
-//                break;
-            case '.json':
-            case '.json.php':
-                $loaded = json_decode(file_get_contents($path), true);
-                break;
-            case '.php':
-                include $path;
-                $loaded = $$php_var;
-                break;
-            case '.ser':
-            case '.ser.php':
-                $loaded = unserialize(file_get_contents($path));
-                break;
-            case '.yml':
-            case '.yml.php':
-                $loaded = yaml_parse_file($path);
-                break;
-            default:
-                throw new \InvalidArgumentException("Invalid config extension $ext on $path.", 400);
-        }
-        return $loaded;
-    }
-
-    /**
      * Load configuration data from a file.
      * @param string $path An optional path to load the file from.
      * @param string $path If true the config will be put under the current config, not over it.
@@ -188,10 +149,11 @@ class Config {
             $path = $this->defaultPath;
         }
 
-        $loaded = static::loadArray($path, $php_var);
+        $loaded = array_load($path, $php_var);
 
-        if (empty($loaded))
+        if (empty($loaded)) {
             return;
+        }
 
         if ($underlay) {
             $this->data = array_replace($loaded, $this->data);
@@ -252,69 +214,17 @@ class Config {
         }
 
         // Load the current config information so we know what to replace.
-        $config = static::loadArray($path, $php_var);
+        $config = array_load($path, $php_var);
         // Merge the new config into the current config.
         $config = array_replace($config, $data);
         // Remove null config values.
-        $config = array_filter($config, function($value) {
+        $config = array_filter($config, function ($value) {
             return $value !== null;
         });
 
         ksort($config, SORT_NATURAL | SORT_FLAG_CASE);
 
-        $result = static::saveArray($config, $path, $php_var);
-        return $result;
-    }
-
-
-    /**
-     * Save an array of data to a specified path.
-     *
-     * @param array $data The data to save.
-     * @param string $path The path to save to.
-     * @param string $php_var The name of the php variable to load from if using the php file type.
-     * @return bool Returns true if the save was successful or false otherwise.
-     */
-    public static function saveArray($data, $path, $php_var = 'config') {
-        if (!is_array($data)) {
-            throw new \InvalidArgumentException('Config::saveArray(): Argument #1 is not an array.', 400);
-        }
-
-        // Get the extension of the file, but allow for .ini.php, .json.php etc.
-        $ext = strstr(basename($path), '.');
-
-        switch ($ext) {
-//            case '.ini':
-//            case '.ini.php':
-//                $ini = static::iniEncode($config);
-//                $result = file_put_contents_safe($path, $ini);
-//                break;
-            case '.json':
-            case '.json.php':
-                if (defined('JSON_PRETTY_PRINT')) {
-                    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-                } else {
-                    $json = json_encode($data);
-                }
-                $result = file_put_contents_safe($path, $json);
-                break;
-            case '.php':
-                $php = "<?php\n".static::phpEncode($data, $php_var)."\n";
-                $result = file_put_contents_safe($path, $php);
-                break;
-            case '.ser':
-            case '.ser.php':
-                $ser = serialize($data);
-                $result = file_put_contents_safe($path, $ser);
-                break;
-            case '.yml':
-            case '.yml.php':
-                $yml = yaml_emit($data, YAML_UTF8_ENCODING, YAML_LN_BREAK);
-                $result = file_put_contents_safe($path, $yml);
-                break;
-            default:
-                throw new \InvalidArgumentException("Invalid config extension $ext on $path.", 400);
-        }
+        $result = array_save($config, $path, $php_var);
         return $result;
     }
 }
