@@ -2,8 +2,7 @@
 /**
  * @author Todd Burry <todd@vanillaforums.com>
  * @copyright 2009-2014 Vanilla Forums Inc.
- * @package Garden Framework
- * @subpackage Core Functions
+ * @license MIT
  */
 
 /**
@@ -16,106 +15,116 @@
  * @license http://opensource.org/licenses/MIT MIT
  */
 
-if (!function_exists('array_column')) {
+/**
+ * Returns the values from a single column of the input array, identified by the $columnKey.
+ *
+ * Optionally, you may provide an $indexKey to index the values in the returned
+ * array by the values from the $indexKey column in the input array.
+ *
+ * @param array $input A multi-dimensional array (record set) from which to pull
+ *                     a column of values.
+ * @param mixed $columnKey The column of values to return. This value may be the
+ *                         integer key of the column you wish to retrieve, or it
+ *                         may be the string key name for an associative array.
+ * @param mixed $indexKey The column to use as the index/keys for
+ *                        the returned array. This value may be the integer key
+ *                        of the column, or it may be the string key name.
+ * @return array
+ * @category Array Functions
+ */
+function array_column_php($input = null, $columnKey = null, $indexKey = null) {
+    // Using func_get_args() in order to check for proper number of
+    // parameters and trigger errors exactly as the built-in array_column()
+    // does in PHP 5.5.
+    $argc = func_num_args();
+    $params = func_get_args();
 
+    if ($argc < 2) {
+        trigger_error("array_column() expects at least 2 parameters, {$argc} given", E_USER_WARNING);
+        return null;
+    }
+
+    if (!is_array($params[0])) {
+        trigger_error('array_column() expects parameter 1 to be array, '.gettype($params[0]).' given', E_USER_WARNING);
+        return null;
+    }
+
+    if (!is_int($params[1])
+        && !is_float($params[1])
+        && !is_string($params[1])
+        && $params[1] !== null
+        && !(is_object($params[1]) && method_exists($params[1], '__toString'))
+    ) {
+        trigger_error('array_column(): The column key should be either a string or an integer', E_USER_WARNING);
+        return false;
+    }
+
+    if (isset($params[2])
+        && !is_int($params[2])
+        && !is_float($params[2])
+        && !is_string($params[2])
+        && !(is_object($params[2]) && method_exists($params[2], '__toString'))
+    ) {
+        trigger_error('array_column(): The index key should be either a string or an integer', E_USER_WARNING);
+        return false;
+    }
+
+    $paramsInput = $params[0];
+    $paramsColumnKey = ($params[1] !== null) ? (string)$params[1] : null;
+
+    $paramsIndexKey = null;
+    if (isset($params[2])) {
+        if (is_float($params[2]) || is_int($params[2])) {
+            $paramsIndexKey = (int)$params[2];
+        } else {
+            $paramsIndexKey = (string)$params[2];
+        }
+    }
+
+    $resultArray = array();
+
+    foreach ($paramsInput as $row) {
+
+        $key = $value = null;
+        $keySet = $valueSet = false;
+
+        if ($paramsIndexKey !== null && array_key_exists($paramsIndexKey, $row)) {
+            $keySet = true;
+            $key = (string)$row[$paramsIndexKey];
+        }
+
+        if ($paramsColumnKey === null) {
+            $valueSet = true;
+            $value = $row;
+        } elseif (is_array($row) && array_key_exists($paramsColumnKey, $row)) {
+            $valueSet = true;
+            $value = $row[$paramsColumnKey];
+        }
+
+        if ($valueSet) {
+            if ($keySet) {
+                $resultArray[$key] = $value;
+            } else {
+                $resultArray[] = $value;
+            }
+        }
+
+    }
+
+    return $resultArray;
+}
+
+if (!function_exists('array_column')) {
     /**
-     * Returns the values from a single column of the input array, identified by
-     * the $columnKey.
+     * A custom implementation of array_column for older versions of php.
      *
-     * Optionally, you may provide an $indexKey to index the values in the returned
-     * array by the values from the $indexKey column in the input array.
-     *
-     * @param array $input A multi-dimensional array (record set) from which to pull
-     *                     a column of values.
-     * @param mixed $columnKey The column of values to return. This value may be the
-     *                         integer key of the column you wish to retrieve, or it
-     *                         may be the string key name for an associative array.
-     * @param mixed $indexKey (Optional.) The column to use as the index/keys for
-     *                        the returned array. This value may be the integer key
-     *                        of the column, or it may be the string key name.
-     * @return array
-     * @category Array Functions
+     * @param array|null $input The dataset to test.
+     * @param int|string|null $columnKey The column of values to return.
+     * @param int|string|null $indexKey The column to use as the index/keys for the returned array.
+     * @return array Returns the columns from the {@link $input} array.
      */
     function array_column($input = null, $columnKey = null, $indexKey = null) {
-        // Using func_get_args() in order to check for proper number of
-        // parameters and trigger errors exactly as the built-in array_column()
-        // does in PHP 5.5.
-        $argc = func_num_args();
-        $params = func_get_args();
-
-        if ($argc < 2) {
-            trigger_error("array_column() expects at least 2 parameters, {$argc} given", E_USER_WARNING);
-            return null;
-        }
-
-        if (!is_array($params[0])) {
-            trigger_error('array_column() expects parameter 1 to be array, '.gettype($params[0]).' given', E_USER_WARNING);
-            return null;
-        }
-
-        if (!is_int($params[1])
-            && !is_float($params[1])
-            && !is_string($params[1])
-            && $params[1] !== null
-            && !(is_object($params[1]) && method_exists($params[1], '__toString'))
-        ) {
-            trigger_error('array_column(): The column key should be either a string or an integer', E_USER_WARNING);
-            return false;
-        }
-
-        if (isset($params[2])
-            && !is_int($params[2])
-            && !is_float($params[2])
-            && !is_string($params[2])
-            && !(is_object($params[2]) && method_exists($params[2], '__toString'))
-        ) {
-            trigger_error('array_column(): The index key should be either a string or an integer', E_USER_WARNING);
-            return false;
-        }
-
-        $paramsInput = $params[0];
-        $paramsColumnKey = ($params[1] !== null) ? (string)$params[1] : null;
-
-        $paramsIndexKey = null;
-        if (isset($params[2])) {
-            if (is_float($params[2]) || is_int($params[2])) {
-                $paramsIndexKey = (int)$params[2];
-            } else {
-                $paramsIndexKey = (string)$params[2];
-            }
-        }
-
-        $resultArray = array();
-
-        foreach ($paramsInput as $row) {
-
-            $key = $value = null;
-            $keySet = $valueSet = false;
-
-            if ($paramsIndexKey !== null && array_key_exists($paramsIndexKey, $row)) {
-                $keySet = true;
-                $key = (string)$row[$paramsIndexKey];
-            }
-
-            if ($paramsColumnKey === null) {
-                $valueSet = true;
-                $value = $row;
-            } elseif (is_array($row) && array_key_exists($paramsColumnKey, $row)) {
-                $valueSet = true;
-                $value = $row[$paramsColumnKey];
-            }
-
-            if ($valueSet) {
-                if ($keySet) {
-                    $resultArray[$key] = $value;
-                } else {
-                    $resultArray[] = $value;
-                }
-            }
-
-        }
-
-        return $resultArray;
+        return array_column_php($input, $columnKey, $indexKey);
     }
 }
 
@@ -126,10 +135,13 @@ if (!function_exists('array_column')) {
  * @param string $php_var The name of the php variable to load from if using the php file type.
  * @return array The configuration data.
  * @throws InvalidArgumentException Throws an exception when the file type isn't supported.
+ *
+ * @category Array Functions
  */
 function array_load($path, $php_var = 'config') {
-    if (!file_exists($path))
-        return array();
+    if (!file_exists($path)) {
+        return false;
+    }
 
     // Get the extension of the file, but allow for .ini.php, .json.php etc.
     $ext = strstr(basename($path), '.');
@@ -169,6 +181,8 @@ function array_load($path, $php_var = 'config') {
  * @param string $php_var The name of the php variable to load from if using the php file type.
  * @return bool Returns true if the save was successful or false otherwise.
  * @throws InvalidArgumentException Throws an exception when the file type isn't supported.
+ *
+ * @category Array Functions
  */
 function array_save($data, $path, $php_var = 'config') {
     if (!is_array($data)) {
@@ -194,7 +208,7 @@ function array_save($data, $path, $php_var = 'config') {
             $result = file_put_contents_safe($path, $json);
             break;
         case '.php':
-            $php = "<?php\n".static::phpEncode($data, $php_var)."\n";
+            $php = "<?php\n".php_encode($data, $php_var)."\n";
             $result = file_put_contents_safe($path, $php);
             break;
         case '.ser':
@@ -228,15 +242,16 @@ function array_translate($array, $mappings) {
     foreach ($mappings as $index => $value) {
         if (is_numeric($index)) {
             $key = $value;
-            $newkey = $value;
+            $newKey = $value;
         } else {
             $key = $index;
-            $newkey = $value;
+            $newKey = $value;
         }
-        if (isset($array[$key]))
-            $result[$newkey] = $array[$key];
-        else
-            $result[$newkey] = NULL;
+        if (isset($array[$key])) {
+            $result[$newKey] = $array[$key];
+        } else {
+            $result[$newKey] = null;
+        }
     }
     return $result;
 }
@@ -526,15 +541,56 @@ function mime2ext($mime, $ext = null) {
         $known[$mime] = ltrim($ext, '.');
     }
 
-    if (array_key_exists($mime, $known))
+    if (array_key_exists($mime, $known)) {
         return $known[$mime];
+    }
 
     // We don't know the mime type so we need to just return the second part as the extension.
     $result = trim(strrchr($mime, '/'), '/');
 
-    if (substr($result, 0, 2) === 'x-')
+    if (substr($result, 0, 2) === 'x-') {
         $result = substr($result, 2);
+    }
 
+    return $result;
+}
+
+/**
+ * Encode a php array nicely.
+ *
+ * @param array $data The data to encode.
+ * @param string $php_var The name of the php variable.
+ * @return string Returns a string of the encoded data.
+ *
+ * @category Array Functions
+ */
+function php_encode($data, $php_var = 'config') {
+    if (is_array($data)) {
+        $result = '';
+        $lastHeading = '';
+        foreach ($data as $key => $value) {
+            // Figure out the heading.
+            if (($pos = strpos($key, '.')) !== false) {
+                $heading = str_replace(array("\n", "\r"), ' ', substr($key, 0, $pos));
+            } else {
+                $heading = substr($key, 0, 1);
+            }
+
+            if ($heading !== $lastHeading) {
+                if (strlen($heading) === 1) {
+                    // Don't emit single letter headings, but space them out.
+                    $result .= "\n";
+                } else {
+                    $result .= "\n// ".$heading."\n";
+                }
+                $lastHeading = $heading;
+            }
+
+            $result .= '$'.$php_var.'['.var_export($key, true).'] = '.var_export($value, true).";\n";
+        }
+    } else {
+        $result = "\$$php_var = ".var_export($data, true).";\n";
+    }
     return $result;
 }
 
@@ -583,14 +639,17 @@ function pnormaldist($qn) {
 function reflectArgs($callback, $args, $get = null) {
     $result = array();
 
-    if (is_string($callback) && !function_exists($callback))
+    if (is_string($callback) && !function_exists($callback)) {
         throw new Exception("Function $callback does not exist");
+    }
 
-    if (is_array($callback) && !method_exists($callback[0], $callback[1]))
+    if (is_array($callback) && !method_exists($callback[0], $callback[1])) {
         throw new Exception("Method {$callback[1]} does not exist.");
+    }
 
-    if (is_array($get))
+    if (is_array($get)) {
         $args = array_merge($get, $args);
+    }
     $args = array_change_key_case($args);
 
     if (is_string($callback) || is_a($callback, 'Closure')) {
@@ -615,14 +674,14 @@ function reflectArgs($callback, $args, $get = null) {
         $param_name = $meth_param->getName();
         $param_namel = strtolower($param_name);
 
-        if (isset($args[$param_namel]))
+        if (isset($args[$param_namel])) {
             $param_value = $args[$param_namel];
-        elseif (isset($args[$index]))
+        } elseif (isset($args[$index])) {
             $param_value = $args[$index];
-        elseif ($meth_param->isDefaultValueAvailable())
+        } elseif ($meth_param->isDefaultValueAvailable()) {
             $param_value = $meth_param->getDefaultValue();
-        else {
-            $param_value = NULL;
+        } else {
+            $param_value = null;
             $missing_args[] = '$'.$param_name;
         }
 
@@ -650,8 +709,9 @@ function reflectArgs($callback, $args, $get = null) {
  * @category String Functions
  */
 function rtrim_substr($mainstr, $substr) {
-    if (strcasecmp(substr($mainstr, -strlen($substr)), $substr) === 0)
+    if (strcasecmp(substr($mainstr, -strlen($substr)), $substr) === 0) {
         return substr($mainstr, 0, -strlen($substr));
+    }
     return $mainstr;
 }
 
@@ -828,20 +888,30 @@ function touchval($key, &$array, $default) {
  * This function uses optimizations found in the [facebook libphputil library](https://github.com/facebook/libphutil).
  *
  * @param string|int $key The array key.
- * @param array $array The array to get the value from.
+ * @param array|object $array The array to get the value from.
  * @param mixed $default The default value to return if the key doesn't exist.
  * @return mixed The item from the array or `$default` if the array key doesn't exist.
  * @category Array Functions
  */
-function val($key, array $array, $default = null) {
-    // isset() is a micro-optimization - it is fast but fails for null values.
-    if (isset($array[$key])) {
-        return $array[$key];
-    }
+function val($key, $array, $default = null) {
+    if (is_array($array)) {
+        // isset() is a micro-optimization - it is fast but fails for null values.
+        if (isset($array[$key])) {
+            return $array[$key];
+        }
 
-    // Comparing $default is also a micro-optimization.
-    if ($default === null || array_key_exists($key, $array)) {
-        return null;
+        // Comparing $default is also a micro-optimization.
+        if ($default === null || array_key_exists($key, $array)) {
+            return null;
+        }
+    } elseif (is_object($array)) {
+        if (isset($array->$key)) {
+            return $array->$key;
+        }
+
+        if ($default === null || property_exists($array, $key)) {
+            return null;
+        }
     }
 
     return $default;
@@ -852,12 +922,12 @@ function val($key, array $array, $default = null) {
  * This function differs from val() in that $key can be an array that will be used to walk a nested array.
  *
  * @param string $keys The key or property name of the value.
- * @param mixed $array The array or object to search.
+ * @param array|object $array The array or object to search.
  * @param mixed $default The value to return if the key does not exist.
  * @return mixed The value from the array or object.
  * @category Array Functions
  */
-function valr($keys, array $array, $default = null) {
+function valr($keys, $array, $default = null) {
     if (is_string($keys)) {
         $keys = explode('.', $keys);
     }

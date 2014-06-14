@@ -163,41 +163,6 @@ class Config {
     }
 
     /**
-     * Encode a php array nicely.
-     *
-     * @param array $data The data to encode.
-     */
-    public static function phpEncode($data, $php_var = 'config') {
-        if (is_array($data)) {
-            $result = '';
-            $lastHeading = '';
-            foreach ($data as $key => $value) {
-                // Figure out the heading.
-                if (($pos = strpos($key, '.')) !== false) {
-                    $heading = str_replace(array("\n", "\r"), ' ', substr($key, 0, $pos));
-                } else {
-                    $heading = substr($key, 0, 1);
-                }
-
-                if ($heading !== $lastHeading) {
-                    if (strlen($heading) === 1) {
-                        // Don't emit single letter headings, but space them out.
-                        $result .= "\n";
-                    } else {
-                        $result .= "\n// ".$heading."\n";
-                    }
-                    $lastHeading = $heading;
-                }
-
-                $result .= '$'.$php_var.'['.var_export($key, true).'] = '.var_export($value, true).";\n";
-            }
-        } else {
-            $result = "\$$php_var = ".var_export($data, true).";\n";
-        }
-        return $result;
-    }
-
-    /**
      *
      * @param array $data The config data to save.
      * @param string $path An optional path to save the data to.
