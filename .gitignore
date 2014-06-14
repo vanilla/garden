@@ -1,2 +1,4 @@
-.idea/
 vendor/
+.idea/
+.DS_Store
+Thumbs.db
