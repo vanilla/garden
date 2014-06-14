@@ -5,8 +5,6 @@
  * @license MIT
  */
 
-namespace Garden\Password\Tests;
-
 use Garden\Password\IPassword;
 
 /**
@@ -70,7 +68,7 @@ class BasicTest extends \PHPUnit_Framework_TestCase {
      * @return array Returns all of the php classes indexed by base class name.
      */
     public function getPasswordClasses() {
-        $paths = glob(__DIR__.'/../*.php');
+        $paths = glob(PATH_SRC.'/Password/*.php');
         $result = [];
 
         foreach ($paths as $path) {
@@ -86,4 +84,3 @@ class BasicTest extends \PHPUnit_Framework_TestCase {
         return $result;
     }
 }
- 
