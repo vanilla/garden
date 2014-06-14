@@ -8,6 +8,10 @@ trim_trailing_whitespace = true
 
 [*.json]
 indent_style = tab
+intent_size = 2
+
+[*.xml]
+indent_size = 2
 
 [*.xml.dist]
 indent_size = 2

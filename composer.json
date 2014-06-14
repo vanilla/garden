@@ -9,9 +9,9 @@
       { "name": "Tim Gunter", "email": "tim@vanillaforums.com", "role": "developer" }
    ],
    "support": {
-       "issues": "https://github.com/vanillaforums/framework/issues",
+       "issues": "https://github.com/vanilla/garden/issues",
        "forum": "http://vanillaforums.org/discussions",
-       "source": "https://github.com/vanillaforums/framework"
+       "source": "https://github.com/vanilla/garden"
    },
    "require": {
       "php": ">=5.4.0",
