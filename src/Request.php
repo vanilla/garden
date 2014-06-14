@@ -1,16 +1,15 @@
-<?php namespace Garden;
-
-if (!defined('APP'))
-    return;
-
+<?php
 /**
- * HTTP Request representation.
- *
  * @author Todd Burry <todd@vanillaforums.com>
  * @copyright 2009 Vanilla Forums Inc.
- * @license LGPL-2.1
- * @package Vanilla
+ * @license MIT
  * @since 1.0
+ */
+
+namespace Garden;
+
+/**
+ * A class that contains the information in an http request.
  */
 class Request {
 
@@ -22,7 +21,6 @@ class Request {
     const METHOD_PATCH = 'PATCH';
     const METHOD_DELETE = 'DELETE';
     const METHOD_OPTIONS = 'OPTIONS';
-    const P = '_p';
 
     /// Properties ///
 
@@ -33,9 +31,19 @@ class Request {
     protected $env;
 
     /**
-     * @var array The global enviroment for the request.
+     * @var Request The currently dispatched request.
      */
-    protected static $globalEnv = null;
+    protected static $current;
+
+    /**
+     * @var array The default environment for constructed requests.
+     */
+    protected static $defaultEnv;
+
+    /**
+     * @var array The global environment for the request.
+     */
+    protected static $globalEnv;
 
     /**
      * Special-case HTTP headers that are otherwise unidentifiable as HTTP headers.
@@ -55,61 +63,112 @@ class Request {
 
     /// Methods ///
 
-    public function __construct($url = null, $method = null, $input = null) {
+    /**
+     * Initialize a new instance of the {@link Request} class.
+     *
+     * @param string $url The url of the request or blank to use the current environment.
+     * @param string $method The request method.
+     * @param mixed $input The request input. This is the query string for GET requests or the body for other requests.
+     */
+    public function __construct($url = '', $method = '', $input = null) {
         if ($url) {
             $this->env = static::defaultEnvironment();
             // Instantiate the request from the url.
             $this->url($url);
-            if ($method)
+            if ($method) {
                 $this->method($method);
+            }
             if ($input) {
                 $this->input($input);
             }
         } else {
             // Instantiate the request from the global environment.
             $this->env = static::globalEnvironment();
-            if ($method)
+            if ($method) {
                 $this->method($method);
-            if ($input)
+            }
+            if ($input) {
                 $this->input($input);
+            }
         }
+
+        static::overrideEnvironment($this->env);
     }
 
+    /**
+     * Convert a request to a string.
+     *
+     * @return string Returns the url of the request.
+     */
     public function __toString() {
         return $this->url();
     }
 
-    public static function defaultEnvironment() {
-        $defaults = array(
-            'REQUEST_METHOD' => 'GET',
-            'SCRIPT_NAME' => '',
-            'PATH_INFO' => '/',
-            'QUERY' => array(),
-            'SERVER_NAME' => 'localhost',
-            'SERVER_PORT' => 80,
-            'ACCEPT' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'ACCEPT_LANGUAGE' => 'en-US,en;q=0.8',
-            'ACCEPT_CHARSET' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-            'USER_AGENT' => 'Vanilla Framework',
-            'REMOTE_ADDR' => '127.0.0.1',
-            'URL_SCHEME' => 'http',
-            'INPUT' => array(),
-        );
-        return $defaults;
+    /**
+     * Gets or sets the current request.
+     *
+     * @param Request $request Pass a request object to set the current request.
+     * @return Request Returns the current request if {@link Request} is null or the previous request otherwise.
+     */
+    public static function current(Request $request = null) {
+        if ($request !== null) {
+            $bak = self::$current;
+            self::$current = $request;
+            return $bak;
+        }
+        return self::$current;
+    }
+
+    /**
+     * Gets or updates the default environment.
+     *
+     * @param string|null $key Specifies a specific key in the environment array.
+     * @param string|null $value Update the value at {@link $key} in the environment array.
+     * @return array|mixed Returns the value at {@link $key} or the entire environment array.
+     */
+    public static function defaultEnvironment($key = null, $value = null) {
+        if (self::$defaultEnv === null) {
+            self::$defaultEnv = array(
+                'REQUEST_METHOD' => 'GET',
+                'SCRIPT_NAME' => '',
+                'PATH_INFO' => '/',
+                'QUERY' => array(),
+                'SERVER_NAME' => 'localhost',
+                'SERVER_PORT' => 80,
+                'ACCEPT' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'ACCEPT_LANGUAGE' => 'en-US,en;q=0.8',
+                'ACCEPT_CHARSET' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+                'USER_AGENT' => 'Vanilla Framework',
+                'REMOTE_ADDR' => '127.0.0.1',
+                'URL_SCHEME' => 'http',
+                'INPUT' => array(),
+            );
+        }
+
+        if ($key !== null && $value !== null) {
+            self::$defaultEnv[$key] = $value;
+            return self::$defaultEnv;
+        } elseif ($value !== null) {
+            return val($key, self::$defaultEnv);
+        } else {
+            return self::$defaultEnv;
+        }
     }
 
     /**
      * Parse request information from the current environment.
-     * The environment contains keys that support the Rack protocal (see http://rack.rubyforge.org/doc/SPEC.html).
+     *
+     * The environment contains keys based on the Rack protocol (see http://rack.rubyforge.org/doc/SPEC.html).
      *
      * @param mixed $key The environment variable to look at.
      * - null: Return the entire environment.
-     * - true: Force a reparse of the environment and return the entire environment.
+     * - true: Force a re-parse of the environment and return the entire environment.
      * - string: One of the environment variables.
+     * @return array|string Returns the global environment or the value at {@link $key}.
      */
     public static function globalEnvironment($key = null) {
         // Check to parse the environment.
-        if ($key === true || ($key === null && !isset(self::$globalEnv))) {
+        if ($key === true || !isset(self::$globalEnv)) {
             $env = array();
 
             // REQUEST_METHOD.
@@ -125,45 +184,44 @@ class Request {
             $env['SCRIPT_NAME'] = rtrim($script_name, '/');
 
             // PATH_INFO.
-            $get = $_GET;
-            if (isset($get[self::P])) {
-                $path = $get[self::P];
-                unset($get[self::P]);
-            } else {
-                $path = '/';
-            }
+            $path = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '';
             $env['PATH_INFO'] = '/' . ltrim($path, '/');
 
             // QUERY.
+            $get = $_GET;
             $env['QUERY'] = $get;
 
             // SERVER_NAME.
             $env['SERVER_NAME'] = isset($_SERVER['HTTP_X_FORWARDED_HOST']) ? val('HTTP_X_FORWARDED_HOST', $_SERVER) : (isset($_SERVER['HTTP_HOST']) ? val('HTTP_HOST', $_SERVER) : val('SERVER_NAME', $_SERVER));
-
-            // SERVER_PORT.
-            if (isset($_SERVER['SERVER_PORT']))
-                $server_port = (int) $_SERVER['SERVER_PORT'];
-            elseif ($Scheme === 'https')
-                $server_port = 443;
-            else
-                $server_port = 80;
-            $env['SERVER_PORT'] = $server_port;
 
             // HTTP_* headers.
             $env = array_replace($env, static::extractHeaders($_SERVER));
 
             // URL_SCHEME.
             $url_scheme = 'http';
-            // Webserver-originated SSL.
-            if (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) == 'on')
+            // Web server-originated SSL.
+            if (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) == 'on') {
                 $url_scheme = 'https';
-            // Loadbalancer-originated (and terminated) SSL.
-            if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https')
+            }
+            // Load balancer-originated (and terminated) SSL.
+            if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https') {
                 $url_scheme = 'https';
+            }
             // Varnish modifies the scheme.
-            $org_protical = val('HTTP_X_ORIGINALLY_FORWARDED_PROTO', $_SERVER, NULL);
-            if (!is_null($org_protical))
-                $url_scheme = $org_protical;
+            $org_protocol = val('HTTP_X_ORIGINALLY_FORWARDED_PROTO', $_SERVER, null);
+            if (!is_null($org_protocol)) {
+                $url_scheme = $org_protocol;
+            }
+
+            // SERVER_PORT.
+            if (isset($_SERVER['SERVER_PORT'])) {
+                $server_port = (int) $_SERVER['SERVER_PORT'];
+            } elseif ($url_scheme === 'https') {
+                $server_port = 443;
+            } else {
+                $server_port = 80;
+            }
+            $env['SERVER_PORT'] = $server_port;
 
             $env['URL_SCHEME'] = $url_scheme;
 
@@ -176,22 +234,25 @@ class Request {
             $env['INPUT'] = $raw_input;
 
             // IP Address.
-            // Loadbalancers set a different ip address.
-            $ip = isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? val('HTTP_X_FORWARDED_FOR', $_SERVER) : $_SERVER['REMOTE_ADDR'];
-            if (strpos($ip, ',') !== FALSE)
+            // Load balancers set a different ip address.
+            $ip = isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? val('HTTP_X_FORWARDED_FOR', $_SERVER) : val('REMOTE_ADDR', $_SERVER, '127.0.0.1');
+            if (strpos($ip, ',') !== false) {
                 $ip = substr($ip, 0, strpos($ip, ','));
+            }
             // Varnish
-            $original_ip = val('HTTP_X_ORIGINALLY_FORWARDED_FOR', $_SERVER, NULL);
-            if (!is_null($original_ip))
+            $original_ip = val('HTTP_X_ORIGINALLY_FORWARDED_FOR', $_SERVER, null);
+            if (!is_null($original_ip)) {
                 $ip = $original_ip;
+            }
 
             // Make sure we have a valid ip.
-            if (preg_match('`(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})`', $ip, $m))
+            if (preg_match('`(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})`', $ip, $m)) {
                 $ip = $m[1];
-            elseif ($ip === '::1')
+            } elseif ($ip === '::1') {
                 $ip = '127.0.0.1';
-            else
+            } else {
                 $ip = '0.0.0.0'; // unknown ip
+            }
 
             $env['REMOTE_ADDR'] = $ip;
 
@@ -202,6 +263,42 @@ class Request {
             return val($key, self::$globalEnv);
         }
         return self::$globalEnv;
+    }
+
+    /**
+     * Check for specific environment overrides.
+     *
+     * @param array &$env The environment to override.
+     */
+    protected static function overrideEnvironment(&$env) {
+        $get =& $env['QUERY'];
+
+        // Check to override the method.
+        if (isset($get['x-method'])) {
+            $method = strtoupper($get['x-method']);
+
+            $getMethods = array(self::METHOD_GET, self::METHOD_HEAD, self::METHOD_OPTIONS);
+
+            // Don't allow get style methods to be overridden to post style methods.
+            if (!in_array($method, $getMethods) || in_array($method, $getMethods)) {
+                $env['REQUEST_METHOD'] = $method;
+                unset($get['REQUEST_METHOD']);
+            }
+        }
+    }
+
+    /**
+     * Gets a value from the environment.
+     *
+     * @param string $key The key to inspect.
+     * @return mixed The environment value.
+     */
+    public function env($key) {
+        $key = strtoupper($key);
+        if (isset($this->env[$key])) {
+            return $this->env[$key];
+        }
+        return null;
     }
 
     /**
@@ -225,13 +322,21 @@ class Request {
         return $result;
     }
 
+    /**
+     * An alias of {@link query}. Get an item from the query.
+     *
+     * @param string|null $key The key to get or null to get the entire array.
+     * @param string|null $default The default value if getting a particular {@link $key}.
+     * @return string|array Gets the value at {@link $key} or the entire array.
+     */
     public function get($key = null, $default = null) {
-        return $this->query($key, $null);
+        return $this->query($key, $default);
     }
 
     public function host($host = null) {
-        if ($host !== null)
+        if ($host !== null) {
             $this->env['SERVER_NAME'] = $host;
+        }
         return $this->env['SERVER_NAME'];
     }
 
@@ -303,22 +408,35 @@ class Request {
         return $this->env['SERVER_PORT'];
     }
 
+    /**
+     * Get an item from the query or the entire query array.
+     *
+     * @param string|null $key The key to get or null to get the entire array.
+     * @param string|null $default The default value if getting a particular {@link $key}.
+     * @return string|array Gets the value at {@link $key} or the entire array.
+     */
     public function query($key = null, $default = null) {
-        if ($key === null)
+        if ($key === null) {
             return $this->env['QUERY'];
-        if (is_string($key))
+        }
+        if (is_string($key)) {
             return isset($this->env['QUERY'][$key]) ? $this->env['QUERY'][$key] : $default;
-        if (is_array($key))
+        }
+        if (is_array($key)) {
             $this->env['QUERY'] = $key;
+        }
     }
 
     public function input($key = null, $default = null) {
-        if ($key === null)
+        if ($key === null) {
             return $this->env['INPUT'];
-        if (is_string($key))
+        }
+        if (is_string($key)) {
             return isset($this->env['INPUT'][$key]) ? $this->env['INPUT'][$key] : $default;
-        if (is_array($key))
+        }
+        if (is_array($key)) {
             $this->env['INPUT'] = $key;
+        }
     }
 
     public function root($value = null) {
@@ -330,8 +448,9 @@ class Request {
     }
 
     public function scheme($value = null) {
-        if ($value !== null)
+        if ($value !== null) {
             $this->env['URL_SCHEME'] = $value;
+        }
         return $this->env['URL_SCHEME'];
     }
 
