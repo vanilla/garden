@@ -25,7 +25,6 @@ class Application {
     /// Methods ///
 
     public function __construct($name = 'default') {
-        $this->request = new Request();
         $this->routes = array();
 
         self::$instances[$name] = $this;
@@ -60,6 +59,7 @@ class Application {
      *
      * @param string|Route $path The path to the route or the {@link Route} object itself.
      * @param mixed $callback
+     * @return Route Returns the route that was added.
      */
     public function route($path, $callback = null) {
         if (is_a($path, '\Garden\Route')) {
@@ -71,8 +71,12 @@ class Application {
         return $route;
     }
 
-    public function run() {
-        $this->request = new Request();
+    public function run(Request $request = null) {
+        if ($request === null) {
+            $request = new Request();
+        }
+        $this->request = $request;
+        $requestBak = Request::current();
 
         // Grab all of the matched routes.
         $routes = $this->matchRoutes($this->request);
@@ -84,15 +88,51 @@ class Application {
             $dispatched = false;
             try {
                 // Dispatch the first matched route.
-                $route->dispatch($args);
+                ob_start();
+                $response = $route->dispatch($args);
+                $output = ob_get_clean();
+
+                $result = [
+                    'routing' => $args,
+                    'response' => $response,
+                    'output' => $output
+                ];
 
                 // Once a route has been successfully dispatched we break and don't dispatch anymore.
                 $dispatched = true;
                 break;
-            } catch (\Garden\Exception\Pass $pex) {
+            } catch (Exception\Pass $pex) {
                 // If the route throws a pass then continue on to the next route.
                 continue;
             }
+        }
+
+        Request::current($requestBak);
+
+        return $this->finalize($result);
+    }
+
+    /**
+     * Finalize the result from a dispatch.
+     *
+     * @param array $result The result of the dispatch.
+     * @return mixed Returns relevant debug data or processes the response.
+     */
+    protected function finalize(array $result) {
+        $accept = $this->request->env('accept');
+
+        if (str_begins($accept, 'debug/')) {
+            // Return debug information.
+            $part = trim(strtolower(strstr($accept, '/')), '/');
+            if ($part === 'all') {
+                return $result;
+            } elseif (isset($result[$part])) {
+                return $result[$part];
+            } else {
+                return null;
+            }
+        } else {
+
         }
     }
 }
