@@ -32,6 +32,7 @@ class Args implements \JsonSerializable {
 
     /**
      * Add an argument to the args array.
+     *
      * @param string $value The argument to add.
      */
     public function addArg($value) {

@@ -57,7 +57,7 @@ class ControllerRoute extends Route {
         return $this->controllers;
     }
 
-    public function dispatch(array $args) {
+    public function dispatch(array &$args) {
         // Instantiate the controller.
         $controller = new $args['controller'];
         $callback = array($controller, $args['action']);
@@ -69,10 +69,15 @@ class ControllerRoute extends Route {
 
     /**
      * Route a request as a default restful request.
+     *
      * Urls that successfully route here are in the following form:
+     *
      * - /controller/method[/args][.ext]
      * - /controlleritem/{id}/method[/args][.ext]
-     * @param Request $request
+     *
+     * @param Request $request The request to match against.
+     * @param Application $app The application that is invoking the request.
+     * @return array|null
      */
     public function matches(Request $request, Application $app) {
         $path = $request->path();
