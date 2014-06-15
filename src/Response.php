@@ -44,7 +44,12 @@ class Response implements JsonSerializable {
     protected static $current;
 
     /**
-     * @var array
+     * @var array An array of context data that is not related to the response data.
+     */
+    protected $context = [];
+
+    /**
+     * @var array An array of response data.
      */
     protected $data = [];
 
@@ -164,10 +169,7 @@ class Response implements JsonSerializable {
             $cex = $result;
             $response->status($cex->getCode());
             $response->headers($cex->getHeaders());
-            $response->data([
-                'exception' => $cex->getMessage(),
-                'code' => $cex->getCode()
-            ]);
+            $response->data($cex->jsonSerialize());
         } elseif ($result instanceof \Exception) {
             /* @var \Exception $ex */
             $ex = $result;
@@ -182,12 +184,13 @@ class Response implements JsonSerializable {
                 $response->status($result[0]);
                 $response->headers($result[1]);
                 $response->data($result[2]);
-            } elseif (isset($result['response'], $result['body'])) {
+            } elseif (isset($result['response'])) {
                 // This is a dispatched response.
                 $response = static::create($result['response']);
-//                if ($result['body']) {
-//                    $response->data('body'] = $result['body'];
-//                }
+
+                if (isset($result['body']) && $result['body']) {
+                    $response->context(['body' => $result['body']], true);
+                }
             } else {
                 $response->data($result);
             }
@@ -310,17 +313,44 @@ class Response implements JsonSerializable {
     }
 
     /**
-     * Get or set the data for the response.
+     * Get or set the context data for the response.
      *
-     * @param array|null $value Pass a new data value or `null` to get the current data array.
-     * @return Response|array $this Returns either the data or `$this` when setting the data.
+     * The context is an array of data that is unrelated to the response data.
+     *
+     * @param array|null $context Pass a new context data value or `null` to get the current context array.
+     * @param bool $merge Whether or not to merge new data with the current data when setting.
+     * @return $this|array Returns either the context or `$this` when setting the context data.
      */
-    public function data($value = null) {
-        if ($value !== null) {
-            $this->data = $value;
+    public function context($context = null, $merge = false) {
+        if ($context !== null) {
+            if ($merge) {
+                $this->context = array_merge($this->context, $context);
+            } else {
+                $this->context = $context;
+            }
             return $this;
         } else {
-            return $this->data();
+            return $this->context;
+        }
+    }
+
+    /**
+     * Get or set the data for the response.
+     *
+     * @param array|null $data Pass a new data value or `null` to get the current data array.
+     * @param bool $merge Whether or not to merge new data with the current data when setting.
+     * @return Response|array Returns either the data or `$this` when setting the data.
+     */
+    public function data($data = null, $merge = false) {
+        if ($data !== null) {
+            if ($merge) {
+                $this->data = array_merge($this->data, $data);
+            } else {
+                $this->data = $data;
+            }
+            return $this;
+        } else {
+            return $this->data;
         }
     }
 
@@ -438,9 +468,18 @@ class Response implements JsonSerializable {
      * @param string $name The name of the header.
      * @return string Returns the normalized header name.
      */
-    protected static function normalizeHeader($name) {
+    public static function normalizeHeader($name) {
+        static $special = [
+            'etag' => 'ETag', 'p3p' => 'P3P', 'www-authenticate' => 'WWW-Authenticate',
+            'x-ua-compatible' => 'X-UA-Compatible'
+        ];
+
         $name = str_replace(['-', '_'], ' ', strtolower($name));
-        $name = str_replace(' ', '-', ucwords($name));
+        if (isset($special[$name])) {
+            $name = $special[$name];
+        } else {
+            $name = str_replace(' ', '-', ucwords($name));
+        }
         return $name;
     }
 
@@ -496,7 +535,7 @@ class Response implements JsonSerializable {
         }
 
         // Set the response code.
-        header(static::statusMessage($this->status), true, $this->status);
+        header(static::statusMessage($this->status, true), true, $this->status);
 
         if ($global) {
             $headers = array_replace(static::globalHeaders(), $this->headers);
