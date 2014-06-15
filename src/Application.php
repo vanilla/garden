@@ -2,6 +2,8 @@
 
 namespace Garden;
 
+use Garden\Exception\NotFoundException;
+
 class Application {
     /// Properties ///
     protected static $instances;
@@ -138,32 +140,36 @@ class Application {
 
         // Try all of the matched routes in turn.
         $dispatched = false;
-        foreach ($routes as $route_args) {
-            list($route, $args) = $route_args;
+        try {
+            foreach ($routes as $route_args) {
+                list($route, $args) = $route_args;
 
-            try {
-                // Dispatch the first matched route.
-                ob_start();
-                $response = $route->dispatch($args);
-                $output = ob_get_clean();
+                try {
+                    // Dispatch the first matched route.
+                    ob_start();
+                    $response = $route->dispatch($args);
+                    $output = ob_get_clean();
 
-                $result = [
-                    'routing' => $args,
-                    'response' => $response,
-                    'output' => $output
-                ];
+                    $result = [
+                        'routing' => $args,
+                        'response' => $response,
+                        'output' => $output
+                    ];
 
-                // Once a route has been successfully dispatched we break and don't dispatch anymore.
-                $dispatched = true;
-                break;
-            } catch (Exception\Pass $pex) {
-                // If the route throws a pass then continue on to the next route.
-                continue;
+                    // Once a route has been successfully dispatched we break and don't dispatch anymore.
+                    $dispatched = true;
+                    break;
+                } catch (Exception\Pass $pex) {
+                    // If the route throws a pass then continue on to the next route.
+                    continue;
+                }
             }
-        }
 
-        if (!$dispatched) {
-            $result = [];
+            if (!$dispatched) {
+                throw new NotFoundException();
+            }
+        } catch (\Exception $ex) {
+            $result = $ex;
         }
 
         Request::current($requestBak);
@@ -174,12 +180,14 @@ class Application {
     /**
      * Finalize the result from a dispatch.
      *
-     * @param array $result The result of the dispatch.
+     * @param mixed $result The result of the dispatch.
      * @return mixed Returns relevant debug data or processes the response.
      */
-    protected function finalize(array $result) {
-        $accept = $this->request->env('accept');
+    protected function finalize($result) {
+        $response = Response::create($result);
+        $response->contentTypeFromAccept($this->request->env('ACCEPT'));
 
+        $accept = $response->contentType();
         if (str_begins($accept, 'debug/')) {
             // Return debug information.
             $part = trim(strtolower(strstr($accept, '/')), '/');
@@ -190,8 +198,19 @@ class Application {
             } else {
                 return null;
             }
-        } else {
+        }
 
+        // Check for known response types.
+        switch ($accept) {
+            case 'application/json':
+                $response->flushHeaders();
+                echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                break;
+            default:
+                $response->status(415);
+                $response->flushHeaders();
+                echo "Unsupported response type: $accept";
+                break;
         }
     }
 }
