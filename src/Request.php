@@ -7,11 +7,12 @@
  */
 
 namespace Garden;
+use JsonSerializable;
 
 /**
  * A class that contains the information in an http request.
  */
-class Request {
+class Request implements JsonSerializable {
 
     /// Constants ///
     const METHOD_HEAD = 'HEAD';
@@ -132,6 +133,7 @@ class Request {
                 'REQUEST_METHOD' => 'GET',
                 'SCRIPT_NAME' => '',
                 'PATH_INFO' => '/',
+                'EXT' => '',
                 'QUERY' => array(),
                 'SERVER_NAME' => 'localhost',
                 'SERVER_PORT' => 80,
@@ -169,7 +171,7 @@ class Request {
     public static function globalEnvironment($key = null) {
         // Check to parse the environment.
         if ($key === true || !isset(self::$globalEnv)) {
-            $env = array();
+            $env = static::defaultEnvironment();
 
             // REQUEST_METHOD.
             $env['REQUEST_METHOD'] = strtoupper(isset($_SERVER['REQUEST_METHOD']) ? val('REQUEST_METHOD', $_SERVER) : 'CONSOLE');
@@ -185,6 +187,14 @@ class Request {
 
             // PATH_INFO.
             $path = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '';
+
+            // Strip the extension from the path.
+            if (substr($path, -1) !== '/' && ($pos = strrpos($path, '.')) !== false) {
+                $ext = substr($path, $pos);
+                $path = substr($path, 0, $pos);
+                $env['EXT'] = $ext;
+            }
+
             $env['PATH_INFO'] = '/' . ltrim($path, '/');
 
             // QUERY.
@@ -227,11 +237,22 @@ class Request {
 
             // INPUT: The entire input.
             // Input stream (readable one time only; not available for multipart/form-data requests)
-            $raw_input = @file_get_contents('php://input');
-            if (!$raw_input) {
-                $raw_input = '';
+            switch ($env['CONTENT_TYPE']) {
+                case 'application/json':
+                    $raw_input = @file_get_contents('php://input');
+                    $input = @json_decode($raw_input, true);
+                break;
             }
-            $env['INPUT'] = $raw_input;
+            if (isset($input)) {
+                $env['INPUT'] = $input;
+                $env['RAW_INPUT'] = $raw_input;
+            } elseif (isset($_POST)) {
+                $env['INPUT'] = $_POST;
+            }
+
+            if (isset($raw_input)) {
+                $env['RAW_INPUT'] = $raw_input;
+            }
 
             // IP Address.
             // Load balancers set a different ip address.
@@ -281,9 +302,19 @@ class Request {
 
             // Don't allow get style methods to be overridden to post style methods.
             if (!in_array($method, $getMethods) || in_array($method, $getMethods)) {
-                $env['REQUEST_METHOD'] = $method;
+                static::replaceEnv($env, 'REQUEST_METHOD', $method);
                 unset($get['REQUEST_METHOD']);
             }
+        }
+
+        // Check to override the accepts header.
+        switch (strtolower($env['EXT'])) {
+            case '.json':
+                static::replaceEnv($env, 'ACCEPT', 'application/json');
+                break;
+            case '.rss':
+                static::replacEEnv($env, 'ACCEPT', 'application/rss+xml');
+                break;
         }
     }
 
@@ -297,6 +328,46 @@ class Request {
         $key = strtoupper($key);
         if (isset($this->env[$key])) {
             return $this->env[$key];
+        }
+        return null;
+    }
+
+    /**
+     * Replace an environment variable with another one and back up the old one in a *_RAW key.
+     *
+     * @param array $env The environment array.
+     * @param string $key The environment key
+     * @param mixed $value The new environment value.
+     * @return mixed Returns the old value or null if there was no old value.
+     */
+    public static function replaceEnv(&$env, $key, $value) {
+        $key = strtoupper($key);
+
+        $result = null;
+        if (isset($env[$key])) {
+            $result = $env[$key];
+            $env[$key.'_RAW'] = $result;
+        }
+        $env[$key] = $value;
+        return $result;
+    }
+
+    /**
+     * Restore an environment variable that was replaced with {@link Request::replaceEnv()}.
+     *
+     * @param array $env The environment array.
+     * @param string $key The environment key
+     * @return mixed Returns the current environment value.
+     */
+    public static function restoreEnv(&$env, $key) {
+        $key = strtoupper($key);
+
+        if (isset($env[$key.'_RAW'])) {
+            $env[$key] = $env[$key.'_RAW'];
+            unset($env[$key.'_RAW']);
+            return $env[$key];
+        } elseif (isset($env[$key])) {
+            return $env[$key];
         }
         return null;
     }
@@ -390,6 +461,7 @@ class Request {
     public function method($method = null) {
         if ($method !== null) {
             $this->env['REQUEST_METHOD'] = strtoupper($method);
+            return $this;
         }
         return $this->env['REQUEST_METHOD'];
     }
@@ -397,14 +469,45 @@ class Request {
     public function path($path = null) {
         if ($path !== null) {
             $this->env['PATH_INFO'] = $path;
+            return $this;
         }
 
         return $this->env['PATH_INFO'];
     }
 
+    public function ext($ext = null) {
+        if ($ext !== null) {
+            if ($ext) {
+                $this->env['EXT'] = '.'.ltrim($ext, '.');
+            } else {
+                $this->env['EXT'] = '';
+            }
+            return $this;
+        }
+
+        return $this->env['EXT'];
+    }
+
+    public function fullPath($path = null) {
+        if ($path !== null) {
+            // Strip the extension from the path.
+            if (substr($path, -1) !== '/' && ($pos = strrpos($path, '.')) !== false) {
+                $ext = substr($path, $pos);
+                $path = substr($path, 0, $pos);
+                $this->env['EXT'] = $ext;
+            }
+            $this->env['PATH_INFO'] = $path;
+            return $this;
+        }
+
+        return $this->env['PATH_INFO'].$this->env['EXT'];
+    }
+
     public function port($port = null) {
-        if ($port !== null)
+        if ($port !== null) {
             $this->env['SERVER_PORT'] = $port;
+            return $this;
+        }
         return $this->env['SERVER_PORT'];
     }
 
@@ -504,5 +607,16 @@ class Request {
             $query = $this->query();
             return $this->scheme() . '://' . $this->host() . $this->root() . $this->path() . (!empty($query) ? '?' . http_build_query($query) : '');
         }
+    }
+
+    /**
+     * (PHP 5 &gt;= 5.4.0)<br/>
+     * Specify data which should be serialized to JSON
+     * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
+     * @return mixed data which can be serialized by <b>json_encode</b>,
+     * which is a value of any type other than a resource.
+     */
+    public function jsonSerialize() {
+        return $this->env;
     }
 }
