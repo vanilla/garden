@@ -237,11 +237,11 @@ class Request implements JsonSerializable {
 
             // INPUT: The entire input.
             // Input stream (readable one time only; not available for multipart/form-data requests)
-            switch ($env['CONTENT_TYPE']) {
+            switch (val('CONTENT_TYPE', $env)) {
                 case 'application/json':
                     $raw_input = @file_get_contents('php://input');
                     $input = @json_decode($raw_input, true);
-                break;
+                    break;
             }
             if (isset($input)) {
                 $env['INPUT'] = $input;

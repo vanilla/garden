@@ -191,9 +191,11 @@ class Application {
         if (str_begins($accept, 'debug/')) {
             // Return debug information.
             $part = trim(strtolower(strstr($accept, '/')), '/');
-            if ($part === 'all') {
+            if ($result instanceof \Exception) {
+                throw $result;
+            } elseif ($part === 'all') {
                 return $result;
-            } elseif (isset($result[$part])) {
+            } elseif (is_array($result) && isset($result[$part])) {
                 return $result[$part];
             } else {
                 return null;
