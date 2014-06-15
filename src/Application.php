@@ -71,6 +71,61 @@ class Application {
         return $route;
     }
 
+    /**
+     * Route to a GET request.
+     *
+     * @param string $pattern The url pattern to match.
+     * @param callable $callback The callback to execute on the route.
+     * @return UrlRoute Returns the new route.
+     */
+    public function get($pattern, callable $callback) {
+        return $this->route($pattern, $callback)->methods('GET');
+    }
+
+    /**
+     * Route to a POST request.
+     *
+     * @param string $pattern The url pattern to match.
+     * @param callable $callback The callback to execute on the route.
+     * @return UrlRoute Returns the new route.
+     */
+    public function post($pattern, callable $callback) {
+        return $this->route($pattern, $callback)->methods('POST');
+    }
+
+    /**
+     * Route to a PUT request.
+     *
+     * @param string $pattern The url pattern to match.
+     * @param callable $callback The callback to execute on the route.
+     * @return UrlRoute Returns the new route.
+     */
+    public function put($pattern, callable $callback) {
+        return $this->route($pattern, $callback)->methods('PUT');
+    }
+
+    /**
+     * Route to a PATCH request.
+     *
+     * @param string $pattern The url pattern to match.
+     * @param callable $callback The callback to execute on the route.
+     * @return UrlRoute Returns the new route.
+     */
+    public function patch($pattern, callable $callback) {
+        return $this->route($pattern, $callback)->methods('PATCH');
+    }
+
+    /**
+     * Route to a DELETE request.
+     *
+     * @param string $pattern The url pattern to match.
+     * @param callable $callback The callback to execute on the route.
+     * @return UrlRoute Returns the new route.
+     */
+    public function delete($pattern, callable $callback) {
+        return $this->route($pattern, $callback)->methods('DELETE');
+    }
+
     public function run(Request $request = null) {
         if ($request === null) {
             $request = new Request();
@@ -82,10 +137,10 @@ class Application {
         $routes = $this->matchRoutes($this->request);
 
         // Try all of the matched routes in turn.
+        $dispatched = false;
         foreach ($routes as $route_args) {
             list($route, $args) = $route_args;
 
-            $dispatched = false;
             try {
                 // Dispatch the first matched route.
                 ob_start();
@@ -105,6 +160,10 @@ class Application {
                 // If the route throws a pass then continue on to the next route.
                 continue;
             }
+        }
+
+        if (!$dispatched) {
+            $result = [];
         }
 
         Request::current($requestBak);

@@ -3,6 +3,9 @@
 abstract class Route {
     /// Properties ///
 
+    /**
+     * @var array[string] An array of allowed http methods for this route.
+     */
     protected $methods;
 
     protected $pattern;
@@ -44,7 +47,7 @@ abstract class Route {
     abstract public function dispatch(array &$args);
 
     /**
-     * Gets/sets the route's conditions.
+     * Gets or sets the route's conditions.
      *
      * @param array|null $conditions An array of conditions to set.
      * @return Route|array
@@ -65,6 +68,20 @@ abstract class Route {
         }
 
         return $this->conditions;
+    }
+
+    /**
+     * Gets or sets the allowed http methods for this route.
+     * @param array|null $methods Set a new set of allowed methods or pass null to get the current methods.
+     * @return Route|array Returns the current methods or `$this` for fluent calls.
+     */
+    public function methods($methods = null) {
+        if ($methods === null) {
+            return $this->methods;
+        }
+
+        $this->methods = array_map('strtoupper', (array)$methods);
+        return $this;
     }
 
     /**
@@ -116,6 +133,19 @@ abstract class Route {
      * If the route matches an array of args is returned, otherwise the function returns null.
      */
     abstract public function matches(Request $request, Application $app);
+
+    /**
+     * Tests whether or not a route matches the allowed methods for this route.
+     *
+     * @param Request $request The request to test.
+     * @return bool Returns `true` if the route allows the method, otherwise `false`.
+     */
+    protected function matchesMethods(Request $request) {
+        if (empty($this->methods)) {
+            return true;
+        }
+        return in_array($request->method(), $this->methods);
+    }
 
     /**
      * Tests whether an argument fails against a condition.
