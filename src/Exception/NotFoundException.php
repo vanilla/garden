@@ -12,11 +12,16 @@ namespace Garden\Exception;
  */
 class NotFoundException extends ClientException {
     /**
-     * @param string $message
-     * @param int $code
-     * @param array $headers
+     * Initialize a {@link NotFoundException}.
+     *
+     * @param string $message The error message or a one word resource name.
+     * @param string $description A longer description for the error.
      */
-    public function __construct($message, $code = 404, array $headers = []) {
-        parent::__construct($message, 404, $headers);
+    public function __construct($message = 'Page', $description = null) {
+        if (strpos($message, ' ') === false) {
+            $message = sprintf('%s not found.', $message);
+        }
+
+        parent::__construct($message, 404, ['description' => $description]);
     }
 }
