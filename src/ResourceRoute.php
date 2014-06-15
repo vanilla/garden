@@ -128,7 +128,7 @@ class ResourceRoute extends Route {
 
                 if (!empty($allowed)) {
                     // Other methods are allowed. Show them.
-                    throw new ClientException(strtoupper($method).' not allowed.', 405, ['Allowed' => $allowed]);
+                    throw new ClientException(strtoupper($method).' not allowed.', 405, ['Allow' => implode(', ', $allowed)]);
                 } else {
                     // The action does not exist at all.
                     throw new NotFoundException("{$args['path']} not found");
