@@ -196,7 +196,13 @@ class Addons {
 
         // Now that the class map has been built return the result.
         if ($classname !== null) {
-            $row = val(strtolower($classname), self::$classMap);
+            if (strpos($classname, '\\') === false) {
+                $basename = strtolower($classname);
+            } else {
+                $basename = strtolower(trim(strrchr($classname, '\\'), '\\'));
+            }
+
+            $row = val($basename, self::$classMap);
 
             if ($row === null) {
                 return ['', ''];
