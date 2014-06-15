@@ -120,9 +120,9 @@ class ResourceRoute extends Route {
                 // Check to see what actions are allowed.
                 unset($actions[$method]);
                 $allowed = [];
-                foreach ($actions as $method => $action) {
-                    if ($this->actionExists($controller, $action)) {
-                        $allowed[] = strtoupper($method);
+                foreach ($actions as $otherMethod => $otherAction) {
+                    if ($this->actionExists($controller, $otherAction)) {
+                        $allowed[] = strtoupper($otherMethod);
                     }
                 }
 
@@ -277,16 +277,6 @@ class ResourceRoute extends Route {
 
         $pathParts = explode('/', trim($path, '/'));
 
-        // Look for a file extension and strip it off.
-        $ext = '';
-        if (count($pathParts) > 0) {
-            $file = end($pathParts);
-            if (substr($file, -1) !== '/' && $pos = strrpos($file, '.')) {
-                $ext = strtolower(substr($file, $pos));
-                $pathParts[count($pathParts) - 1] = substr($file, 0, $pos);
-            }
-        }
-
         $controller = array_shift($pathParts);
         if (!$controller) {
             return null;
@@ -294,8 +284,19 @@ class ResourceRoute extends Route {
 
         // Check to see if a class exists with the desired controller name.
         // If a controller is found then it is responsible for the route, regardless of any other parameters.
-        $basename = sprintf($this->controllerPattern, $controller);
-        list($classname, $classpath) = Addons::classMap($basename);
+        $basename = sprintf($this->controllerPattern, ucfirst($controller));
+        if (class_exists('Addons', false)) {
+            list($classname) = Addons::classMap($basename);
+
+            // TODO: Optimize this second check.
+            if (!$classname && class_exists($basename)) {
+                $classname = $basename;
+            }
+        } elseif (class_exists($basename)) {
+            $classname = $basename;
+        } else {
+            $classname = '';
+        }
 
         if (!$classname) {
             return null;
@@ -306,8 +307,7 @@ class ResourceRoute extends Route {
             'method' => $request->method(),
             'path' => $path,
             'pathArgs' => $pathParts,
-            'query' => $request->query(),
-            'ext' => $ext
+            'query' => $request->query()
         );
         return $result;
     }
