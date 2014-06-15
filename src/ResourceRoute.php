@@ -7,12 +7,13 @@
 
 namespace Garden;
 
-use Garden\Exception\ClientException;
 use Garden\Exception\NotFoundException;
+use Garden\Exception\MethodNotAllowedException;
 
 /**
  * Maps paths to controllers that act as RESTful resources.
  *
+ * The following are examples of urls that will map using this resource route.
  * - METHOD /controller/:id -> method
  * - METHOD /controller/:id/action -> methodAction
  * - GET /controller -> index
@@ -21,8 +22,15 @@ use Garden\Exception\NotFoundException;
 class ResourceRoute extends Route {
     protected $controllerPattern = '%sApiController';
 
-    public function __construct($pattern = '', $controllerPattern = null) {
-        $this->pattern($pattern);
+    /**
+     * Initialize an instance of the {@link ResourceRoute} class.
+     *
+     * @param string $root The url root of that this route will map to.
+     * @param string $controllerPattern A pattern suitable for {@link sprintf} that will map
+     * a path to a controller object name.
+     */
+    public function __construct($root = '', $controllerPattern = null) {
+        $this->pattern($root);
 
         if ($controllerPattern !== null) {
             $this->controllerPattern = $controllerPattern;
@@ -34,8 +42,9 @@ class ResourceRoute extends Route {
      *
      * @param array &$args The args to pass to the dispatch.
      * These are the arguments returned from {@link Route::matches()}.
-     * @throws NotFoundException
-     * @throws ClientException
+     * @throws NotFoundException Throws a 404 when the path doesn't map to a controller action.
+     * @throws MethodNotAllowedException Throws a 405 when the http method does not map to a controller action,
+     * but other methods do.
      */
     public function dispatch(array &$args) {
         $controller = new $args['controller']();
@@ -60,10 +69,10 @@ class ResourceRoute extends Route {
                 if ($initParam->isDefaultValueAvailable()) {
                     $initArgs[$i] = $initParam->getDefaultValue();
                 } elseif (!isset($pathArgs[$i])) {
-                    throw new NotFoundException("Missing argument $i for {$args['controller']}::initialize().", 404);
+                    throw new NotFoundException('Page', "Missing argument $i for {$args['controller']}::initialize().");
                 } elseif ($this->failsCondition($initParams[$i], $pathArgs[$i])) {
                     // This isn't a valid value for a required parameter.
-                    throw new NotFoundException("Invalid argument '{$pathArgs[$i]}' for {$initParams[$i]}.", 404);
+                    throw new NotFoundException('Page', "Invalid argument '{$pathArgs[$i]}' for {$initParams[$i]}.");
                 } else {
                     $initArgs[$i] = $pathArgs[$i];
                     $actionIndex = $i + 1;
@@ -108,15 +117,16 @@ class ResourceRoute extends Route {
             if (!isset($actions[$method])) {
                 // The http method isn't allowed.
                 $allowed = array_map('strtoupper', array_keys($actions));
-                throw new ClientException(
-                    strtoupper($method).' not allowed.',
-                    405,
-                    ['Allow' => implode(', ', $allowed)]
-                );
+                throw new MethodNotAllowedException($method, $allowed);
             }
 
             $action = $actions[$method];
             if (!$this->actionExists($controller, $action)) {
+                // If there are more path args left to go then just throw a 404.
+                if ($actionIndex < count($pathArgs)) {
+                    throw new NotFoundException();
+                }
+
                 // Check to see what actions are allowed.
                 unset($actions[$method]);
                 $allowed = [];
@@ -128,10 +138,10 @@ class ResourceRoute extends Route {
 
                 if (!empty($allowed)) {
                     // Other methods are allowed. Show them.
-                    throw new ClientException(strtoupper($method).' not allowed.', 405, ['Allow' => implode(', ', $allowed)]);
+                    throw new MethodNotAllowedException($method, $allowed);
                 } else {
                     // The action does not exist at all.
-                    throw new NotFoundException("{$args['path']} not found");
+                    throw new NotFoundException();
                 }
             }
         }
@@ -152,16 +162,12 @@ class ResourceRoute extends Route {
                 $allowed = $this->allowedMethods($controller, $actionArgs[0]);
                 if (count($allowed) > 0) {
                     // At least one method was allowed for this action so throw an exception.
-                    throw new ClientException(
-                        strtoupper($method).' not allowed.',
-                        405,
-                        ['Allow' => implode(', ', $allowed)]
-                    );
+                    throw new MethodNotAllowedException($method, $allowed);
                 }
             }
 
             // Too many arguments were passed.
-            throw new Exception\NotFoundException("{$args['path']} not found");
+            throw new NotFoundException();
         }
         // Fill in missing default parameters.
         foreach ($actionParams as $param) {
@@ -171,18 +177,18 @@ class ResourceRoute extends Route {
                 if ($param->isDefaultValueAvailable()) {
                     $actionArgs[$i] = $param->getDefaultValue();
                 } else {
-                    throw new NotFoundException("Missing argument $i for {$args['controller']}::$action().");
+                    throw new NotFoundException('Page', "Missing argument $i for {$args['controller']}::$action().");
                 }
             } elseif ($this->failsCondition($param->getName(), $actionArgs[$i])) {
                 $name = $param->getName();
-                throw new NotFoundException("Invalid argument '{$actionArgs[$i]}' for {$name}.", 404);
+                throw new NotFoundException('Page', "Invalid argument '{$actionArgs[$i]}' for {$name}.");
             }
         }
 
-        $args += [
+        $args = array_replace($args, [
             'action' => $action,
             'actionArgs' => $actionArgs
-        ];
+        ]);
         Event::callUserFuncArray([$controller, $action], $actionArgs);
     }
 
@@ -263,6 +269,10 @@ class ResourceRoute extends Route {
      * If the route matches an array of args is returned, otherwise the function returns null.
      */
     public function matches(Request $request, Application $app) {
+        if (!$this->matchesMethods($request)) {
+            return null;
+        }
+
         $path = $request->path();
 
         // If this route is off of a root then check that first.
