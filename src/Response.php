@@ -184,9 +184,14 @@ class Response implements JsonSerializable {
                 $response->status($result[0]);
                 $response->headers($result[1]);
                 $response->data($result[2]);
-            } elseif (isset($result['response'])) {
-                // This is a dispatched response.
-                $response = static::create($result['response']);
+            } elseif (array_key_exists('response', $result)) {
+                $resultResponse = $result['response'];
+                if (!$resultResponse) {
+                    $response->data([]);
+                } else {
+                    // This is a dispatched response.
+                    $response = static::create($resultResponse);
+                }
 
                 if (isset($result['body']) && $result['body']) {
                     $response->context(['body' => $result['body']], true);
