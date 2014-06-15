@@ -29,7 +29,7 @@ class UrlRoute extends Route {
         return $this->callback;
     }
 
-    public function dispatch(array $args) {
+    public function dispatch(array &$args) {
         $callback = $args['callback'];
         $callback_args = reflectArgs($callback, $args['args']);
 
@@ -61,10 +61,12 @@ class UrlRoute extends Route {
 
     /**
      * Convert a path pattern into its regex.
-     * @param string $pattern
+     *
+     * @param string $pattern The route pattern to convert into a regular expression.
+     * @return string Returns the regex pattern for the route.
      */
     protected static function patternRegex($pattern) {
-        $result = preg_replace_callback('`{([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)}`i', function($match) {
+        $result = preg_replace_callback('`{([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)}`i', function ($match) {
             $param = $match[1];
             $param_pattern = '[^/]+';
             $result = "(?<$param>$param_pattern)";
