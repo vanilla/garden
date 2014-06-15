@@ -28,42 +28,29 @@ class Config {
     /**
      * @var array The config data.
      */
-    protected $data;
+    protected static $data;
 
     /**
      * @var string The default path to load/save to.
      */
-    public $defaultPath;
-
-    /**
-     * @var Config The singleton instance of the config.
-     */
-    static $instance;
+    protected static $defaultPath;
 
     /// Methods ///
 
-    public function __construct($default_path = '') {
-        if (!$default_path) {
-            $default_path = PATH_ROOT . '/conf/config.json.php';
+    public static function defaultPath($value = '') {
+        if ($value) {
+            self::$defaultPath = $value;
+        } elseif (!self::$defaultPath) {
+            self::$defaultPath = PATH_ROOT.'/conf/config.json.php';
         }
-        $this->defaultPath = $default_path;
-        $this->data = array();
-    }
-
-    /**
-     * Return the singleton instance of this class.
-     * @return \Garden\Config
-     */
-    public function __invoke() {
-        return self::instance();
     }
 
     /**
      * Return all of the config data.
      * @return array Returns an array of config data.
      */
-    public function data() {
-        return $this->data;
+    public static function data() {
+        return self::$data;
     }
 
     /**
@@ -74,9 +61,9 @@ class Config {
      * @return mixed The value at {@link $key} or {@link $default} if the key isn't found.
      * @see \config()
      */
-    public function get($key, $default = null) {
-        if (array_key_exists($key, $this->data)) {
-            return $this->data[$key];
+    public static function get($key, $default = null) {
+        if (array_key_exists($key, self::$data)) {
+            return self::$data[$key];
         } else {
             return $default;
         }
@@ -122,31 +109,15 @@ class Config {
 //    }
 
     /**
-     * Get or set the singleton instance of this class.
-     *
-     * If you subclass the config object to provide a non-default implementation of config loading/saving
-     * then you must set your subclass with this function.
-     * @param Config $value The Config instance to install.
-     * @return Config
-     */
-    public static function instance($value = null) {
-        if ($value !== null) {
-            self::$instance = $value;
-        } elseif (self::$instance === null) {
-            self::$instance = new Config();
-        }
-        return self::$instance;
-    }
-
-    /**
      * Load configuration data from a file.
+     *
      * @param string $path An optional path to load the file from.
      * @param string $path If true the config will be put under the current config, not over it.
      * @param string $php_var The name of the php variable to load from if using the php file type.
      */
-    public function load($path = '', $underlay = false, $php_var = 'config') {
+    public static function load($path = '', $underlay = false, $php_var = 'config') {
         if (!$path) {
-            $path = $this->defaultPath;
+            $path = self::$defaultPath;
         }
 
         $loaded = array_load($path, $php_var);
@@ -155,27 +126,33 @@ class Config {
             return;
         }
 
+        if (!is_array(self::$data)) {
+            self::$data = [];
+        }
+
         if ($underlay) {
-            $this->data = array_replace($loaded, $this->data);
+            self::$data = array_replace($loaded, self::$data);
         } else {
-            $this->data = array_replace($this->data, $loaded);
+            self::$data = array_replace(self::$data, $loaded);
         }
     }
 
     /**
+     * Save data to the config file.
      *
      * @param array $data The config data to save.
      * @param string $path An optional path to save the data to.
-     * @param type $php_var The name of the php variable to load from if using the php file type.
+     * @param string $php_var The name of the php variable to load from if using the php file type.
      * @return bool Returns true if the save was successful or false otherwise.
+     * @throws \InvalidArgumentException Throws an exception when the saved data isn't an array.
      */
-    public function save($data, $path = null, $php_var = 'config') {
+    public static function save($data, $path = null, $php_var = 'config') {
         if (!is_array($data)) {
-            throw new \InvalidArgumentException('Config->save(): Argument #1 is not an array.', 400);
+            throw new \InvalidArgumentException('Config::save(): Argument #1 is not an array.', 400);
         }
 
         if (!$path) {
-            $path = $this->defaultPath;
+            $path = static::defaultPath();
         }
 
         // Load the current config information so we know what to replace.
