@@ -148,12 +148,12 @@ class Application {
                     // Dispatch the first matched route.
                     ob_start();
                     $response = $route->dispatch($args);
-                    $output = ob_get_clean();
+                    $body = ob_get_clean();
 
                     $result = [
                         'routing' => $args,
                         'response' => $response,
-                        'output' => $output
+                        'body' => $body
                     ];
 
                     // Once a route has been successfully dispatched we break and don't dispatch anymore.
@@ -185,7 +185,7 @@ class Application {
      */
     protected function finalize($result) {
         $response = Response::create($result);
-        $response->contentTypeFromAccept($this->request->env('ACCEPT'));
+        $response->contentTypeFromAccept($this->request->env('HTTP_ACCEPT'));
 
         $accept = $response->contentType();
         if (str_begins($accept, 'debug/')) {
