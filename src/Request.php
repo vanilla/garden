@@ -123,11 +123,12 @@ class Request implements JsonSerializable {
     /**
      * Gets or updates the default environment.
      *
-     * @param string|null $key Specifies a specific key in the environment array.
-     * @param string|null $value Update the value at {@link $key} in the environment array.
+     * @param string|array|null $key Specifies a specific key in the environment array.
+     * If you pass an array for this parameter then you can set the default environment.
+     * @param bool $merge Whether or not to merge the new value.
      * @return array|mixed Returns the value at {@link $key} or the entire environment array.
      */
-    public static function defaultEnvironment($key = null, $value = null) {
+    public static function defaultEnvironment($key = null, $merge = false) {
         if (self::$defaultEnv === null) {
             self::$defaultEnv = array(
                 'REQUEST_METHOD' => 'GET',
@@ -137,23 +138,29 @@ class Request implements JsonSerializable {
                 'QUERY' => array(),
                 'SERVER_NAME' => 'localhost',
                 'SERVER_PORT' => 80,
-                'ACCEPT' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'ACCEPT_LANGUAGE' => 'en-US,en;q=0.8',
-                'ACCEPT_CHARSET' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-                'USER_AGENT' => 'Vanilla Framework',
+                'HTTP_ACCEPT' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'HTTP_ACCEPT_LANGUAGE' => 'en-US,en;q=0.8',
+                'HTTP_ACCEPT_CHARSET' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+                'HTTP_USER_AGENT' => 'Vanilla Framework',
                 'REMOTE_ADDR' => '127.0.0.1',
                 'URL_SCHEME' => 'http',
                 'INPUT' => array(),
             );
         }
 
-        if ($key !== null && $value !== null) {
-            self::$defaultEnv[$key] = $value;
+        if ($key === null) {
             return self::$defaultEnv;
-        } elseif ($value !== null) {
+        } elseif (is_array($key)) {
+            if ($merge) {
+                self::$defaultEnv = array_merge(self::$defaultEnv, $key);
+            } else {
+                self::$defaultEnv = $key;
+            }
+            return self::$defaultEnv;
+        } elseif (is_string($key)) {
             return val($key, self::$defaultEnv);
         } else {
-            return self::$defaultEnv;
+            throw new \InvalidArgumentException("Argument #1 for Request::globalEnvironment() is invalid.", 422);
         }
     }
 
