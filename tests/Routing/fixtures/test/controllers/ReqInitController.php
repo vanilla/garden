@@ -9,4 +9,8 @@ class ReqInitController {
     public function initialize($id) {
 
     }
+
+    public function get() {
+
+    }
 }

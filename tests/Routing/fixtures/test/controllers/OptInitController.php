@@ -17,4 +17,8 @@ class OptInitController {
     public function post() {
 
     }
+
+    public function patch($archive = '0') {
+        
+    }
 }
