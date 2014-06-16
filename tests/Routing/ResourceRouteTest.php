@@ -35,7 +35,10 @@ class ResourceRouteTest extends \PHPUnit_Framework_TestCase {
         Event::fire('bootstrap');
 
         // Set the default return type to route info.
-        Request::defaultEnvironment('ACCEPT', 'debug/routing');
+        Request::defaultEnvironment([
+            'HTTP_ACCEPT' => 'application/internal',
+            'HTTP_X_ASSET' => 'meta.routing'
+        ], true);
 
         Route::globalConditions([
             'page' => 'p\d+'

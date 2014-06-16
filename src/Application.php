@@ -186,11 +186,12 @@ class Application {
     protected function finalize($result) {
         $response = Response::create($result);
         $response->contentTypeFromAccept($this->request->env('HTTP_ACCEPT'));
+        $response->contentAsset($this->request->env('HTTP_X_ASSET'));
 
-        $accept = $response->contentType();
-        if (str_begins($accept, 'debug/')) {
+        $contentType = $response->contentType();
+        if (str_begins($contentType, 'debug/')) {
             // Return debug information.
-            $part = trim(strtolower(strstr($accept, '/')), '/');
+            $part = trim(strtolower(strstr($contentType, '/')), '/');
             if ($result instanceof \Exception) {
                 throw $result;
             } elseif ($part === 'all') {
@@ -203,7 +204,19 @@ class Application {
         }
 
         // Check for known response types.
-        switch ($accept) {
+        switch ($contentType) {
+            case 'application/internal':
+                if ($result instanceof \Exception) {
+                    throw $result;
+                }
+
+                if ($response->contentAsset() === 'response') {
+                    return $response;
+                } else {
+                    return $response->jsonSerialize();
+                }
+
+                break;
             case 'application/json':
                 $response->flushHeaders();
                 echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
@@ -211,7 +224,7 @@ class Application {
             default:
                 $response->status(415);
                 $response->flushHeaders();
-                echo "Unsupported response type: $accept";
+                echo "Unsupported response type: $contentType";
                 break;
         }
     }

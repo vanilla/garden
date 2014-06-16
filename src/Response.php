@@ -44,14 +44,19 @@ class Response implements JsonSerializable {
     protected static $current;
 
     /**
-     * @var array An array of context data that is not related to the response data.
+     * @var array An array of meta data that is not related to the response data.
      */
-    protected $context = [];
+    protected $meta = [];
 
     /**
      * @var array An array of response data.
      */
     protected $data = [];
+
+    /**
+     * @var string The asset that should be rendered.
+     */
+    protected $contentAsset;
 
     /**
      * @var string The default cookie domain.
@@ -193,9 +198,9 @@ class Response implements JsonSerializable {
                     $response = static::create($resultResponse);
                 }
 
-                if (isset($result['body']) && $result['body']) {
-                    $response->context(['body' => $result['body']], true);
-                }
+                // Set the rest of the result to the response context.
+                unset($result['response']);
+                $response->meta($result, true);
             } else {
                 $response->data($result);
             }
@@ -221,6 +226,21 @@ class Response implements JsonSerializable {
         }
 
         return $this->headers('Content-Type', $value);
+    }
+
+    /**
+     * Gets or sets the asset that will be rendered in the response.
+     *
+     * @param string $asset Set a new value or pass `null` to get the current value.
+     * @return Response|string Returns the current content asset or `$this` when settings.
+     */
+    public function contentAsset($asset = null) {
+        if ($asset !== null) {
+            $this->contentAsset = $asset;
+            return $this;
+        }
+
+        return $this->contentAsset;
     }
 
     /**
@@ -318,24 +338,24 @@ class Response implements JsonSerializable {
     }
 
     /**
-     * Get or set the context data for the response.
+     * Get or set the meta data for the response.
      *
-     * The context is an array of data that is unrelated to the response data.
+     * The meta is an array of data that is unrelated to the response data.
      *
-     * @param array|null $context Pass a new context data value or `null` to get the current context array.
+     * @param array|null $meta Pass a new meta data value or `null` to get the current meta array.
      * @param bool $merge Whether or not to merge new data with the current data when setting.
-     * @return $this|array Returns either the context or `$this` when setting the context data.
+     * @return $this|array Returns either the meta or `$this` when setting the meta data.
      */
-    public function context($context = null, $merge = false) {
-        if ($context !== null) {
+    public function meta($meta = null, $merge = false) {
+        if ($meta !== null) {
             if ($merge) {
-                $this->context = array_merge($this->context, $context);
+                $this->meta = array_merge($this->meta, $meta);
             } else {
-                $this->context = $context;
+                $this->meta = $meta;
             }
             return $this;
         } else {
-            return $this->context;
+            return $this->meta;
         }
     }
 
@@ -576,6 +596,31 @@ class Response implements JsonSerializable {
      * which is a value of any type other than a resource.
      */
     public function jsonSerialize() {
+        $asset = $this->contentAsset();
+
+        if ($asset) {
+            // A specific asset was specified.
+            if (strpos($asset, '.') !== false) {
+                list($group, $key) = explode('.', $asset, 2);
+                switch ($group) {
+                    case 'meta':
+                        return val($key, $this->meta);
+                    case 'data':
+                        return val($key, $this->data);
+                    default:
+                        return null;
+                }
+            } else {
+                switch ($asset) {
+                    case 'data':
+                        return $this->data;
+                    case 'meta':
+                        return $this->meta;
+                    default:
+                        return null;
+                }
+            }
+        }
         return $this->data;
     }
 }
