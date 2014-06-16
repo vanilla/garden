@@ -182,6 +182,7 @@ class Application {
      *
      * @param mixed $result The result of the dispatch.
      * @return mixed Returns relevant debug data or processes the response.
+     * @throws \Exception Throws an exception when finalizing internal content types and the result is an exception.
      */
     protected function finalize($result) {
         $response = Response::create($result);
@@ -189,19 +190,6 @@ class Application {
         $response->contentAsset($this->request->env('HTTP_X_ASSET'));
 
         $contentType = $response->contentType();
-        if (str_begins($contentType, 'debug/')) {
-            // Return debug information.
-            $part = trim(strtolower(strstr($contentType, '/')), '/');
-            if ($result instanceof \Exception) {
-                throw $result;
-            } elseif ($part === 'all') {
-                return $result;
-            } elseif (is_array($result) && isset($result[$part])) {
-                return $result[$part];
-            } else {
-                return null;
-            }
-        }
 
         // Check for known response types.
         switch ($contentType) {

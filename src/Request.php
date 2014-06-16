@@ -317,10 +317,10 @@ class Request implements JsonSerializable {
         // Check to override the accepts header.
         switch (strtolower($env['EXT'])) {
             case '.json':
-                static::replaceEnv($env, 'ACCEPT', 'application/json');
+                static::replaceEnv($env, 'HTTP_ACCEPT', 'application/json');
                 break;
             case '.rss':
-                static::replacEEnv($env, 'ACCEPT', 'application/rss+xml');
+                static::replaceEnv($env, 'HTTP_ACCEPT', 'application/rss+xml');
                 break;
         }
     }
