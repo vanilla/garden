@@ -23,6 +23,11 @@ class ResourceRoute extends Route {
     protected $controllerPattern = '%sApiController';
 
     /**
+     * @var array An array of controller method names that can't be dispatched to by name.
+     */
+    public static $specialActions = ['delete', 'get', 'index', 'initialize', 'options', 'patch', 'post'];
+
+    /**
      * Initialize an instance of the {@link ResourceRoute} class.
      *
      * @param string $root The url root of that this route will map to.
@@ -85,7 +90,7 @@ class ResourceRoute extends Route {
         for ($i = $actionIndex; $i < count($pathArgs); $i++) {
             $pathArg = $pathArgs[$i];
 
-            $action = $this->actionExists($controller, $pathArg, $method);
+            $action = $this->actionExists($controller, $pathArg, $method, true);
             if ($action) {
                 // We found an action and can move on to the next step.
                 $actionIndex = $i + 1;
@@ -115,9 +120,14 @@ class ResourceRoute extends Route {
             }
 
             if (!isset($actions[$method])) {
-                // The http method isn't allowed.
-                $allowed = array_map('strtoupper', array_keys($actions));
-                throw new MethodNotAllowedException($method, $allowed);
+                if ($actionIndex < count($pathArgs)) {
+                    // There are more path args left to go then just throw a 404.
+                    throw new NotFoundException();
+                } else {
+                    // The http method isn't allowed.
+                    $allowed = array_keys($actions);
+                    throw new MethodNotAllowedException($method, $allowed);
+                }
             }
 
             $action = $actions[$method];
@@ -146,24 +156,18 @@ class ResourceRoute extends Route {
             }
         }
 
-        $args['initialize'] = $initialize;
-        $args['initArgs'] = $initArgs;
-        if ($initialize) {
-            Event::callUserFuncArray([$controller, 'initialize'], $initArgs);
-        }
         // Make sure the number of action arguments match the action method.
         $actionMethod = new \ReflectionMethod($controller, $action);
+        $action = $actionMethod->getName(); // make correct case.
         $actionParams = $actionMethod->getParameters();
         $actionArgs = array_slice($pathArgs, $actionIndex);
 
         if (count($actionArgs) > count($actionParams)) {
             // Double check to see if the first argument might be a method, but one that isn't allowed.
-            if (count($actionArgs) > 0) {
-                $allowed = $this->allowedMethods($controller, $actionArgs[0]);
-                if (count($allowed) > 0) {
-                    // At least one method was allowed for this action so throw an exception.
-                    throw new MethodNotAllowedException($method, $allowed);
-                }
+            $allowed = $this->allowedMethods($controller, $actionArgs[0]);
+            if (count($allowed) > 0) {
+                // At least one method was allowed for this action so throw an exception.
+                throw new MethodNotAllowedException($method, $allowed);
             }
 
             // Too many arguments were passed.
@@ -186,9 +190,16 @@ class ResourceRoute extends Route {
         }
 
         $args = array_replace($args, [
+            'init' => $initialize,
+            'initArgs' => $initArgs,
             'action' => $action,
             'actionArgs' => $actionArgs
         ]);
+
+        if ($initialize) {
+            Event::callUserFuncArray([$controller, 'initialize'], $initArgs);
+        }
+
         Event::callUserFuncArray([$controller, $action], $actionArgs);
     }
 
@@ -199,10 +210,6 @@ class ResourceRoute extends Route {
      * @return bool Returns true if {@link $str} can be used as an identifier.
      */
     protected static function isIdentifier($str) {
-        if (preg_match('`^p\d+$`i', $str)) {
-            // This is a page number.
-            return false;
-        }
         if (preg_match('`[_a-zA-Z][_a-zA-Z0-9]{0,30}`i', $str)) {
             return true;
         }
@@ -215,9 +222,19 @@ class ResourceRoute extends Route {
      * @param object $object The controller object that the method should be on.
      * @param string $action The name of the action.
      * @param string $method The http method.
+     * @param bool $special Whether or not to blacklist the special methods.
      * @return string Returns the name of the action method or an empty string if it doesn't exist.
      */
-    protected function actionExists($object, $action, $method = '') {
+    protected function actionExists($object, $action, $method = '', $special = false) {
+        if ($special && in_array($action, self::$specialActions)) {
+            return '';
+        }
+
+        // Short circuit on a badly named action.
+        if (!$this->isIdentifier($action)) {
+            return '';
+        }
+
         if ($method && $method !== $action) {
             $calledAction = $method.$action;
             if (Event::methodExists($object, $calledAction)) {
@@ -244,6 +261,11 @@ class ResourceRoute extends Route {
             Request::METHOD_PATCH, Request::METHOD_PUT,
             Request::METHOD_HEAD, Request::METHOD_OPTIONS
         ];
+
+        // Special actions should not be considered.
+        if (in_array($action, self::$specialActions)) {
+            return [];
+        }
 
         if (Event::methodExists($object, $action)) {
             // The controller has the named action and thus supports all methods.
@@ -295,7 +317,7 @@ class ResourceRoute extends Route {
         // Check to see if a class exists with the desired controller name.
         // If a controller is found then it is responsible for the route, regardless of any other parameters.
         $basename = sprintf($this->controllerPattern, ucfirst($controller));
-        if (class_exists('Addons', false)) {
+        if (class_exists('\Garden\Addons', false)) {
             list($classname) = Addons::classMap($basename);
 
             // TODO: Optimize this second check.
