@@ -21,7 +21,7 @@ class MethodNotAllowedException extends clientException {
     public function __construct($method, $allow = []) {
         $allow = (array)$allow;
         $message = sprintf('%s not allowed.', strtoupper($method));
-        parent::__construct($message, 405, ['HTTP_ALLOW' => implode(', ', $allow)]);
+        parent::__construct($message, 405, ['HTTP_ALLOW' => strtoupper(implode(', ', $allow))]);
     }
 
     /**
