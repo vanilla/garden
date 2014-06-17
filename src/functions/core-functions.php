@@ -782,70 +782,40 @@ function str_ends($haystack, $needle) {
     return strcasecmp(substr($haystack, -strlen($needle)), $needle) === 0;
 }
 
-$timers = array();
+$translations = [];
 
 /**
- * Start a timer to time a piece of code.
+ * Translate a string.
  *
- * @global array $timers All of the active timers.
- * @param string $name The name of the timer.
+ * @param string $code The translation code.
+ * @param string $default The default if the translation is not found.
+ * @return string The translated string.
  */
-function timerStart($name) {
-    global $timers;
+function t($code, $default = null) {
+    global $translations;
 
-    $str = '';
-
-    $count = count($timers);
-
-    // Mark my parent timer as such so it knows how to format.
-    if ($count) {
-        if (!isset($timers[$count - 1]['parent'])) {
-            $timers[$count - 1]['parent'] = true;
-            $str .= "\n";
-        }
+    if (substr($code, 0, 1) === '@') {
+        return substr($code, 1);
+    } elseif (isset($translations[$code])) {
+        return $translations[$code];
+    } elseif ($default !== null) {
+        return $default;
+    } else {
+        return $code;
     }
-
-    $timer = array('name' => $name, 'start' => microtime(true));
-    $timers[] = $timer;
-
-    $str .= str_repeat('  ', $count).
-        "start $name";
-
-    fwrite(STDERR, $str);
 }
 
 /**
- * Stop a timer that was called with timerStart().
+ * A version of {@link sprintf()} That translates the string format.
  *
- * @global array $timers All of the active timers.
+ * @param string $formatCode The format translation code.
+ * @param mixed $arg1 The arguments to pass to {@link sprintf()}.
+ * @return string The translated string.
  */
-function timerStop($data = null) {
-    global $timers;
-
-    $stop = microtime(true);
-    $timer = array_pop($timers);
-
-    if ($timer) {
-        $timespan = $stop - $timer['start'];
-
-        if (isset($timer['parent'])) {
-            // This was a nested timer.
-            $str = str_repeat('  ', count($timers)).
-                "stop {$timer['name']}...".formatTimespan($timespan);
-            fwrite(STDERR, $str);
-        } else {
-            // Not a nested timer.
-            fwrite(STDERR, '...'.formatTimespan($timespan));
-        }
-
-        if (is_array($data) && count($data))
-            fwrite(STDERR, ' '.implode_assoc(', ', ': ', $data));
-
-        fwrite(STDERR, "\n");
-    } else {
-        // This really is an error, but probably isn't worth taking out the entire script for.
-        trigger_error("timerStop() called without calling timerStart() first.", E_USER_NOTICE);
-    }
+function sprintft($formatCode, $arg1 = null) {
+    $args = func_get_args();
+    $args[0] = t($args[0]);
+    return call_user_func_array('sprintf', $args);
 }
 
 /**
