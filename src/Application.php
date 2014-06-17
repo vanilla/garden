@@ -133,7 +133,7 @@ class Application {
             $request = new Request();
         }
         $this->request = $request;
-        $requestBak = Request::current();
+        $requestBak = Request::current($request);
 
         // Grab all of the matched routes.
         $routes = $this->matchRoutes($this->request);
@@ -147,7 +147,7 @@ class Application {
                 try {
                     // Dispatch the first matched route.
                     ob_start();
-                    $response = $route->dispatch($args);
+                    $response = $route->dispatch($request, $args);
                     $body = ob_get_clean();
 
                     $result = [
@@ -186,6 +186,7 @@ class Application {
      */
     protected function finalize($result) {
         $response = Response::create($result);
+        $response->meta(['request' => $this->request], true);
         $response->contentTypeFromAccept($this->request->env('HTTP_ACCEPT'));
         $response->contentAsset($this->request->env('HTTP_X_ASSET'));
 

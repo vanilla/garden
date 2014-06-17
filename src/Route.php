@@ -1,6 +1,12 @@
 <?php namespace Garden;
 
 abstract class Route {
+    /// Constants ///
+
+    const MAP_QUERY = 'query'; // map to the querystring.
+    const MAP_INPUT = 'input'; // map to the input (post).
+    const MAP_DATA = 'data'; // map to the querystring or input depending on the method.
+
     /// Properties ///
 
     /**
@@ -19,6 +25,20 @@ abstract class Route {
      * @var array An array of global parameter conditions.
      */
     protected static $globalConditions;
+
+    /**
+     * @var array An array of parameter mappings.
+     */
+    protected $mappings;
+
+    /**
+     * @var array An array of global parameter mappings.
+     */
+    protected static $globalMappings = [
+        'data' => Route::MAP_DATA,
+        'query' => Route::MAP_QUERY,
+        'input' => Route::MAP_INPUT
+    ];
 
     /// Methods ///
 
@@ -41,10 +61,11 @@ abstract class Route {
     /**
      * Dispatch the route.
      *
+     * @param Request $request The current request we are dispatching against.
      * @param array &$args The args to pass to the dispatch.
      * These are the arguments returned from {@link Route::matches()}.
      */
-    abstract public function dispatch(array &$args);
+    abstract public function dispatch(Request $request, array &$args);
 
     /**
      * Gets or sets the route's conditions.
@@ -72,6 +93,7 @@ abstract class Route {
 
     /**
      * Gets or sets the allowed http methods for this route.
+     *
      * @param array|null $methods Set a new set of allowed methods or pass null to get the current methods.
      * @return Route|array Returns the current methods or `$this` for fluent calls.
      */
@@ -105,6 +127,84 @@ abstract class Route {
         }
 
         return self::$globalConditions;
+    }
+
+    /**
+     * Gets or sets the mappings array that maps parameter names to mappings.
+     *
+     * @param array|null $mappings An array of mappings to set.
+     * @return Route|array Returns the current mappings or `$this` for fluent calls.
+     */
+    public function mappings($mappings = null) {
+        if ($this->mappings === null) {
+            $this->mappings = [];
+        }
+
+        if (is_array($mappings)) {
+            $mappings = array_change_key_case($mappings);
+
+            $this->mappings = array_replace(
+                $this->mappings,
+                $mappings
+            );
+            return $this;
+        }
+
+        return $this->mappings;
+    }
+
+    /**
+     * Gets or sets the global mappings array that maps parameter names to mappings.
+     *
+     * @param array|null $mappings An array of mappings to set.
+     * @return array Returns the current global mappings.
+     */
+    public static function globalMappings($mappings = null) {
+        if (self::$globalMappings === null) {
+            self::$globalMappings = [];
+        }
+
+        if (is_array($mappings)) {
+            $mappings = array_change_key_case($mappings);
+
+            self::$globalMappings = array_replace(
+                self::$globalMappings,
+                $mappings
+            );
+        }
+
+        return self::$globalMappings;
+    }
+
+    protected function isMapped($name) {
+        $name = strtolower($name);
+        return isset($this->mappings[$name]) || isset(self::$globalMappings[$name]);
+    }
+
+    protected function mappedData($name, Request $request) {
+        $name = strtolower($name);
+
+        if (isset($this->mappings[$name])) {
+            $mapping = $this->mapping[$name];
+        } elseif (isset(self::$globalMappings[$name])) {
+            $mapping = self::$globalMappings[$name];
+        } else {
+            return null;
+        }
+
+        switch (strtolower($mapping)) {
+            case self::MAP_DATA:
+                break;
+            case self::MAP_INPUT:
+                $result = $request->input();
+                break;
+            case self::MAP_QUERY:
+                $result = $request->query();
+                break;
+            default:
+                return null;
+        }
+        return $result;
     }
 
     /**

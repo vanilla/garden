@@ -28,7 +28,7 @@ class Config {
     /**
      * @var array The config data.
      */
-    protected static $data;
+    protected static $data = [];
 
     /**
      * @var string The default path to load/save to.
