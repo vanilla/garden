@@ -336,7 +336,7 @@ function c($key, $default) {
  * @return mixed The config value.
  */
 function config($key, $default = null) {
-    return Garden\Config::instance()->get($key, $default);
+    return Garden\Config::get($key, $default);
 }
 
 /**
