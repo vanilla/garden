@@ -549,6 +549,26 @@ class Request implements JsonSerializable {
         }
     }
 
+    /**
+     * Gets the query on input depending on the http method.
+     *
+     * @return array Returns the data.
+     */
+    public function data() {
+        switch ($this->method) {
+            case self::METHOD_GET:
+            case self::METHOD_DELETE:
+            case self::METHOD_HEAD:
+            case self::METHOD_OPTIONS:
+                return $this->env['QUERY'];
+            case self::METHOD_POST:
+            case self::METHOD_PATCH:
+            case self::METHOD_PUT:
+            default:
+                return $this->env['INPUT'];
+        }
+    }
+
     public function root($value = null) {
         if ($value !== null) {
             $value = rtrim($value, '/');

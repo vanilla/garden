@@ -45,13 +45,15 @@ class ResourceRoute extends Route {
     /**
      * Dispatch the route.
      *
+     * @param Request $request The current request we are dispatching against.
      * @param array &$args The args to pass to the dispatch.
      * These are the arguments returned from {@link Route::matches()}.
+     * @return mixed Returns the result from the controller method.
      * @throws NotFoundException Throws a 404 when the path doesn't map to a controller action.
      * @throws MethodNotAllowedException Throws a 405 when the http method does not map to a controller action,
      * but other methods do.
      */
-    public function dispatch(array &$args) {
+    public function dispatch(Request $request, array &$args) {
         $controller = new $args['controller']();
         $method = strtolower($args['method']);
         $pathArgs = $args['pathArgs'];
@@ -176,16 +178,19 @@ class ResourceRoute extends Route {
         // Fill in missing default parameters.
         foreach ($actionParams as $param) {
             $i = $param->getPosition();
+            $paramName = $param->getName();
 
-            if (!isset($actionArgs[$i]) || !$actionArgs[$i]) {
+            if ($this->isMapped($paramName)) {
+                // The parameter is mapped to a specific request item.
+                array_splice($actionArgs, $i, 0, [$this->mappedData($paramName, $request)]);
+            } elseif (!isset($actionArgs[$i]) || !$actionArgs[$i]) {
                 if ($param->isDefaultValueAvailable()) {
                     $actionArgs[$i] = $param->getDefaultValue();
                 } else {
                     throw new NotFoundException('Page', "Missing argument $i for {$args['controller']}::$action().");
                 }
-            } elseif ($this->failsCondition($param->getName(), $actionArgs[$i])) {
-                $name = $param->getName();
-                throw new NotFoundException('Page', "Invalid argument '{$actionArgs[$i]}' for {$name}.");
+            } elseif ($this->failsCondition($paramName, $actionArgs[$i])) {
+                throw new NotFoundException('Page', "Invalid argument '{$actionArgs[$i]}' for {$paramName}.");
             }
         }
 
@@ -200,7 +205,8 @@ class ResourceRoute extends Route {
             Event::callUserFuncArray([$controller, 'initialize'], $initArgs);
         }
 
-        Event::callUserFuncArray([$controller, $action], $actionArgs);
+        $result = Event::callUserFuncArray([$controller, $action], $actionArgs);
+        return $result;
     }
 
     /**
