@@ -246,19 +246,19 @@ class Request implements JsonSerializable {
             // Input stream (readable one time only; not available for multipart/form-data requests)
             switch (val('CONTENT_TYPE', $env)) {
                 case 'application/json':
-                    $raw_input = @file_get_contents('php://input');
-                    $input = @json_decode($raw_input, true);
+                    $input_raw = @file_get_contents('php://input');
+                    $input = @json_decode($input_raw, true);
                     break;
             }
             if (isset($input)) {
                 $env['INPUT'] = $input;
-                $env['RAW_INPUT'] = $raw_input;
+                $env['INPUT_RAW'] = $input_raw;
             } elseif (isset($_POST)) {
                 $env['INPUT'] = $_POST;
             }
 
-            if (isset($raw_input)) {
-                $env['RAW_INPUT'] = $raw_input;
+            if (isset($input_raw)) {
+                $env['INPUT_RAW'] = $input_raw;
             }
 
             // IP Address.
