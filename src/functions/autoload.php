@@ -19,5 +19,6 @@ require_once __DIR__.'/core-functions.php';
 
 // Load the framework's overridable functions late so that addons can override them.
 Event::bind('bootstrap', function () {
+    require_once __DIR__.'/pluggable-functions.php';
     require_once __DIR__.'/formatting-functions.php';
 }, Event::PRIORITY_LOW);

@@ -502,14 +502,22 @@ function implode_assoc($elemglue, $keyglue, $pieces) {
 }
 
 /**
- * Finds whether the type given variable is a database id.
+ * Whether or not a string is a url in the form http://, https://, or //.
  *
- * @param mixed $val The variable being evaluated.
- * @param bool $allow_slugs Whether or not slugs are allowed in the url.
- * @return bool Returns `true` if the variable is a database id or `false` if it isn't.
+ * @param string $str The string to check.
+ * @return bool
  */
-function is_id($val, $allow_slugs = false) {
-    return is_numeric($val);
+function is_url($str) {
+    if (!$str) {
+        return false;
+    }
+    if (substr($str, 0, 2) == '//') {
+        return true;
+    }
+    if (strpos($str, '://', 1) !== false) {
+        return true;
+    }
+    return false;
 }
 
 /**
