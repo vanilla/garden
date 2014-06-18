@@ -68,14 +68,16 @@ class Schema {
             if (is_int($key)) {
                 if (is_string($value)) {
                     // This is a short param value.
-                    list($name, $param) = static::parseShortParam($value);
+                    $param = static::parseShortParam($value);
+                    $name = $param['name'];
                     $result[$name] = $param;
                 } else {
                     throw new \InvalidArgumentException("Schema at position $key is not a valid param.", 422);
                 }
             } else {
                 // The parameter is defined in the key.
-                list($name, $param) = static::parseShortParam($key, $value);
+                $param = static::parseShortParam($key, $value);
+                $name = $param['name'];
 
                 if (is_array($value)) {
                     // The value describes a bit more about the schema.
@@ -127,7 +129,7 @@ class Schema {
     /**
      * Parse a short parameter string into a full array parameter.
      *
-     * @param $str The short parameter string to parse.
+     * @param string $str The short parameter string to parse.
      * @param array $other An array of other information that might help resolve ambiguity.
      * @return array Returns an array in the form [name, [param]].
      * @throws \InvalidArgumentException Throws an exception if the short param is not in the correct format.
@@ -161,7 +163,7 @@ class Schema {
             }
         }
 
-        $result = [$name, ['type' => $type, 'required' => $required]];
+        $result = ['name' => $name, 'type' => $type, 'required' => $required];
 
         return $result;
     }
@@ -169,12 +171,12 @@ class Schema {
     /**
      * Add a custom validator to to validate the schema.
      *
+     * @param string $fieldname The name of the field to validate, if any.
      * @param callable $callback The callback to validate with.
-     * @param string $field The name of the field to validate, if any.
      * @return Schema Returns `$this` for fluent calls.
      */
-    public function addValidator(callable $callback, $field = '*') {
-        $this->validators[$field][] = $callback;
+    public function addValidator($fieldname, callable $callback) {
+        $this->validators[$fieldname][] = $callback;
         return $this;
     }
 
@@ -182,16 +184,16 @@ class Schema {
     /**
      * Require one of a given set of fields in the schema.
      *
-     * @param array $fields The field names to require.
+     * @param array $fieldnames The field names to require.
      * @param int $count The count of required items.
      * @return Schema Returns `$this` for fluent calls.
      */
-    public function requireOneOf(array $fields, $count = 1) {
-        return $this->addValidator(function ($data, Validation $validation) use ($fields, $count) {
+    public function requireOneOf(array $fieldnames, $count = 1) {
+        return $this->addValidator('*', function ($data, Validation $validation) use ($fieldnames, $count) {
             $hasCount = 0;
             $flattened = [];
 
-            foreach ($fields as $name) {
+            foreach ($fieldnames as $name) {
                 $flattened = array_merge($flattened, (array)$name);
 
                 if (is_array($name)) {
@@ -221,7 +223,7 @@ class Schema {
                     return '('.implode(', ', $v).')';
                 }
                 return $v;
-            }, $fields);
+            }, $fieldnames);
 
             if ($count === 1) {
                 $message = sprintft('One of %s are required.', implode(', ', $messageFields));
@@ -277,7 +279,7 @@ class Schema {
         // Loop through the schema fields and validate each one.
         foreach ($schema as $field => $params) {
             if (isset($data[$field])) {
-                $this->validateField($data[$field], $field, $params, $validation);
+                $this->validateField($data[$field], $params, $validation);
             } elseif (val('required', $params)) {
                 $validation->addError('missing_field', $field);
             }
@@ -297,15 +299,16 @@ class Schema {
      * Validate a field.
      *
      * @param mixed &$value The value to validate.
-     * @param string $field The name of the field to validate.
-     * @param array $params Parameters on the field.
+     * @param array $field Parameters on the field.
      * @param Validation $validation A validation object to add errors to.
-     * @return bool Returns true if the field is valid, false otherwise.
      * @throws \InvalidArgumentException Throws an exception when there is something wrong in the {@link $params}.
+     * @internal param string $fieldname The name of the field to validate.
+     * @return bool Returns true if the field is valid, false otherwise.
      */
-    public function validateField(&$value, $field, $params, Validation $validation) {
-        $type = $params['type'];
-        $required = val('required', $params, false);
+    protected function validateField(&$value, $field, Validation $validation) {
+        $fieldname = $field['name'];
+        $type = $field['type'];
+        $required = val('required', $field, false);
         $valid = true;
 
         // Check required first.
@@ -322,12 +325,12 @@ class Schema {
                     $value = false;
                     return true;
                 case 'string':
-                    if (val('minLength', $params, 1) == 0) {
+                    if (val('minLength', $field, 1) == 0) {
                         $value = '';
                         return true;
                     }
             }
-            $validation->addError('missing_field', $field);
+            $validation->addError('missing_field', $fieldname);
             return false;
         }
 
@@ -420,13 +423,20 @@ class Schema {
             $valid = false;
             $validation->addError(
                 'invalid_type',
-                $field,
+                $fieldname,
                 [
                     'type' => $type,
-                    'message' => sprintft('%1$s is not a valid %2$s.', $field, $type),
+                    'message' => sprintft('%1$s is not a valid %2$s.', $fieldname, $type),
                     'status' => 422
                 ]
             );
+        }
+
+        // Validate a custom field validator.
+        if (isset($this->validators[$fieldname])) {
+            foreach ($this->validators[$fieldname] as $callback) {
+                call_user_func_array($callback, [&$value, $field, $validation]);
+            }
         }
 
         return $valid;
