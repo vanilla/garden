@@ -23,7 +23,8 @@ class Schema {
         's' => 'string',
         'f' => 'float',
         'b' => 'boolean',
-        'ts' => 'timestamp'
+        'ts' => 'timestamp',
+        'dt' => 'datetime'
     ];
 
     /**
@@ -33,6 +34,11 @@ class Schema {
 
     /// Methods ///
 
+    /**
+     * Initialize an instance of a new {@link Schema} class.
+     *
+     * @param array $schema The array schema to validate against.
+     */
     public function __construct($schema = []) {
         $this->schema = static::parse($schema);
     }
@@ -183,9 +189,25 @@ class Schema {
     public function requireOneOf(array $fields, $count = 1) {
         return $this->addValidator(function ($data, Validation $validation) use ($fields, $count) {
             $hasCount = 0;
+            $flattened = [];
 
             foreach ($fields as $name) {
-                if (isset($data[$name]) && $data[$name]) {
+                $flattened = array_merge($flattened, (array)$name);
+
+                if (is_array($name)) {
+                    // This is an array of required names. They all must match.
+                    $hasCountInner = 0;
+                    foreach ($name as $nameInner) {
+                        if (isset($data[$nameInner]) && $data[$nameInner]) {
+                            $hasCountInner++;
+                        } else {
+                            break;
+                        }
+                    }
+                    if ($hasCountInner >= count($name)) {
+                        $hasCount++;
+                    }
+                } elseif (isset($data[$name]) && $data[$name]) {
                     $hasCount++;
                 }
 
@@ -194,13 +216,20 @@ class Schema {
                 }
             }
 
+            $messageFields = array_map(function ($v) {
+                if (is_array($v)) {
+                    return '('.implode(', ', $v).')';
+                }
+                return $v;
+            }, $fields);
+
             if ($count === 1) {
-                $message = sprintft('One of %s are required.', implode(', ', $fields));
+                $message = sprintft('One of %s are required.', implode(', ', $messageFields));
             } else {
-                $message = sprintft('%1$s of %2$s are required.', $count, implode(', ', $fields));
+                $message = sprintft('%1$s of %2$s are required.', $count, implode(', ', $messageFields));
             }
 
-            $validation->addError('missing_field', $fields, [
+            $validation->addError('missing_field', $flattened, [
                 'message' => $message
             ]);
         });
@@ -225,27 +254,39 @@ class Schema {
      * Validate data against the schema and return the result.
      *
      * @param array &$data The data to validate.
-     * @param Validation $validation This argument will be filled with the validation result.
+     * @param Validation &$validation This argument will be filled with the validation result.
      * @return bool Returns true if the data is valid. False otherwise.
      */
     public function isValid(array &$data, Validation &$validation = null) {
+        return $this->isValidInternal($data, $this->schema, $validation);
+    }
+
+    /**
+     * Validate data against the schema and return the result.
+     *
+     * @param array &$data The data to validate.
+     * @param array $schema The schema array to validate against.
+     * @param Validation &$validation This argument will be filled with the validation result.
+     * @return bool Returns true if the data is valid. False otherwise.
+     */
+    protected function isValidInternal(array &$data, array $schema, Validation &$validation = null) {
         if ($validation === null) {
             $validation = new Validation();
         }
 
-        // Validate the global validators first.
-        if (isset($this->validators['*'])) {
-            foreach ($this->validators['*'] as $callback) {
-                call_user_func($callback, $data, $validation);
-            }
-        }
-
         // Loop through the schema fields and validate each one.
-        foreach ($this->schema as $field => $params) {
+        foreach ($schema as $field => $params) {
             if (isset($data[$field])) {
                 $this->validateField($data[$field], $field, $params, $validation);
             } elseif (val('required', $params)) {
                 $validation->addError('missing_field', $field);
+            }
+        }
+
+        // Validate the global validators.
+        if (isset($this->validators['*'])) {
+            foreach ($this->validators['*'] as $callback) {
+                call_user_func($callback, $data, $validation);
             }
         }
 
@@ -346,6 +387,14 @@ class Schema {
                     $validType = false;
                 }
                 break;
+            case 'datetime':
+                $dt = date_create($value);
+                if ($dt) {
+                    $value = $dt;
+                } else {
+                    $validType = false;
+                }
+                break;
             case 'base64':
                 if (!is_string($value)
                     || !preg_match('`^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$`', $value)) {
@@ -364,7 +413,7 @@ class Schema {
                 }
                 break;
             default:
-                throw new \InvalidArgumentException("Unrecognized type $type.", 422);
+                throw new \InvalidArgumentException("Unrecognized type $type.", 500);
                 break;
         }
         if (!$validType) {
@@ -372,7 +421,11 @@ class Schema {
             $validation->addError(
                 'invalid_type',
                 $field,
-                ['message' => sprintft('%1$s is not a valid %2$s.', $field, $type)]
+                [
+                    'type' => $type,
+                    'message' => sprintft('%1$s is not a valid %2$s.', $field, $type),
+                    'status' => 422
+                ]
             );
         }
 
