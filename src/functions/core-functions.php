@@ -478,6 +478,18 @@ function force_int($value) {
     return intval($value);
 }
 
+function garden_error_handler($number, $message, $file, $line, $args) {
+    $error_reporting = error_reporting();
+    // Ignore errors that are below the current error reporting level.
+    if (($error_reporting & $number) != $number) {
+        return false;
+    }
+
+    $backtrace = debug_backtrace();
+
+    throw new Garden\Exception\ErrorException($message, $number, $file, $line, $args, $backtrace);
+}
+
 /**
  * Like {@link implode()}, but joins array keys and values.
  *
