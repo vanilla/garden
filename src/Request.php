@@ -432,9 +432,11 @@ class Request implements JsonSerializable {
     }
 
     public function ip($ip = null) {
-        if ($ip !== null)
+        if ($ip !== null) {
             $this->env['REMOTE_ADDR'] = $ip;
-        $this->env['REMOTE_ADDR'];
+            return $this;
+        }
+        return $this->env['REMOTE_ADDR'];
     }
 
     public function isDelete() {
@@ -637,8 +639,42 @@ class Request implements JsonSerializable {
     }
 
     /**
-     * (PHP 5 &gt;= 5.4.0)<br/>
-     * Specify data which should be serialized to JSON
+     * Construct a url on the current site.
+     *
+     * @param string $path The path of the url.
+     * @param mixed $domain Whether or not to include the domain. This can be one of the following.
+     * - false: The domain will not be included.
+     * - true: The domain will be included.
+     * - http: Force http.
+     * - https: Force https.
+     * - //: A schemeless domain will be included.
+     * - /: Just the path will be returned.
+     * @return string Returns the url.
+     */
+    public function makeUrl($path, $domain = false) {
+        // Check for a specific scheme.
+        $scheme = $this->scheme();
+        if ($domain === 'http' || $domain === 'https') {
+            $scheme = $domain;
+            $domain = true;
+        }
+
+        if ($domain === true) {
+            $prefix = $scheme.'://'.$this->hostAndPort().$this->root();
+        } elseif ($domain === false) {
+            $prefix = $this->root();
+        } elseif ($domain === '//') {
+            $prefix = '//'.$this->hostAndPort().$this->root();
+        } else {
+            $prefix = '';
+        }
+
+        return $prefix.'/'.ltrim($path, '/');
+    }
+
+    /**
+     * Specify data which should be serialized to JSON.
+     *
      * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
      * @return mixed data which can be serialized by <b>json_encode</b>,
      * which is a value of any type other than a resource.

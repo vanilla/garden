@@ -295,7 +295,7 @@ function base64url_encode($str) {
 }
 
 /**
- * Decode a string that was encoded using {@link base64_urlencode()}
+ * Decode a string that was encoded using {@link base64_urlencode()}.
  *
  * @param string $str The encoded string.
  * @return string The decoded string.
@@ -308,8 +308,7 @@ function base64url_decode($str) {
 }
 
 /**
- * An alias of config().
- * Get a value from the config.
+ * An alias of {@link config()}.
  *
  * @param string $key The config key.
  * @param string $default The default value if the config setting isn't available.
@@ -349,33 +348,25 @@ function config($key, $default = null) {
  * @category Date/Time Functions
  */
 function datecmp($date1, $date2) {
-    if (is_numeric($date1))
+    if (is_numeric($date1)) {
         $timestamp1 = $date1;
-    else
+    } else {
         $timestamp1 = strtotime($date1);
+    }
 
-    if (is_numeric($date2))
+    if (is_numeric($date2)) {
         $timestamp2 = $date2;
-    else
+    } else {
         $timestamp2 = strtotime($date2);
+    }
 
-    if ($timestamp1 == $timestamp2)
+    if ($timestamp1 == $timestamp2) {
         return 0;
-    elseif ($timestamp1 > $timestamp2)
+    } elseif ($timestamp1 > $timestamp2) {
         return 1;
-    else
+    } else {
         return -1;
-}
-
-/**
- * @param type $value
- * @param type $prefix
- */
-function decho($value, $prefix = 'debug') {
-    if (PHP_SAPI === 'cli')
-        fwrite(STDERR, "$prefix: ".var_export($value, true)."\n");
-    else
-        echo '<pre class="decho">'.$prefix.': '.htmlspecialchars(var_export($value, true)).'</pre>';
+    }
 }
 
 /**
@@ -478,6 +469,18 @@ function force_int($value) {
     return intval($value);
 }
 
+function garden_error_handler($number, $message, $file, $line, $args) {
+    $error_reporting = error_reporting();
+    // Ignore errors that are below the current error reporting level.
+    if (($error_reporting & $number) != $number) {
+        return false;
+    }
+
+    $backtrace = debug_backtrace();
+
+    throw new Garden\Exception\ErrorException($message, $number, $file, $line, $args, $backtrace);
+}
+
 /**
  * Like {@link implode()}, but joins array keys and values.
  *
@@ -493,8 +496,9 @@ function implode_assoc($elemglue, $keyglue, $pieces) {
     $result = '';
 
     foreach ($pieces as $key => $value) {
-        if ($result)
+        if ($result) {
             $result .= $elemglue;
+        }
 
         $result .= $key.$keyglue.$value;
     }
@@ -502,34 +506,44 @@ function implode_assoc($elemglue, $keyglue, $pieces) {
 }
 
 /**
- * Finds whether the type given variable is a database id.
+ * Whether or not a string is a url in the form http://, https://, or //.
  *
- * @param mixed $val The variable being evaluated.
- * @param bool $allow_slugs Whether or not slugs are allowed in the url.
- * @return bool Returns `true` if the variable is a database id or `false` if it isn't.
+ * @param string $str The string to check.
+ * @return bool
  */
-function is_id($val, $allow_slugs = false) {
-    return is_numeric($val);
+function is_url($str) {
+    if (!$str) {
+        return false;
+    }
+    if (substr($str, 0, 2) == '//') {
+        return true;
+    }
+    if (strpos($str, '://', 1) !== false) {
+        return true;
+    }
+    return false;
 }
 
 /**
  * Strip a substring from the beginning of a string.
  *
- * @param string $mainstr
- * @param string $substr
+ * @param string $mainstr The main string to look at (the haystack).
+ * @param string $substr The substring to search trim (the needle).
  * @return string
  *
  * @category String Functions
  */
 function ltrim_substr($mainstr, $substr) {
-    if (strncasecmp($mainstr, $substr, strlen($substr)) === 0)
+    if (strncasecmp($mainstr, $substr, strlen($substr)) === 0) {
         return substr($mainstr, strlen($substr));
+    }
     return $mainstr;
 }
 
 /**
  * Get the file extension from a mime-type.
- * @param string $mime
+ *
+ * @param string $mime The mime type.
  * @param string $ext If this argument is specified then this extension will be added to the list of known types.
  * @return string The file extension without the dot.
  */
@@ -596,6 +610,7 @@ function php_encode($data, $php_var = 'config') {
 
 /**
  * Calculate the polynomial distribution of a probability.
+ *
  * @param float $qn A probability between 0 and 1.
  * @return real
  */
@@ -603,16 +618,19 @@ function pnormaldist($qn) {
     $b = array(1.570796288, 0.03706987906, -0.8364353589e-3, -0.2250947176e-3, 0.6841218299e-5,
         0.5824238515e-5, -0.104527497e-5, 0.8360937017e-7, -0.3231081277e-8, 0.3657763036e-10, 0.6936233982e-12);
 
-    if ($qn < 0.0 || 1.0 < $qn)
+    if ($qn < 0.0 || 1.0 < $qn) {
         return 0.0;
+    }
 
-    if ($qn == 0.5)
+    if ($qn == 0.5) {
         return 0.0;
+    }
 
     $w1 = $qn;
 
-    if ($qn > 0.5)
+    if ($qn > 0.5) {
         $w1 = 1.0 - $w1;
+    }
 
     $w3 = -log(4.0 * $w1 * (1.0 - $w1));
     $w1 = $b[0];
@@ -621,8 +639,9 @@ function pnormaldist($qn) {
         $w1 += $b[$i] * pow($w3, $i);
     }
 
-    if ($qn > 0.5)
+    if ($qn > 0.5) {
         return sqrt($w1 * $w3);
+    }
 
     return -sqrt($w1 * $w3);
 }
@@ -703,9 +722,9 @@ function reflectArgs($callback, $args, $get = null) {
 /**
  * Strip a substring rom the end of a string.
  *
- * @param string $mainstr
- * @param string $substr
- * @return string
+ * @param string $mainstr The main string to search (the haystack).
+ * @param string $substr The substring to trim (the needle).
+ * @return string Returns the trimmed string or {@link $mainstr} if {@link $substr} was not found.
  * @category String Functions
  */
 function rtrim_substr($mainstr, $substr) {
@@ -716,48 +735,8 @@ function rtrim_substr($mainstr, $substr) {
 }
 
 /**
- * Saves an array of configuration values to a given {@link $path}.
- * @param string $path The path to save to.
- * @param array $values The values to save to the config file.
- * @throws Exception Throws an exception when the file specified by {@link $path} is not a recognized file format.
- */
-function saveConfig($path, $values) {
-    // Load the config into a temporary array so we know what to save.
-    $array = [];
-    loadConfig($path, $array);
-
-    foreach ($values as $key => $value) {
-        if ($value === null)
-            unset($array[$key]);
-        else
-            $array[$key] = $value;
-    }
-
-    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-    $basename = basename($path, $ext);
-    $tmpPath = tempnam(dirname($path), $basename);
-
-    switch ($ext) {
-        case 'json':
-            $json = json_encode($array);
-            file_put_contents($tmpPath, $json);
-            break;
-        case 'php':
-            $php = '$'.$basename.' = '.var_export($array, true);
-            file_put_contents($tmpPath, $php);
-            break;
-        case 'ser':
-            $ser = serialize($array);
-            file_put_contents($tmpPath, $ser);
-            break;
-        default:
-            throw new Exception("Unknown file type: $ext.", 422);
-    }
-    rename($tmpPath, $path);
-}
-
-/**
  * Returns whether or not a string begins with another string.
+ *
  * This function is not case-sensitive.
  *
  * @param string $haystack The string to test.
@@ -771,6 +750,7 @@ function str_begins($haystack, $needle) {
 
 /**
  * Returns whether or not a string ends with another string.
+ *
  * This function is not case-sensitive.
  *
  * @param string $haystack The string to test.
@@ -838,13 +818,14 @@ function touchdir($dir, $mode = 0777) {
  * Make sure that a key exists in an array.
  *
  * @param string|int $key The array key to ensure.
- * @param array $array The array to modify.
+ * @param array &$array The array to modify.
  * @param mixed $default The default value to set if key does not exist.
  * @category Array Functions
  */
 function touchval($key, &$array, $default) {
-    if (!array_key_exists($key, $array))
+    if (!array_key_exists($key, $array)) {
         $array[$key] = $default;
+    }
 }
 
 /**
@@ -889,6 +870,7 @@ function val($key, $array, $default = null) {
 
 /**
  * Return the value from an associative array.
+ *
  * This function differs from val() in that $key can be an array that will be used to walk a nested array.
  *
  * @param string $keys The key or property name of the value.
