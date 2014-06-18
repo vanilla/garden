@@ -110,7 +110,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     /**
      * Get the path for a temporary file.
      *
-     * @param $ext The file extension
+     * @param string $ext The file extension.
      * @return string Returns the path of the temporary file.
      */
     protected function tempPath($ext) {
@@ -121,7 +121,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
-     * Test array_load() and array_save().
+     * Test {@link array_load()} and {@link array_save()}.
      *
      * @param string $ext The file extension.
      * @dataProvider provideExtensions
@@ -137,20 +137,44 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
-     * Provide an array of file extensions for {@link testArrayLoadSave()}.
+     * Test {@link array_load()} against a bad path.
      *
-     * @return array Returns an array of extensions.
+     * @param string $ext The file extension.
+     * @dataProvider provideExtensions
      */
-    public function provideExtensions() {
-        return [
-            '.json' => ['.json'],
-            '.json.php' => ['.json.php'],
-            '.ser' => ['.ser'],
-            '.ser.php' => ['.ser.php'],
-            '.php' => ['.php'],
-            '.yml' => ['.yml'],
-            '.yml.php' => ['.yml.php']
-        ];
+    public function testArrayLoadNoPath($ext) {
+        $path = $this->tempPath($ext);
+
+        $this->assertFalse(array_load($path));
+    }
+
+    /**
+     * Test {@link array_touch()}.
+     */
+    public function testArrayTouch() {
+        $arr = ['z', 'a' => 'b'];
+
+        // Test touching already existing values first.
+        $org = $arr;
+        array_touch(0, $arr, 'c');
+        $this->assertEquals($org, $arr);
+        array_touch('a', $arr, 'c');
+        $this->assertEquals($org, $arr);
+
+        $mod = $arr;
+        $mod['c'] = 'd';
+        array_touch('c', $arr, 'd');
+        $this->assertEquals($mod, $arr);
+    }
+
+    public function testArrayTranslate() {
+        $arr = ['a' => 'b', 'c' => 'd', 'e' => 'f'];
+
+        $a1 = array_translate($arr, ['a', 'b']);
+        $this->assertEquals(['a' => 'b', 'b' => null], $a1);
+
+        $a2 = array_translate($arr, ['a' => 'b', 'e' => 'f']);
+        $this->assertEquals(['b' => 'b', 'f' => 'f'], $a2);
     }
 
     /**
@@ -240,5 +264,22 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals('default', valr('parent.child.moxy', $arr, 'default'));
         $this->assertEquals(null, valr(['baz'], $arr));
         $this->assertEquals(null, valr(['parent', 'child', 'moxy'], $arr));
+    }
+
+    /**
+     * Provide an array of file extensions for {@link testArrayLoadSave()}.
+     *
+     * @return array Returns an array of extensions.
+     */
+    public function provideExtensions() {
+        return [
+            '.json' => ['.json'],
+            '.json.php' => ['.json.php'],
+            '.ser' => ['.ser'],
+            '.ser.php' => ['.ser.php'],
+            '.php' => ['.php'],
+            '.yml' => ['.yml'],
+            '.yml.php' => ['.yml.php']
+        ];
     }
 }
