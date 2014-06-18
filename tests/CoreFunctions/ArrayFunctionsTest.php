@@ -45,7 +45,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     /**
      * Test array_column() errors and warnings.
      *
-     * @expectedException PHPUnit_Framework_Error_Warning
+     * @expectedException \Garden\Exception\ErrorException
      */
     public function testArrayColumnError1() {
         $r = array_column_php();
@@ -54,7 +54,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     /**
      * Test array_column() errors and warnings.
      *
-     * @expectedException PHPUnit_Framework_Error_Warning
+     * @expectedException \Garden\Exception\ErrorException
      */
     public function testArrayColumnError2() {
         $r = array_column_php('foo', 'bar');
@@ -63,7 +63,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     /**
      * Test array_column() errors and warnings.
      *
-     * @expectedException PHPUnit_Framework_Error_Warning
+     * @expectedException \Garden\Exception\ErrorException
      */
     public function testArrayColumnError3() {
         $ds = $this->getDataset();
@@ -74,7 +74,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     /**
      * Test array_column() errors and warnings.
      *
-     * @expectedException PHPUnit_Framework_Error_Warning
+     * @expectedException \Garden\Exception\ErrorException
      */
     public function testArrayColumnError4() {
         $ds = $this->getDataset();
@@ -85,7 +85,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     /**
      * Test array_column() errors and warnings.
      *
-     * @expectedException PHPUnit_Framework_Error_Warning
+     * @expectedException \Garden\Exception\ErrorException
      */
     public function testArrayColumnError5() {
         $ds = $this->getDataset();
