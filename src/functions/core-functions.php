@@ -41,12 +41,12 @@ function array_column_php($input = null, $columnKey = null, $indexKey = null) {
 
     if ($argc < 2) {
         trigger_error("array_column() expects at least 2 parameters, {$argc} given", E_USER_WARNING);
-        return null;
+//        return null;
     }
 
     if (!is_array($params[0])) {
         trigger_error('array_column() expects parameter 1 to be array, '.gettype($params[0]).' given', E_USER_WARNING);
-        return null;
+//        return null;
     }
 
     if (!is_int($params[1])
@@ -56,7 +56,7 @@ function array_column_php($input = null, $columnKey = null, $indexKey = null) {
         && !(is_object($params[1]) && method_exists($params[1], '__toString'))
     ) {
         trigger_error('array_column(): The column key should be either a string or an integer', E_USER_WARNING);
-        return false;
+//        return false;
     }
 
     if (isset($params[2])
@@ -66,7 +66,7 @@ function array_column_php($input = null, $columnKey = null, $indexKey = null) {
         && !(is_object($params[2]) && method_exists($params[2], '__toString'))
     ) {
         trigger_error('array_column(): The index key should be either a string or an integer', E_USER_WARNING);
-        return false;
+//        return false;
     }
 
     $paramsInput = $params[0];
@@ -168,7 +168,7 @@ function array_load($path, $php_var = 'config') {
             $loaded = yaml_parse_file($path);
             break;
         default:
-            throw new InvalidArgumentException("Invalid config extension $ext on $path.", 400);
+            throw new InvalidArgumentException("Invalid config extension $ext on $path.", 500);
     }
     return $loaded;
 }
@@ -186,7 +186,7 @@ function array_load($path, $php_var = 'config') {
  */
 function array_save($data, $path, $php_var = 'config') {
     if (!is_array($data)) {
-        throw new \InvalidArgumentException('Config::saveArray(): Argument #1 is not an array.', 400);
+        throw new \InvalidArgumentException('Config::saveArray(): Argument #1 is not an array.', 500);
     }
 
     // Get the extension of the file, but allow for .ini.php, .json.php etc.
@@ -222,7 +222,7 @@ function array_save($data, $path, $php_var = 'config') {
             $result = file_put_contents_safe($path, $yml);
             break;
         default:
-            throw new \InvalidArgumentException("Invalid config extension $ext on $path.", 400);
+            throw new \InvalidArgumentException("Invalid config extension $ext on $path.", 500);
     }
     return $result;
 }
@@ -429,6 +429,7 @@ function file_put_contents_safe($filename, $data, $mode = 0644) {
  *
  * @param mixed $value The value to force.
  * @return boolean Returns the boolean value of {@link $value}.
+ * @category Type Functions
  */
 function force_bool($value) {
     if (is_string($value)) {
@@ -450,6 +451,7 @@ function force_bool($value) {
  *
  * @param mixed $value The value to force.
  * @return int Returns the integer value of {@link $value}.
+ * @category Type Functions
  */
 function force_int($value) {
     if (is_string($value)) {
@@ -460,6 +462,7 @@ function force_int($value) {
             case 'off':
             case '':
                 return 0;
+            case 'enabled':
             case 'true':
             case 'yes':
             case 'on':
@@ -510,6 +513,9 @@ function implode_assoc($elemglue, $keyglue, $pieces) {
  *
  * @param string $str The string to check.
  * @return bool
+ *
+ * @category String Functions
+ * @category Internet Functions
  */
 function is_url($str) {
     if (!$str) {
@@ -546,6 +552,8 @@ function ltrim_substr($mainstr, $substr) {
  * @param string $mime The mime type.
  * @param string $ext If this argument is specified then this extension will be added to the list of known types.
  * @return string The file extension without the dot.
+ * @category Internet Functions
+ * @category String Functions
  */
 function mime2ext($mime, $ext = null) {
     static $known = array('text/plain' => 'txt', 'image/jpeg' => 'jpg');
@@ -654,6 +662,7 @@ function pnormaldist($qn) {
  * @param array $get An optional other array of arguments.
  * @return array The arguments in an associative array, in order ready to be passed to call_user_func_array().
  * @throws Exception Throws an exception when {@link callback} isn't a valid callback.
+ * @category Type Functions
  */
 function reflectArgs($callback, $args, $get = null) {
     $result = array();
@@ -770,6 +779,9 @@ $translations = [];
  * @param string $code The translation code.
  * @param string $default The default if the translation is not found.
  * @return string The translated string.
+ *
+ * @category String Functions
+ * @category Localization Functions
  */
 function t($code, $default = null) {
     global $translations;
@@ -822,7 +834,7 @@ function touchdir($dir, $mode = 0777) {
  * @param mixed $default The default value to set if key does not exist.
  * @category Array Functions
  */
-function touchval($key, &$array, $default) {
+function array_touch($key, &$array, $default) {
     if (!array_key_exists($key, $array)) {
         $array[$key] = $default;
     }

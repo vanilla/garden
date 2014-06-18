@@ -329,8 +329,8 @@ class Addons {
         if (!$info) {
             $info = array();
         }
-        touchval('name', $info, $addon_key);
-        touchval('version', $info, '0.0');
+        array_touch('name', $info, $addon_key);
+        array_touch('version', $info, '0.0');
 
         // Look for the bootstrap.
         $bootstrap = $dir.'/bootstrap.php';
