@@ -147,4 +147,15 @@ class Validation {
     public function isValid() {
         return count($this->errors) === 0;
     }
+
+    /**
+     * Check whether or not a particular field is has errors.
+     *
+     * @param $field The name of the field to check for validity.
+     * @return bool Returns true if the field has no errors, false otherwise.
+     */
+    public function fieldValid($field) {
+        $result = !isset($this->errors[$field]) || count($this->errors[$field]) === 0;
+        return $result;
+    }
 }
