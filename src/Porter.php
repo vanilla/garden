@@ -101,8 +101,8 @@ class Porter {
          $format = $tdef;
 
          // Set the source query.
-         touchval('source', $format, array($table, array()));
-         touchval('destination', $format, $format['destination']);
+         array_touch('source', $format, array($table, array()));
+         array_touch('destination', $format, $format['destination']);
 
          // Coax the columns into the proper format.
          $columns = array();
@@ -113,18 +113,18 @@ class Porter {
                if (is_string($cdef)) {
                   // This is a format in the form sourcecolumns => destcolumn
                   $cformat = array($cdef);
-               } if (isset($cdef[0]))
+               } if (isset($cdef[0])) {
                   $cformat = array_change_key_case($cdef);
-               elseif (isset($cdef['column'])) {
+               } elseif (isset($cdef['column'])) {
                   // This is an old porter format.
                   $cformat = array($cdef['column']) + $cdef;
                   unset($cformat['column']);
                } else
                   $cformat = array(val('sourcecolumn', $cdef, $sourceColumn)) + array_change_key_case($cdef);
 
-               touchval('sourcecolumn', $cformat, $sourceColumn);
-               touchval('type', $cformat, 'varchar(255)');
-               touchval('default', $cformat, null);
+               array_touch('sourcecolumn', $cformat, $sourceColumn);
+               array_touch('type', $cformat, 'varchar(255)');
+               array_touch('default', $cformat, null);
 
                $columns[$sourceColumn] = $cformat;
             }

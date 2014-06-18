@@ -194,7 +194,7 @@ class Event {
 
         foreach (self::$handlers as $event_name => $nested) {
             $handlers = call_user_func_array('array_merge', $nested);
-            $result[$event_name] = array_map('formatCallback', $handlers);
+            $result[$event_name] = array_map('format_callback', $handlers);
         }
 
         return $result;
