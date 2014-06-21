@@ -50,8 +50,9 @@ class Application {
 
         foreach ($this->routes as $route) {
             $matches = $route->matches($request, $this);
-            if ($matches)
+            if ($matches) {
                 $result[] = array($route, $matches);
+            }
         }
         return $result;
     }
