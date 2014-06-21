@@ -296,7 +296,17 @@ class SecureString {
 
         // Recalculate the signature to compare.
         $calcSignature = hash_hmac($method, $str, $password, true);
-        if ($calcSignature !== $signature) {
+
+        if (strlen($signature) !== strlen($calcSignature)) {
+            return $this->exception($throw, "The signature is invalid.", 403);
+        }
+
+        // Do a double hmac comparison to prevent timing attacks.
+        // https://www.isecpartners.com/blog/2011/february/double-hmac-verification.aspx
+        $dblSignature = hash_hmac($method, $signature, $password, true);
+        $dblCalcSignature = hash_hmac($method, $calcSignature, $password, true);
+
+        if ($dblSignature !== $dblCalcSignature) {
             return $this->exception($throw, "The signature is invalid.", 403);
         }
 

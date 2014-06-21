@@ -7,6 +7,9 @@
 
 use Garden\SecureString;
 
+/**
+ * Unit tests for the {@link Garden\SecureString} class.
+ */
 class SecureStringTest extends PHPUnit_Framework_TestCase {
 
     /**
