@@ -91,6 +91,7 @@ class Table {
 
     /**
      * Adds a green cell.
+     *
      * @param string $text The text of the cell.
      * @return $this Returns this object for fluent calls.
      */
@@ -100,6 +101,7 @@ class Table {
 
     /**
      * Adds a blue cell.
+     *
      * @param string $text The text of the cell.
      * @return $this Returns this object for fluent calls.
      */
@@ -109,6 +111,7 @@ class Table {
 
     /**
      * Adds a purple cell.
+     * 
      * @param string $text The text of the cell.
      * @return $this Returns this object for fluent calls.
      */
