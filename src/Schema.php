@@ -40,7 +40,7 @@ class Schema {
      * @param array $schema The array schema to validate against.
      */
     public function __construct($schema = []) {
-        $this->schema = static::parse($schema);
+        $this->schema = static::parseSchema($schema);
     }
 
     /**
@@ -61,7 +61,7 @@ class Schema {
      * @return array The full schema array.
      * @throws \InvalidArgumentException Throws an exception when an item in the schema is invalid.
      */
-    public static function parse(array $arr) {
+    public static function parseSchema(array $arr) {
         $result = [];
 
         foreach ($arr as $key => $value) {
@@ -72,7 +72,7 @@ class Schema {
                     $name = $param['name'];
                     $result[$name] = $param;
                 } else {
-                    throw new \InvalidArgumentException("Schema at position $key is not a valid param.", 422);
+                    throw new \InvalidArgumentException("Schema at position $key is not a valid param.", 500);
                 }
             } else {
                 // The parameter is defined in the key.
@@ -93,7 +93,7 @@ class Schema {
                             break;
                         case 'object':
                             // The value is a schema of the object.
-                            $param['properties'] = static::parse($value);
+                            $param['properties'] = static::parseSchema($value);
                             break;
                         default:
                             $param = array_replace($param, $value);
