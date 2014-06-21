@@ -282,7 +282,7 @@ class Cli {
                     continue;
                 }
 
-                $type = val('type', $srow, 'string');
+                $type = Cli::val('type', $srow, 'string');
                 $types[$sname] = $type;
                 if (isset($srow['short'])) {
                     $types[$srow['short']] = $type;
@@ -317,7 +317,7 @@ class Cli {
                     // -a
 
                     $key = $str[1];
-                    $type = val($key, $types, 'boolean');
+                    $type = Cli::val($key, $types, 'boolean');
                     $v = null;
 
                     if (isset($argv[$i + 1])) {
@@ -343,7 +343,7 @@ class Cli {
                     }
 
                     if ($v === null) {
-                        $v = val($type, ['boolean' => true, 'integer' => 1, 'string' => '']);
+                        $v = Cli::val($type, ['boolean' => true, 'integer' => 1, 'string' => '']);
                     }
 
                     $parsed->setOpt($key, $v);
@@ -352,7 +352,7 @@ class Cli {
                     for ($j = 1; $j < strlen($str); $j++) {
                         $opt = $str[$j];
                         $remaining = substr($str, $j + 1);
-                        $type = val($opt, $types, 'boolean');
+                        $type = Cli::val($opt, $types, 'boolean');
 
                         if ($type === 'boolean') {
                             if (preg_match('`^([01])`', $remaining, $matches)) {
@@ -424,8 +424,8 @@ class Cli {
 
         foreach ($schema as $key => $definition) {
             // No Parameter (default)
-            $required = val('required', $definition, false);
-            $type = val('type', $definition, 'string');
+            $required = Cli::val('required', $definition, false);
+            $type = Cli::val('type', $definition, 'string');
             $value = null;
 
             if (isset($opts[$key])) {
@@ -719,7 +719,7 @@ class Cli {
                 $table
                     ->row()
                     ->cell($pattern)
-                    ->cell(val('description', val(Cli::META, $schema), ''));
+                    ->cell(val('description', Cli::val(Cli::META, $schema), ''));
             }
         }
         $table->write();
@@ -731,8 +731,8 @@ class Cli {
      */
     protected function writeHelp($schema) {
         // Write the command description.
-        $meta = val(Cli::META, $schema, []);
-        $description = val('description', $meta);
+        $meta = Cli::val(Cli::META, $schema, []);
+        $description = Cli::val('description', $meta);
 
         if ($description) {
             echo implode("\n", Cli::breakLines($description, 80, false))."\n\n";
@@ -752,7 +752,7 @@ class Cli {
 
                 // Write the keys.
                 $keys = "--{$key}";
-                if ($shortKey = val('short', $definition, false)) {
+                if ($shortKey = Cli::val('short', $definition, false)) {
                     $keys .= ", -$shortKey";
                 }
                 if (val('required', $definition)) {
@@ -879,7 +879,7 @@ class Cli {
      * @return array Returns an array in the form [name, [param]].
      * @throws \InvalidArgumentException Throws an exception if the short param is not in the correct format.
      */
-    public static function parseShortParam($str, $other = []) {
+    protected static function parseShortParam($str, $other = []) {
         // Is the parameter optional?
         if (substr($str, -1) === '?') {
             $required = false;
@@ -919,5 +919,29 @@ class Cli {
         }
 
         return $result;
+    }
+
+    /**
+     * Safely get a value out of an array.
+     *
+     * This function uses optimizations found in the [facebook libphputil library](https://github.com/facebook/libphutil).
+     *
+     * @param string|int $key The array key.
+     * @param array $array The array to get the value from.
+     * @param mixed $default The default value to return if the key doesn't exist.
+     * @return mixed The item from the array or `$default` if the array key doesn't exist.
+     */
+    public static function val($key, array $array, $default = null) {
+        // isset() is a micro-optimization - it is fast but fails for null values.
+        if (isset($array[$key])) {
+            return $array[$key];
+        }
+
+        // Comparing $default is also a micro-optimization.
+        if ($default === null || array_key_exists($key, $array)) {
+            return null;
+        }
+
+        return $default;
     }
 }

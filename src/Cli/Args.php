@@ -80,7 +80,7 @@ class Args implements \JsonSerializable {
      * @return mixed Returns the meta value or {@link $default} if it doesn't exist.
      */
     public function getMeta($name, $default = null) {
-        return val($name, $this->meta, $default);
+        return Cli::val($name, $this->meta, $default);
     }
 
     /**
@@ -117,7 +117,7 @@ class Args implements \JsonSerializable {
      * @return mixed Returns the option or {@link $default} if it does not exist.
      */
     public function getOpt($option, $default = null) {
-        return val($option, $this->opts, $default);
+        return Cli::val($option, $this->opts, $default);
     }
 
     /**

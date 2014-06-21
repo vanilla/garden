@@ -56,7 +56,7 @@ class Table {
         }
 
         $i = count($this->currentRow);
-        $this->columnWidths[$i] = max(strlen($text), val($i, $this->columnWidths, 0)); // max column width
+        $this->columnWidths[$i] = max(strlen($text), Cli::val($i, $this->columnWidths, 0)); // max column width
 
         $this->currentRow[$i] = [$text, $wrap];
         return $this;
@@ -64,6 +64,7 @@ class Table {
 
     /**
      * Adds a cell.
+     *
      * @param string $text The text of the cell.
      * @return $this Returns this object for fluent calls.
      */
@@ -73,6 +74,7 @@ class Table {
 
     /**
      * Adds a bold cell.
+     *
      * @param string $text The text of the cell.
      * @return $this Returns this object for fluent calls.
      */
@@ -82,6 +84,7 @@ class Table {
 
     /**
      * Adds a red cell.
+     *
      * @param string $text The text of the cell.
      * @return $this Returns this object for fluent calls.
      */
