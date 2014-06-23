@@ -97,4 +97,4 @@ $app->run();
 More to Come
 ------------
 
-*This read-me is a work in progress, just like gardem.*
+*This read-me is a work in progress.*
