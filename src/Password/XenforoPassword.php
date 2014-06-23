@@ -101,7 +101,7 @@ class XenforoPassword implements IPassword {
         $parts = @unserialize($hash);
 
         if (!is_array($parts)) {
-            $Result = ['', '', ''];
+            $result = ['', '', ''];
         } else {
             $parts = array_merge(['hash' => '', 'hashFunc' => '', 'salt' => ''], $parts);
 
@@ -114,11 +114,10 @@ class XenforoPassword implements IPassword {
                         $parts['hashFunc'] = 'sha1';
                         break;
                 }
-
             }
 
             $result = [$parts['hash'], $parts['hashFunc'], $parts['salt']];
-            return $result;
         }
+        return $result;
     }
 }
