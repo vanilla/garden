@@ -26,10 +26,8 @@ class PhpbbPassword implements IPassword {
      * @return bool Returns true if the password is correct, false if not.
      */
     public function verify($password, $hash) {
-        $itoa64 = PhpbbPassword::ITOA64;
         if (strlen($hash) == 34) {
-
-            return ($this->cryptPrivate($password, $hash, $itoa64) === $hash) ? true : false;
+            return ($this->cryptPrivate($password, $hash) === $hash) ? true : false;
         }
 
         return (md5($password) === $hash) ? true : false;
@@ -85,7 +83,7 @@ class PhpbbPassword implements IPassword {
         }
 
         $output = substr($setting, 0, 12);
-        $output .= $this->encode64($hash, 16, $itoa64);
+        $output .= $this->encode64($hash, 16);
 
         return $output;
     }
