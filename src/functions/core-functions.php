@@ -37,53 +37,51 @@ function array_column_php($input = null, $columnKey = null, $indexKey = null) {
     // parameters and trigger errors exactly as the built-in array_column()
     // does in PHP 5.5.
     $argc = func_num_args();
-    $params = func_get_args();
 
     if ($argc < 2) {
         trigger_error("array_column() expects at least 2 parameters, {$argc} given", E_USER_WARNING);
 //        return null;
     }
 
-    if (!is_array($params[0])) {
-        trigger_error('array_column() expects parameter 1 to be array, '.gettype($params[0]).' given', E_USER_WARNING);
+    if (!is_array($input)) {
+        trigger_error('array_column() expects parameter 1 to be array, '.gettype($input).' given', E_USER_WARNING);
 //        return null;
     }
 
-    if (!is_int($params[1])
-        && !is_float($params[1])
-        && !is_string($params[1])
-        && $params[1] !== null
-        && !(is_object($params[1]) && method_exists($params[1], '__toString'))
+    if (!is_int($columnKey)
+        && !is_float($columnKey)
+        && !is_string($columnKey)
+        && $columnKey !== null
+        && !(is_object($columnKey) && method_exists($columnKey, '__toString'))
     ) {
         trigger_error('array_column(): The column key should be either a string or an integer', E_USER_WARNING);
 //        return false;
     }
 
-    if (isset($params[2])
-        && !is_int($params[2])
-        && !is_float($params[2])
-        && !is_string($params[2])
-        && !(is_object($params[2]) && method_exists($params[2], '__toString'))
+    if (isset($indexKey)
+        && !is_int($indexKey)
+        && !is_float($indexKey)
+        && !is_string($indexKey)
+        && !(is_object($indexKey) && method_exists($indexKey, '__toString'))
     ) {
         trigger_error('array_column(): The index key should be either a string or an integer', E_USER_WARNING);
 //        return false;
     }
 
-    $paramsInput = $params[0];
-    $paramsColumnKey = ($params[1] !== null) ? (string)$params[1] : null;
+    $paramsColumnKey = ($columnKey !== null) ? (string)$columnKey : null;
 
     $paramsIndexKey = null;
-    if (isset($params[2])) {
-        if (is_float($params[2]) || is_int($params[2])) {
-            $paramsIndexKey = (int)$params[2];
+    if (isset($indexKey)) {
+        if (is_float($indexKey) || is_int($indexKey)) {
+            $paramsIndexKey = (int)$indexKey;
         } else {
-            $paramsIndexKey = (string)$params[2];
+            $paramsIndexKey = (string)$indexKey;
         }
     }
 
     $resultArray = array();
 
-    foreach ($paramsInput as $row) {
+    foreach ($input as $row) {
 
         $key = $value = null;
         $keySet = $valueSet = false;
@@ -331,7 +329,7 @@ function c($key, $default) {
  * Get a value from the config.
  *
  * @param string $key The config key.
- * @param string $default The default value if the config setting isn't available.
+ * @param mixed $default The default value if the config setting isn't available.
  * @return mixed The config value.
  */
 function config($key, $default = null) {
@@ -665,8 +663,6 @@ function pnormaldist($qn) {
  * @category Type Functions
  */
 function reflectArgs($callback, $args, $get = null) {
-    $result = array();
-
     if (is_string($callback) && !function_exists($callback)) {
         throw new Exception("Function $callback does not exist");
     }
@@ -680,7 +676,7 @@ function reflectArgs($callback, $args, $get = null) {
     }
     $args = array_change_key_case($args);
 
-    if (is_string($callback) || is_a($callback, 'Closure')) {
+    if (is_string($callback) || (is_object($callback) && $callback instanceof Closure)) {
         $meth = new ReflectionFunction($callback);
         $meth_name = $meth;
     } else {
@@ -806,7 +802,7 @@ function t($code, $default = null) {
  */
 function sprintft($formatCode, $arg1 = null) {
     $args = func_get_args();
-    $args[0] = t($args[0]);
+    $args[0] = t($formatCode);
     return call_user_func_array('sprintf', $args);
 }
 
