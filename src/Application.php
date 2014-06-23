@@ -61,14 +61,18 @@ class Application {
      * Add a new route.
      *
      * @param string|Route $path The path to the route or the {@link Route} object itself.
-     * @param mixed $callback
+     * @param mixed $callback Either a callback to map the route to or a string representing a format for
+     * {@link sprintf()}.
      * @return Route Returns the route that was added.
+     * @throws \InvalidArgumentException Throws an exceptio if {@link $path} isn't a string or {@link Route}.
      */
     public function route($path, $callback = null) {
-        if (is_a($path, '\Garden\Route')) {
+        if (is_object($path) && $path instanceof Route) {
             $route = $path;
-        } else {
+        } elseif (is_string($path)) {
             $route = Route::create($path, $callback);
+        } else {
+            throw new \InvalidArgumentException("Argument #1 must be either a Garden\\Route or a string.", 500);
         }
         $this->routes[] = $route;
         return $route;
@@ -129,6 +133,13 @@ class Application {
         return $this->route($pattern, $callback)->methods('DELETE');
     }
 
+    /**
+     * Run the application against a {@link Request}.
+     *
+     * @param Request|null $request A {@link Request} to run the application against or null to run against a request
+     * on the current environment.
+     * @return mixed Returns a response appropriate to the request's ACCEPT header.
+     */
     public function run(Request $request = null) {
         if ($request === null) {
             $request = new Request();
@@ -141,6 +152,7 @@ class Application {
 
         // Try all of the matched routes in turn.
         $dispatched = false;
+        $result = null;
         try {
             foreach ($routes as $route_args) {
                 list($route, $args) = $route_args;
