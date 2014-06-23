@@ -32,7 +32,7 @@ class DjangoPassword implements IPassword {
         if (strpos($hash, '$') === false) {
             return true;
         } else {
-            list($method, $salt, $rawHash) = explode('$', $hash, 3);
+            list($method,,) = explode('$', $hash, 3);
             switch (strtolower($method)) {
                 case 'crypt':
                 case 'sha256':
