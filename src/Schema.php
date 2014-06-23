@@ -10,6 +10,9 @@ namespace Garden;
 
 use Garden\Exception\ValidationException;
 
+/**
+ * A class for defining and validating data schemas.
+ */
 class Schema {
     /// Properties ///
     protected $schema = [];
@@ -189,7 +192,7 @@ class Schema {
      * @return Schema Returns `$this` for fluent calls.
      */
     public function requireOneOf(array $fieldnames, $count = 1) {
-        return $this->addValidator('*', function ($data, Validation $validation) use ($fieldnames, $count) {
+        $result = $this->addValidator('*', function ($data, Validation $validation) use ($fieldnames, $count) {
             $hasCount = 0;
             $flattened = [];
 
@@ -235,18 +238,25 @@ class Schema {
                 'message' => $message
             ]);
         });
+
+        return $result;
     }
 
     /**
      * Validate data against the schema.
      *
      * @param array &$data The data to validate.
-     * @param Validation $validation This argument will be filled with the validation result.
+     * @param Validation &$validation This argument will be filled with the validation result.
      * @return bool Returns true if the data is valid, false otherwise.
      * @throws ValidationException Throws an exception when the data does not validate against the schema.
      */
     public function validate(array &$data, Validation &$validation = null) {
         if (!$this->isValid($data, $validation)) {
+            if ($validation === null) {
+                // Although this should never be null, scrutinizer complains that it might be.
+                $validation = new Validation();
+            }
+
             throw new ValidationException($validation);
         }
         return $this;
@@ -417,7 +427,6 @@ class Schema {
                 break;
             default:
                 throw new \InvalidArgumentException("Unrecognized type $type.", 500);
-                break;
         }
         if (!$validType) {
             $valid = false;
