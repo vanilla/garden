@@ -457,7 +457,7 @@ class Response implements JsonSerializable {
      * - string: The header name if just a name was passed.
      * @throws \InvalidArgumentException Throws an exception if {@link $name} is not a valid string or array.
      */
-    private static function splitHeaders($name, $value = null) {
+    protected static function splitHeaders($name, $value = null) {
         if (is_string($name)) {
             if (strpos($name, ':') !== false) {
                 // The name is in the form Header: value.
@@ -601,7 +601,7 @@ class Response implements JsonSerializable {
     public function jsonSerialize() {
         $asset = $this->contentAsset();
 
-        if ($asset) {
+        if ($asset && is_string($asset)) {
             // A specific asset was specified.
             if (strpos($asset, '.') !== false) {
                 list($group, $key) = explode('.', $asset, 2);
