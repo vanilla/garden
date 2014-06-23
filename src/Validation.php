@@ -22,17 +22,28 @@ class Validation {
     /// Methods ///
 
     /**
-     * @param array $errors
-     * @param string $mainMessage
-     * @param int $status
+     * Initialize an instance of the {@link Validation} class.
+     *
+     * @param array $errors An array of errors.
+     * @param string $mainMessage The main message of the error.
+     * @param int $status The http status code of the error or 0 to build the status code from the indivdual errors.
      */
-    public function __construct($errors = [], $mainMessage = '', $status = 0) {
+    public function __construct(array $errors = [], $mainMessage = '', $status = 0) {
         $this->errors = $errors;
         $this->mainMessage = $mainMessage;
         $this->status = $status;
     }
 
-    public static function errorMessage($error) {
+    /**
+     * Gets the error message from an error.
+     *
+     * Errors are stored with either a message or a translation code.
+     * This method will look at both to determine the full message.
+     *
+     * @param array $error The error array.
+     * @return string Returns the message from the error.
+     */
+    public static function errorMessage(array $error) {
         if (isset($error['message'])) {
             return $error['message'];
         } else {
@@ -99,7 +110,7 @@ class Validation {
      * The status code is an http resonse code and should be of the 4xx variety.
      *
      * @param int|null $value Pass a new status code or null to get the current code.
-     * @return Validation|null Returns the current status code or $this for fluent sets.
+     * @return Validation|int Returns the current status code or $this for fluent sets.
      */
     public function status($value = null) {
         if ($value !== null) {
