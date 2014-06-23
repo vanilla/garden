@@ -94,7 +94,7 @@ abstract class Route {
     /**
      * Gets or sets the allowed http methods for this route.
      *
-     * @param array|null $methods Set a new set of allowed methods or pass null to get the current methods.
+     * @param array|string|null $methods Set a new set of allowed methods or pass null to get the current methods.
      * @return Route|array Returns the current methods or `$this` for fluent calls.
      */
     public function methods($methods = null) {
