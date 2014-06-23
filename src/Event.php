@@ -12,12 +12,6 @@ namespace Garden;
  *
  * Addons can create callbacks that bind to events which are calle througout the code to allow
  * extension of the application and framework.
- *
- * @author Todd Burry <todd@vanillaforums.com>
- * @copyright 2009 Vanilla Forums Inc.
- * @license LGPL-2.1
- * @package Vanilla
- * @since 1.0
  */
 class Event {
     /// Constants ///
@@ -36,7 +30,7 @@ class Event {
 
     /**
      * All of the event handlers that still need to be sorted by priority.
-     * @var type
+     * @var array An array of event handler names that need to be sorted.
      */
     protected static $toSort = array();
 
@@ -80,7 +74,7 @@ class Event {
             return call_user_func_array($callback, $args);
         }
 
-        // The events could have different arguments because the event handler can take the object as the first parameter.
+        // The events could have different args because the event handler can take the object as the first parameter.
         $event_args = $args;
         // If the callback is an object then it gets passed as the first argument.
         if (is_array($callback) && is_object($callback[0])) {
@@ -161,7 +155,6 @@ class Event {
             }
 
             $parts = explode('_', strtolower($method_name));
-            $event_name = '';
             switch (end($parts)) {
                 case 'handler':
                 case 'create':
@@ -190,7 +183,7 @@ class Event {
      * @return array Returns an array of all handlers indexed by event name.
      */
     public static function dumpHandlers() {
-        $result = array();
+        $result = [];
 
         foreach (self::$handlers as $event_name => $nested) {
             $handlers = call_user_func_array('array_merge', $nested);
@@ -352,7 +345,7 @@ class Event {
      * This method resets the event object to its original state.
      */
     public static function reset() {
-        self::$handlers = array();
-        self::$toSort = array();
+        self::$handlers = [];
+        self::$toSort = [];
     }
 }
