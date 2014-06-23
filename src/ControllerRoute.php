@@ -45,12 +45,12 @@ class ControllerRoute extends Route {
         if ($value !== null) {
             // Canonicalize the list of controllers.
             $controllers = array();
-            foreach ($value as $key => $value) {
-                $value = rtrim_substr($value, 'controller');
+            foreach ($value as $key => $val) {
+                $val = rtrim_substr($val, 'controller');
                 if (is_numeric($key)) {
-                    $key = strtolower($value);
+                    $key = strtolower($val);
                 }
-                $controllers[$key] = $value;
+                $controllers[$key] = $val;
             }
             $this->controllers = $controllers;
         }
