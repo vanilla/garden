@@ -83,7 +83,7 @@ class Application {
      *
      * @param string $pattern The url pattern to match.
      * @param callable $callback The callback to execute on the route.
-     * @return UrlRoute Returns the new route.
+     * @return CallbackRoute Returns the new route.
      */
     public function get($pattern, callable $callback) {
         return $this->route($pattern, $callback)->methods('GET');
@@ -94,7 +94,7 @@ class Application {
      *
      * @param string $pattern The url pattern to match.
      * @param callable $callback The callback to execute on the route.
-     * @return UrlRoute Returns the new route.
+     * @return CallbackRoute Returns the new route.
      */
     public function post($pattern, callable $callback) {
         return $this->route($pattern, $callback)->methods('POST');
@@ -105,7 +105,7 @@ class Application {
      *
      * @param string $pattern The url pattern to match.
      * @param callable $callback The callback to execute on the route.
-     * @return UrlRoute Returns the new route.
+     * @return CallbackRoute Returns the new route.
      */
     public function put($pattern, callable $callback) {
         return $this->route($pattern, $callback)->methods('PUT');
@@ -116,7 +116,7 @@ class Application {
      *
      * @param string $pattern The url pattern to match.
      * @param callable $callback The callback to execute on the route.
-     * @return UrlRoute Returns the new route.
+     * @return CallbackRoute Returns the new route.
      */
     public function patch($pattern, callable $callback) {
         return $this->route($pattern, $callback)->methods('PATCH');
@@ -127,7 +127,7 @@ class Application {
      *
      * @param string $pattern The url pattern to match.
      * @param callable $callback The callback to execute on the route.
-     * @return UrlRoute Returns the new route.
+     * @return CallbackRoute Returns the new route.
      */
     public function delete($pattern, callable $callback) {
         return $this->route($pattern, $callback)->methods('DELETE');

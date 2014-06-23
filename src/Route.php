@@ -51,7 +51,7 @@ abstract class Route {
      */
     public static function create($pattern, $callback) {
         if (is_callable($callback)) {
-            $route = new UrlRoute($pattern, $callback);
+            $route = new CallbackRoute($pattern, $callback);
         } else {
             $route = new ResourceRoute($pattern, $callback);
         }
