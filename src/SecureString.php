@@ -73,12 +73,12 @@ class SecureString {
                 default:
                     return $this->exception($throw, "Invalid method $encode.", 500);
             }
-            $this->pushString($str, $name);
-
             // Return on error.
             if (!$str) {
                 return null;
             }
+
+            $this->pushString($str, $name);
 
             $first = false;
         }
@@ -270,6 +270,9 @@ class SecureString {
 
         // Sign the string.
         $signature = hash_hmac($method, $str, $password, true);
+        if ($signature === false) {
+            return $this->exception($throw, "Invalid hash method $method.", 400);
+        }
 
         // Add the signature to the string.
         static::pushString($str, static::base64urlEncode($signature));
