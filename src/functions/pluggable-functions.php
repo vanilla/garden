@@ -35,6 +35,12 @@ if (!function_exists('is_id')) {
      * @return bool Returns `true` if the variable is a database id or `false` if it isn't.
      */
     function is_id($val, $allow_slugs = false) {
-        return is_numeric($val);
+        if (is_numeric($val)) {
+            return true;
+        } elseif ($allow_slugs && preg_match(`^\d+-`, $val)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }
