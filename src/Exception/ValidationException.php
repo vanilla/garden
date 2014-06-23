@@ -18,9 +18,14 @@ use Garden\Validation;
 class ValidationException extends ClientException {
     protected $validation;
 
+    /**
+     * Initialize an instance of the {@link ValidationException} class.
+     *
+     * @param Validation $validation The {@link Validation} object for the exception.
+     */
     public function __construct(Validation $validation) {
         $this->validation = $validation;
-        parent::__construct($validation->getMessage(), $validation->status());
+        parent::__construct($validation->getMessage(), (int)$validation->status());
     }
 
     /**

@@ -217,8 +217,7 @@ class Application {
                 } else {
                     return $response->jsonSerialize();
                 }
-
-                break;
+                // No break because everything returns.
             case 'application/json':
                 $response->flushHeaders();
                 echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

@@ -599,9 +599,9 @@ class Response implements JsonSerializable {
      * which is a value of any type other than a resource.
      */
     public function jsonSerialize() {
-        $asset = $this->contentAsset();
+        $asset = (string)$this->contentAsset();
 
-        if ($asset && is_string($asset)) {
+        if ($asset) {
             // A specific asset was specified.
             if (strpos($asset, '.') !== false) {
                 list($group, $key) = explode('.', $asset, 2);
