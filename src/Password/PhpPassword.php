@@ -49,6 +49,6 @@ class PhpPassword implements IPassword {
      * {@inheritdoc}
      */
     public function verify($password, $hash) {
-        return password_verify($password, $hash);
+        return password_verify((string)$password, (string)$hash);
     }
 }

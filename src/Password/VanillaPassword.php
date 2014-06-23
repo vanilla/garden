@@ -46,7 +46,7 @@ class VanillaPassword extends PhpassPassword {
      */
     public function verify($password, $hash) {
         if (function_exists('password_verify')) {
-            return password_verify($password, $hash);
+            return password_verify((string)$password, (string)$hash);
         }
 
         if (!$hash) {

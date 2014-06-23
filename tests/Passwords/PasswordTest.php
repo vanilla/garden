@@ -73,6 +73,12 @@ class BasicTest extends \PHPUnit_Framework_TestCase {
 
         foreach ($paths as $path) {
             $classname = basename($path, '.php');
+
+            // Skip password testing for older versions of php.
+            if ($classname === 'PhpPassword' && !function_exists('password_verify')) {
+                continue;
+            }
+
             if ($classname != 'IPassword') {
                 $full_classname = "\Garden\Password\\$classname";
                 $obj = new $full_classname();
