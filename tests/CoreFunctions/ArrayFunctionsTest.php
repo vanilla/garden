@@ -11,7 +11,7 @@
 class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
 
     /**
-     * Test array_column().
+     * Test {@link array_column_php()}.
      */
     public function testArrayColumn() {
         $ds = $this->getDataset();
@@ -30,7 +30,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
-     * Test array_column() with indexes and values.
+     * Test {@link array_column_php()} with indexes and values.
      */
     public function testArrayColumnWithIndexes() {
         $ds = $this->getDataset();
@@ -43,7 +43,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
-     * Test array_column() errors and warnings.
+     * Test {@link array_column_php()} errors and warnings.
      *
      * @expectedException \Garden\Exception\ErrorException
      */
@@ -272,14 +272,19 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
      * @return array Returns an array of extensions.
      */
     public function provideExtensions() {
-        return [
+        $result = [
             '.json' => ['.json'],
             '.json.php' => ['.json.php'],
             '.ser' => ['.ser'],
             '.ser.php' => ['.ser.php'],
             '.php' => ['.php'],
-            '.yml' => ['.yml'],
-            '.yml.php' => ['.yml.php']
         ];
+
+        if (extension_loaded('yaml')) {
+            $result['.yml'] = ['.yml'];
+            $result['.yml.php'] = ['.yml.php'];
+        }
+
+        return $result;
     }
 }
