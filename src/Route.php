@@ -185,7 +185,7 @@ abstract class Route {
         $name = strtolower($name);
 
         if (isset($this->mappings[$name])) {
-            $mapping = $this->mapping[$name];
+            $mapping = $this->mappings[$name];
         } elseif (isset(self::$globalMappings[$name])) {
             $mapping = self::$globalMappings[$name];
         } else {
@@ -194,6 +194,17 @@ abstract class Route {
 
         switch (strtolower($mapping)) {
             case self::MAP_DATA:
+                switch ($request->method()) {
+                    case Request::METHOD_GET:
+                    case Request::METHOD_DELETE:
+                    case Request::METHOD_HEAD:
+                    case Request::METHOD_OPTIONS:
+                        $result = $request->query();
+                        break;
+                    default:
+                        $result = $request->input();
+                        break;
+                }
                 break;
             case self::MAP_INPUT:
                 $result = $request->input();
