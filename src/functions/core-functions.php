@@ -32,7 +32,7 @@
  * @return array
  * @category Array Functions
  */
-function array_column_php($input = null, $columnKey = null, $indexKey = null) {
+function array_column_php($input, $columnKey = null, $indexKey = null) {
     // Using func_get_args() in order to check for proper number of
     // parameters and trigger errors exactly as the built-in array_column()
     // does in PHP 5.5.
