@@ -73,7 +73,7 @@ class Request implements JsonSerializable {
      */
     public function __construct($url = '', $method = '', $input = null) {
         if ($url) {
-            $this->env = static::defaultEnvironment();
+            $this->env = (array)static::defaultEnvironment();
             // Instantiate the request from the url.
             $this->url($url);
             if ($method) {
@@ -597,7 +597,7 @@ class Request implements JsonSerializable {
     /**
      * Get an item from the query or the entire query array.
      *
-     * @param string|null $key The key to get or null to get the entire array.
+     * @param string|array|null $key The key to get or null to get the entire array.
      * @param string|null $default The default value if getting a particular {@link $key}.
      * @return string|array Gets the value at {@link $key} or the entire array.
      */
@@ -718,7 +718,7 @@ class Request implements JsonSerializable {
                 $path = $url_parts['path'];
 
                 // Try stripping the root out of the path first.
-                $root = static::globalEnvironment('SCRIPT_NAME');
+                $root = (string)static::globalEnvironment('SCRIPT_NAME');
 
                 if (strpos($path, $root) === 0) {
                     $path = substr($path, strlen($root));
