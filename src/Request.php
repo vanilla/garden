@@ -127,6 +127,7 @@ class Request implements JsonSerializable {
      * If you pass an array for this parameter then you can set the default environment.
      * @param bool $merge Whether or not to merge the new value.
      * @return array|mixed Returns the value at {@link $key} or the entire environment array.
+     * @throws \InvalidArgumentException Throws an exception when {@link $key} is not valid.
      */
     public static function defaultEnvironment($key = null, $merge = false) {
         if (self::$defaultEnv === null) {
@@ -252,7 +253,6 @@ class Request implements JsonSerializable {
             }
             if (isset($input)) {
                 $env['INPUT'] = $input;
-                $env['INPUT_RAW'] = $input_raw;
             } elseif (isset($_POST)) {
                 $env['INPUT'] = $_POST;
             }
@@ -431,6 +431,12 @@ class Request implements JsonSerializable {
         return $host.$port;
     }
 
+    /**
+     * Get the ip address of the request.
+     *
+     * @param string|null $ip Pass a new ip address.
+     * @return string|Request Returns the current ip address or $this for fluent sets.
+     */
     public function ip($ip = null) {
         if ($ip !== null) {
             $this->env['REMOTE_ADDR'] = $ip;
@@ -439,34 +445,75 @@ class Request implements JsonSerializable {
         return $this->env['REMOTE_ADDR'];
     }
 
+    /**
+     * Gets whether or not this is a DELETE request.
+     *
+     * @return bool Returns true if this is a DELETE request, false otherwise.
+     */
     public function isDelete() {
         return $this->method() === self::METHOD_DELETE;
     }
 
+    /**
+     * Gets whether or not this is a GET request.
+     *
+     * @return bool Returns true if this is a GET request, false otherwise.
+     */
     public function isGet() {
         return $this->method() === self::METHOD_GET;
     }
 
+    /**
+     * Gets whether or not this is a HEAD request.
+     *
+     * @return bool Returns true if this is a HEAD request, false otherwise.
+     */
     public function isHead() {
         return $this->method() === self::METHOD_HEAD;
     }
 
+    /**
+     * Gets whether or not this is an OPTIONS request.
+     *
+     * @return bool Returns true if this is an OPTIONS request, false otherwise.
+     */
     public function isOptions() {
         return $this->method() === self::METHOD_OPTIONS;
     }
 
+    /**
+     * Gets whether or not this is a PATCH request.
+     *
+     * @return bool Returns true if this is a PATCH request, false otherwise.
+     */
     public function isPatch() {
         return $this->method() === self::METHOD_PATCH;
     }
 
+    /**
+     * Gets whether or not this is a POST request.
+     *
+     * @return bool Returns true if this is a POST request, false otherwise.
+     */
     public function isPost() {
         return $this->method() === self::METHOD_POST;
     }
 
+    /**
+     * Gets whether or not this is a PUT request.
+     *
+     * @return bool Returns true if this is a PUT request, false otherwise.
+     */
     public function isPut() {
         return $this->method() === self::METHOD_PUT;
     }
 
+    /**
+     * Gets or sets the request method.
+     *
+     * @param string|null $method Pass a new request method or null to get the current method.
+     * @return Request|string Returns the current request method or $this for fluent sets.
+     */
     public function method($method = null) {
         if ($method !== null) {
             $this->env['REQUEST_METHOD'] = strtoupper($method);
@@ -475,6 +522,15 @@ class Request implements JsonSerializable {
         return $this->env['REQUEST_METHOD'];
     }
 
+    /**
+     * Gets or sets the request path.
+     *
+     * Not that this returns the path without the file extension.
+     * If you want the full path use {@link Request::fullPath()}.
+     *
+     * @param string|null $path Pass a new path or null to get the curren path.
+     * @return Request|string Returns the current path or $this for fluent sets.
+     */
     public function path($path = null) {
         if ($path !== null) {
             $this->env['PATH_INFO'] = $path;
@@ -484,6 +540,12 @@ class Request implements JsonSerializable {
         return $this->env['PATH_INFO'];
     }
 
+    /**
+     * Gets or sets the file extension.
+     *
+     * @param string|null $ext Pass a new extension or null to get the current extension.
+     * @return Request|string Returns the current extension or $this for fluent sets.
+     */
     public function ext($ext = null) {
         if ($ext !== null) {
             if ($ext) {
@@ -497,6 +559,12 @@ class Request implements JsonSerializable {
         return $this->env['EXT'];
     }
 
+    /**
+     * Gets or sets the path + extension.
+     *
+     * @param string|null $path Pass a new full path or null to get the current full path.
+     * @return Request|string Returns the current full path or $this for fluent sets.
+     */
     public function fullPath($path = null) {
         if ($path !== null) {
             // Strip the extension from the path.
@@ -512,6 +580,12 @@ class Request implements JsonSerializable {
         return $this->env['PATH_INFO'].$this->env['EXT'];
     }
 
+    /**
+     * Gets or sets the port of the request.
+     *
+     * @param int|null $port Pass a new port or null to get the current port.
+     * @return Request|int Returns the current port or $this for fluent sets.
+     */
     public function port($port = null) {
         if ($port !== null) {
             $this->env['SERVER_PORT'] = $port;
@@ -539,6 +613,19 @@ class Request implements JsonSerializable {
         }
     }
 
+    /**
+     * Gets or sets the current request input.
+     *
+     * This method can get/set the entire input or indvidual keys from it.
+     * The input will usually refer to the {@link $_POST} array.
+     *
+     * @param string|array|null $key Pass one of the following to the {@link $key} parameter.
+     * - string: A sting will get an indivdual key of the input array.
+     * - array: An array will set the entire input array.
+     * - null: Calling the function without any args will return the entire input array.
+     * @param mixed|null $default The default value to return if {@link $key} is not found.
+     * @return Requst|mixed Returns the value at {@link $key}, {@link $default} or $this for fluent sets.
+     */
     public function input($key = null, $default = null) {
         if ($key === null) {
             return $this->env['INPUT'];
@@ -548,6 +635,7 @@ class Request implements JsonSerializable {
         }
         if (is_array($key)) {
             $this->env['INPUT'] = $key;
+            return $this;
         }
     }
 
@@ -557,7 +645,7 @@ class Request implements JsonSerializable {
      * @return array Returns the data.
      */
     public function data() {
-        switch ($this->method) {
+        switch ($this->method()) {
             case self::METHOD_GET:
             case self::METHOD_DELETE:
             case self::METHOD_HEAD:
@@ -571,6 +659,12 @@ class Request implements JsonSerializable {
         }
     }
 
+    /**
+     * Get or set the root directory of the request.
+     *
+     * @param string|null $value Pass a new root or null to get the current root.
+     * @return Request|string Returns the current route or $this for fluent sets.
+     */
     public function root($value = null) {
         if ($value !== null) {
             $value = rtrim($value, '/');
@@ -579,13 +673,28 @@ class Request implements JsonSerializable {
         return $this->env['SCRIPT_NAME'];
     }
 
+    /**
+     * Gets or sets the url scheme (ex. http or https).
+     *
+     * @param string|null $value Pass a new scheme or null to get the current scheme.
+     * @return Request|null Returns the current scheme or $this for fluent sets.
+     */
     public function scheme($value = null) {
         if ($value !== null) {
             $this->env['URL_SCHEME'] = $value;
+            return $this;
         }
         return $this->env['URL_SCHEME'];
     }
 
+    /**
+     * Gets or sets the entire url.
+     *
+     * When you use this method to set the url it will be parsed and split into its component parts.
+     *
+     * @param string|null $url Pass a new url or null to get the current url.
+     * @return string
+     */
     public function url($url = null) {
         if ($url !== null) {
             // Parse the url and set the individual components.
@@ -632,9 +741,10 @@ class Request implements JsonSerializable {
                 parse_str($url_parts['query'], $query);
                 $this->query($query);
             }
+            return $this;
         } else {
             $query = $this->query();
-            return $this->scheme() . '://' . $this->host() . $this->root() . $this->path() . (!empty($query) ? '?' . http_build_query($query) : '');
+            return $this->scheme().'://'.$this->hostAndPort().$this->root().$this->path().(!empty($query) ? '?'.http_build_query($query) : '');
         }
     }
 
