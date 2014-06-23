@@ -1,10 +1,14 @@
 <?php
+/**
+ * @author Todd Burry <todd@vanillaforums.com>
+ * @copyright 2009-2014 Vanilla Forums Inc.
+ * @license MIT
+ */
 
 namespace Garden;
 
 /**
- * Contains functionality that allows addons to be be enabled and disabled within the application to
- * enhance or change the application's functionality.
+ * Contains functionality that allows addons to enhance or change an application's functionality.
  *
  * An addon can do the following.
  *
@@ -39,7 +43,7 @@ class Addons {
 //    protected static $basenameMap;
 
     /**
-     * @var array An array that maps class names to file paths.
+     * @var array|null An array that maps class names to file paths.
      */
     protected static $classMap;
 
@@ -65,7 +69,7 @@ class Addons {
      *
      * @param string $addon_key If you supply an addon key then only that addon will be returned.
      * @param string $key Supply one of the Addons::K_* constants to get a specific key from the addon.
-     * @return Returns the addon with the given key or all available addons if no key is passed.
+     * @return array Returns the addon with the given key or all available addons if no key is passed.
      */
     public static function all($addon_key = null, $key = null) {
         if (self::$all === null) {
@@ -151,7 +155,7 @@ class Addons {
             }
         }
 
-        Event::bind('bootstrap', function() {
+        Event::bind('bootstrap', function () {
             // Start each of the enabled addons.
             foreach (self::enabled() as $key => $value) {
                 static::startAddon($key);
@@ -159,7 +163,14 @@ class Addons {
         });
     }
 
-    private static function cacheGet($key, $cache_cb) {
+    /**
+     * Get the cached file or hydrate the cache with a callback.
+     *
+     * @param string $key The cache key to get.
+     * @param callable $cache_cb The function to run when hydrating the cache.
+     * @return array Returns the cached array.
+     */
+    protected static function cacheGet($key, callable $cache_cb) {
         // Salt the cache with the root path so that it will invalidate if the app is moved.
         $salt = substr(md5(static::baseDir()), 0, 10);
 
@@ -223,7 +234,8 @@ class Addons {
      *
      * @param string $addon_key If you supply an addon key then only that addon will be returned.
      * @param string $key Supply one of the Addons::K_* constants to get a specific key from the addon.
-     * @return Returns the addon with the given key or all enabled addons if no key is passed.
+     * @return array Returns the addon with the given key or all enabled addons if no key is passed.
+     * @throws \Exception Throws an exception if {@link Addons::bootstrap()} hasn't been called yet.
      */
     public static function enabled($addon_key = null, $key = null) {
         // Lazy build the enabled array.
@@ -243,7 +255,7 @@ class Addons {
                 }
             } else {
                 // Build the enabled array by walking the addons.
-                self::$enabled = static::cacheGet('addons-enabled', function() {
+                self::$enabled = static::cacheGet('addons-enabled', function () {
                     return static::scanAddons(null, self::$enabledKeys);
                 });
             }
@@ -283,22 +295,27 @@ class Addons {
 
     /**
      * Scan an addon directory for information.
-     * @param string $dir
+     *
+     * @param string $dir The addon directory to scan.
+     * @param array &$addons The addons array.
+     * @param array $enabled An array of enabled addons or null to scan all addons.
+     * @return array Returns an array in the form [addonKey, addonInfo].
      */
-    private static function scanAddonRecursive($dir, $enabled = null, &$addons) {
+    protected static function scanAddonRecursive($dir, &$addons, $enabled = null) {
         $dir = rtrim($dir, '/');
-        $addon_key = strtolower(basename($dir));
+        $addonKey = strtolower(basename($dir));
 
         // Scan the addon if it is enabled.
-        if ($enabled === null || in_array($addon_key, $enabled)) {
-            list($addon_key, $addon) = static::scanAddon($dir);
+        if ($enabled === null || in_array($addonKey, $enabled)) {
+            list($addonKey, $addon) = static::scanAddon($dir);
         } else {
             $addon = null;
         }
 
         // Add the addon to the collection array if one was supplied.
-        if ($addon !== null)
-            $addons[$addon_key] = $addon;
+        if ($addon !== null) {
+            $addons[$addonKey] = $addon;
+        }
 
         // Recurse.
         $addon_subdirs = array('/addons');
@@ -308,13 +325,15 @@ class Addons {
             }
         }
 
-        return array($addon_key, $addon);
+        return array($addonKey, $addon);
     }
 
     /**
      * Scan an individual addon directory and return the information about that addon.
+     *
      * @param string $dir The path to the addon.
-     * @return array An array in the form of `[$addon_key, $addon_row]` or `[$addon_key, null]` if the directory doesn't represent an addon.
+     * @return array An array in the form of `[$addon_key, $addon_row]` or `[$addon_key, null]` if the directory doesn't
+     * represent an addon.
      */
     protected static function scanAddon($dir) {
         $dir = rtrim($dir, '/');
@@ -372,6 +391,14 @@ class Addons {
         return array($addon_key, $addon);
     }
 
+    /**
+     * Scan a directory for addons.
+     *
+     * @param string $dir The directory to scan.
+     * @param array $enabled An array of enabled addons in the form `[addonKey => enabled, ...]`.
+     * @param array &$addons The addons will fill this array.
+     * @return array Returns all of the addons.
+     */
     protected static function scanAddons($dir = null, $enabled = null, &$addons = null) {
         if (!$dir) {
             $dir = static::$baseDir;
@@ -380,25 +407,27 @@ class Addons {
             $addons = array();
         }
 
+        /* @var \DirectoryIterator */
         foreach (new \DirectoryIterator($dir) as $subdir) {
             if ($subdir->isDir() && !$subdir->isDot()) {
 //                echo $subdir->getPathname().$subdir->isDir().$subdir->isDot().'<br />';
-                static::scanAddonRecursive($subdir->getPathname(), $enabled, $addons);
+                static::scanAddonRecursive($subdir->getPathname(), $addons, $enabled);
             }
         }
         return $addons;
     }
 
     /**
+     * Looks what classes and namespaces are defined in a file and returns the first found.
      *
-     * Looks what classes and namespaces are defined in that file and returns the first found
      * @param string $file Path to file.
-     * @return array Returns an empty array if no classes are found or an array with namespaces and classes found in the file.
+     * @return array Returns an empty array if no classes are found or an array with namespaces and
+     * classes found in the file.
      * @see http://stackoverflow.com/a/11114724/1984219
      */
     protected static function scanFile($file) {
         $classes = $nsPos = $final = array();
-        $foundNS = FALSE;
+        $foundNamespace = false;
         $ii = 0;
 
         if (!file_exists($file)) {
@@ -413,13 +442,13 @@ class Addons {
         $count = count($tokens);
 
         for ($i = 0; $i < $count; $i++) {
-            if (!$foundNS && $tokens[$i][0] == T_NAMESPACE) {
+            if (!$foundNamespace && $tokens[$i][0] == T_NAMESPACE) {
                 $nsPos[$ii]['start'] = $i;
-                $foundNS = true;
-            } elseif ($foundNS && ($tokens[$i] == ';' || $tokens[$i] == '{')) {
+                $foundNamespace = true;
+            } elseif ($foundNamespace && ($tokens[$i] == ';' || $tokens[$i] == '{')) {
                 $nsPos[$ii]['end'] = $i;
                 $ii++;
-                $foundNS = false;
+                $foundNamespace = false;
             } elseif ($i - 2 >= 0 && $tokens[$i - 2][0] == T_CLASS && $tokens[$i - 1][0] == T_WHITESPACE && $tokens[$i][0] == T_STRING) {
                 if ($i - 4 >= 0 && $tokens[$i - 4][0] == T_ABSTRACT) {
                     $classes[$ii][] = array('name' => $tokens[$i][1], 'type' => 'ABSTRACT CLASS');
@@ -450,10 +479,22 @@ class Addons {
         return $classes;
     }
 
+    /**
+     * Start an addon.
+     *
+     * This function does the following:
+     *
+     * 1. Make the addon available in the autoloader.
+     * 2. Run the addon's bootstrap.php if it exists.
+     *
+     * @param string $addon_key The key of the addon to enable.
+     * @return bool
+     */
     public static function startAddon($addon_key) {
         $addon = static::enabled($addon_key);
-        if (!$addon)
+        if (!$addon) {
             return false;
+        }
 
         // Run the class' bootstrap.
         if ($bootstrap_path = val(self::K_BOOTSTRAP, $addon)) {
