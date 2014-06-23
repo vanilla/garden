@@ -1,7 +1,9 @@
 ![Garden](http://cdn.vanillaforums.com/garden-logo-400.svg)
-==========================================================
+===========================================================
 
-Garden is a mini framework for pluggable web applications and apis. ***This framework is currently a work in progress and should be considered alpha quality code right now.***
+[[![Build Status](https://travis-ci.org/vanilla/garden.svg?branch=master)](https://travis-ci.org/vanilla/garden)](https://travis-ci.org/vanilla/garden)
+
+Garden is a mini framework for building pluggable web applications and apis. ***This framework is currently a work in progress and should be considered alpha quality code right now.***
 
 Howdy, Stranger!
 ----------------
@@ -33,7 +35,7 @@ Composer is the amazing package manager that has taken the PHP world by storm. G
 
 ### Unit Tested
 
-Garden is tested with [PHPUnit](https://phpunit.de/) and [Travis CI](https://travis-ci.org/). We want to make sure that garden is high quality software that doesn't break as we add new features. Our goal is to implement all reported bugs as unit tests so that they can be fixed and never happen again.
+Garden is tested with [PHPUnit](https://phpunit.de/) and [Travis CI](https://travis-ci.org/vanilla/garden). We want to make sure that garden is high quality software that doesn't break as we add new features. Our goal is to implement all reported bugs as unit tests so that they can be fixed and never happen again.
 
 ### Open Source
 
@@ -55,7 +57,10 @@ Garden is [PSR-4](https://github.com/php-fig/fig-standards/blob/master/accepted/
 A Basic Garden Application
 --------------------------
 
+Most garden applications will make use of an .htaccess file for pretty urls and then have an index.php defined as follows:
+
 ```php
+// Put your index.php in the Garden namespace or import the various classes you need.
 namespace Garden;
 
 // Define the root path of the application.
@@ -68,7 +73,7 @@ require_once __DIR__.'/vendor/autoload.php';
 $app = new Application();
 
 // Load the default config from conf/config.json.php.
-Config::instance()->load();
+Config::load();
 
 // Enable addon functionality.
 Addons::bootstrap(); // enables config('addons')
@@ -76,9 +81,13 @@ Addons::bootstrap(); // enables config('addons')
 // Fire the bootstrap event so that overridable function files can be included.
 Event::fire('bootstrap');
 
-// Register a route.
+// Register some routes.
 $app->route('/hello', function () use ($app) {
     echo "Hello World!";
+});
+
+$app->route('/hello', function () use ($app) {
+    return "Pong";
 });
 
 // Run the application.
