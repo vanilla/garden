@@ -56,7 +56,7 @@ class XenforoPassword implements IPassword {
      * @return string Returns the password hash.
      */
     protected function hashRaw($password, $salt, $function = null) {
-        if ($function === null) {
+        if (!$function) {
             $function = $this->hashFunction;
         }
 
