@@ -37,16 +37,24 @@ class Config {
 
     /// Methods ///
 
+    /**
+     * Get or set the default path.
+     *
+     * @param string $value Pass a value to set a new default path.
+     * @return string Returns the current default path.
+     */
     public static function defaultPath($value = '') {
         if ($value) {
             self::$defaultPath = $value;
         } elseif (!self::$defaultPath) {
             self::$defaultPath = PATH_ROOT.'/conf/config.json.php';
         }
+        return self::$defaultPath;
     }
 
     /**
      * Return all of the config data.
+     *
      * @return array Returns an array of config data.
      */
     public static function data() {
