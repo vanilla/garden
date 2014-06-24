@@ -13,7 +13,7 @@ use Garden\Exception\ValidationException;
 /**
  * A class for defining and validating data schemas.
  */
-class Schema {
+class Schema implements \JsonSerializable {
     /// Properties ///
     protected $schema = [];
 
@@ -251,7 +251,7 @@ class Schema {
      * @throws ValidationException Throws an exception when the data does not validate against the schema.
      */
     public function validate(array &$data, Validation &$validation = null) {
-        if (!$this->isValid($data, $validation)) {
+        if (!$this->isValidInternal($data, $this->schema, $validation)) {
             if ($validation === null) {
                 // Although this should never be null, scrutinizer complains that it might be.
                 $validation = new Validation();
@@ -317,7 +317,7 @@ class Schema {
      */
     protected function validateField(&$value, $field, Validation $validation) {
         $fieldname = $field['name'];
-        $type = $field['type'];
+        $type = val('type', $field, '');
         $required = val('required', $field, false);
         $valid = true;
 
@@ -351,7 +351,10 @@ class Schema {
                 if (is_bool($value)) {
                     $validType = true;
                 } else {
-                    $bools = ['0' => false, 'false' => false, '1' => true, 'true' => true];
+                    $bools = [
+                        '0' => false, 'false' => false, 'no' => false, 'off' => false,
+                        '1' => true,  'true'  => true, 'yes' => true,  'on'  => true
+                    ];
                     if (isset($bools[$value])) {
                         $value = $bools[$value];
                         $validType = true;
@@ -401,29 +404,60 @@ class Schema {
                 }
                 break;
             case 'datetime':
-                $dt = date_create($value);
-                if ($dt) {
-                    $value = $dt;
+                if ($value instanceof \DateTime) {
+                    $validType = true;
+                } elseif (is_string($value)) {
+                    try {
+                        $dt = new \DateTime($value);
+                        if ($dt) {
+                            $value = $dt;
+                        } else {
+                            $validType = false;
+                        }
+                    } catch (\Exception $ex) {
+                        $validType = false;
+                    }
+                } elseif (is_numeric($value) && $value > 0) {
+                    $value = new \DateTime('@'.(string)round($value));
+                    $validType = true;
                 } else {
                     $validType = false;
                 }
                 break;
             case 'base64':
-                if (!is_string($value)
-                    || !preg_match('`^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$`', $value)) {
-
+                if (!is_string($value)) {
                     $validType = false;
+                } else {
+                    $decoded = @base64_decode($value);
+                    if ($decoded === false) {
+                        $validType = false;
+                    } else {
+                        $value = $decoded;
+                        $validType = true;
+                    }
                 }
                 break;
             case 'array':
-                if (!is_array($value) || !isset($value[0])) {
+                if (!is_array($value) || (count($value) > 0 && !isset($value[0]))) {
                     $validType = false;
+                } elseif (isset($field['items'])) {
+                    // Validate each of the types.
+                    $itemField = $field['items'];
+                    $itemField['validatorName'] = "$fieldname.items"; // custom validators attach here
+                    foreach ($value as $i => &$item) {
+                        $itemField['name'] = "$fieldname.$i";
+                        $this->validateField($item, $itemField, $validation);
+                    }
                 }
                 break;
             case 'object':
                 if (!is_array($value) || isset($value[0])) {
                     $validType = false;
                 }
+                break;
+            case '':
+                // No type was specified so we are valid.
+                $validType = true;
                 break;
             default:
                 throw new \InvalidArgumentException("Unrecognized type $type.", 500);
@@ -442,12 +476,24 @@ class Schema {
         }
 
         // Validate a custom field validator.
-        if (isset($this->validators[$fieldname])) {
-            foreach ($this->validators[$fieldname] as $callback) {
+        $validatorFieldname = val('validatorName', $field, $fieldname);
+        if (isset($this->validators[$validatorFieldname])) {
+            foreach ($this->validators[$validatorFieldname] as $callback) {
                 call_user_func_array($callback, [&$value, $field, $validation]);
             }
         }
 
         return $valid;
+    }
+
+    /**
+     * Specify data which should be serialized to JSON.
+     *
+     * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
+     * @return mixed data which can be serialized by <b>json_encode</b>,
+     * which is a value of any type other than a resource.
+     */
+    public function jsonSerialize() {
+        return $this->schema;
     }
 }
