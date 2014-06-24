@@ -69,7 +69,7 @@ class Application {
     public function route($pathOrRoute, $callback = null) {
         if (is_object($pathOrRoute) && $pathOrRoute instanceof Route) {
             $route = $pathOrRoute;
-        } elseif (is_string($pathOrRoute)) {
+        } elseif (is_string($pathOrRoute) && $callback !== null) {
             $route = Route::create($pathOrRoute, $callback);
         } else {
             throw new \InvalidArgumentException("Argument #1 must be either a Garden\\Route or a string.", 500);
