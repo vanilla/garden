@@ -600,6 +600,7 @@ class Request implements JsonSerializable {
      * @param string|array|null $key The key to get or null to get the entire array.
      * @param string|null $default The default value if getting a particular {@link $key}.
      * @return string|array Gets the value at {@link $key} or the entire array.
+     * @throws \InvalidArgumentException Throws an exception when {@link $key} is not the correct type.
      */
     public function query($key = null, $default = null) {
         if ($key === null) {
@@ -611,6 +612,7 @@ class Request implements JsonSerializable {
         if (is_array($key)) {
             $this->env['QUERY'] = $key;
         }
+        throw \InvalidArgumentException("Argument #1 must be one of null, string, array.", 500);
     }
 
     /**
@@ -625,6 +627,7 @@ class Request implements JsonSerializable {
      * - null: Calling the function without any args will return the entire input array.
      * @param mixed|null $default The default value to return if {@link $key} is not found.
      * @return Requst|mixed Returns the value at {@link $key}, {@link $default} or $this for fluent sets.
+     * @throws \InvalidArgumentException Throws an exception when {@link $key} is not the correct type.
      */
     public function input($key = null, $default = null) {
         if ($key === null) {
@@ -637,6 +640,7 @@ class Request implements JsonSerializable {
             $this->env['INPUT'] = $key;
             return $this;
         }
+        throw \InvalidArgumentException("Argument #1 must be one of null, string, array.", 500);
     }
 
     /**
