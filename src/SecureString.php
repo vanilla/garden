@@ -57,7 +57,7 @@ class SecureString {
                 return null;
             }
 
-            list($encode, $decode, $method, $encodeFirst) = $supported;
+            list($encode,, $method, $encodeFirst) = $supported;
 
             if ($encodeFirst && $first) {
                 $str = static::base64urlEncode($str);
@@ -121,7 +121,7 @@ class SecureString {
             }
             $password = $spec[$token];
 
-            list($encode, $decode, $method, $decodeFirst) = $supported;
+            list(, $decode, $method, $decodeFirst) = $supported;
 
             switch ($decode) {
                 case 'decrypt':
@@ -220,7 +220,11 @@ class SecureString {
         $iv = static::base64urlDecode($this->popString($str));
         $encrypted = static::base64urlDecode($this->popString($str));
 
-        $decrypted = openssl_decrypt($encrypted, $method, $password, true, $iv);
+        try {
+            $decrypted = openssl_decrypt($encrypted, $method, $password, true, $iv);
+        } catch (\Eception $ex) {
+            return $this->exception($throw, "Error decrypting the string.", 403);
+        }
 
         if ($decrypted === false) {
             return $this->exception($throw, "Error decrypting the string.", 403);
@@ -316,7 +320,7 @@ class SecureString {
         // Grab the timestamp and verify it.
         $timestamp = $this->popString($str);
         if (!$this->verifyTimestamp($timestamp, $throw)) {
-            return false;
+            return null;
         }
 
         return $str;
