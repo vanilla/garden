@@ -68,17 +68,6 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     public function testArrayColumnError3() {
         $ds = $this->getDataset();
 
-        array_column_php($ds, null);
-    }
-
-    /**
-     * Test array_column() errors and warnings.
-     *
-     * @expectedException \Garden\Exception\ErrorException
-     */
-    public function testArrayColumnError4() {
-        $ds = $this->getDataset();
-
         array_column_php($ds, []);
     }
 
@@ -87,7 +76,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
      *
      * @expectedException \Garden\Exception\ErrorException
      */
-    public function testArrayColumnError5() {
+    public function testArrayColumnError4() {
         $ds = $this->getDataset();
 
         $r = array_column_php($ds, 'id', []);
