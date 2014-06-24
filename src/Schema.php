@@ -237,6 +237,7 @@ class Schema implements \JsonSerializable {
             $validation->addError('missing_field', $flattened, [
                 'message' => $message
             ]);
+            return false;
         });
 
         return $result;
@@ -315,33 +316,16 @@ class Schema implements \JsonSerializable {
      * @internal param string $fieldname The name of the field to validate.
      * @return bool Returns true if the field is valid, false otherwise.
      */
-    protected function validateField(&$value, $field, Validation $validation) {
+    protected function validateField(&$value, array $field, Validation $validation) {
         $fieldname = $field['name'];
         $type = val('type', $field, '');
-        $required = val('required', $field, false);
         $valid = true;
 
         // Check required first.
-        if ($value === '' || $value === null) {
-            if (!$required) {
-                if (!($type === 'boolean' && $value === false)) {
-                    $value = null;
-                }
-                return true;
-            }
-
-            switch ($type) {
-                case 'boolean':
-                    $value = false;
-                    return true;
-                case 'string':
-                    if (val('minLength', $field, 1) == 0) {
-                        $value = '';
-                        return true;
-                    }
-            }
-            $validation->addError('missing_field', $fieldname);
-            return false;
+        // A value that isn't passed should fail the required test, but short circuit the other ones.
+        $validRequired = $this->validateRequired($value, $field, $validation);
+        if ($validRequired !== null) {
+            return $validRequired;
         }
 
         // Validate the field's type.
@@ -484,6 +468,43 @@ class Schema implements \JsonSerializable {
         }
 
         return $valid;
+    }
+
+    /**
+     * Validate a required field.
+     *
+     * @param mixed &$value The field value.
+     * @param array $field The field definition.
+     * @param Validation $validation A {@link Validation} object to collect errors.
+     * @return bool|null Returns one of the following:
+     * - null: The field is not required.
+     * - true: The field is required and {@link $value} is not empty.
+     * - false: The field is required and {@link $value} is empty.
+     */
+    protected function validateRequired(&$value, array $field, Validation $validation) {
+        $required = val('required', $field, false);
+        $type = $field['type'];
+
+        if ($value === '' || $value === null) {
+            if (!$required) {
+                $value = null;
+                return true;
+            }
+
+            switch ($type) {
+                case 'boolean':
+                    $value = false;
+                    return true;
+                case 'string':
+                    if (val('minLength', $field, 1) == 0) {
+                        $value = '';
+                        return true;
+                    }
+            }
+            $validation->addError('missing_field', $field['name']);
+            return false;
+        }
+        return null;
     }
 
     /**
