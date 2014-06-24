@@ -223,7 +223,7 @@ class SecureString {
 
         try {
             $decrypted = openssl_decrypt($encrypted, $method, $password, true, $iv);
-        } catch (\Eception $ex) {
+        } catch (\Exception $ex) {
             return $this->exception($throw, "Error decrypting the string.", 403);
         }
 

@@ -488,7 +488,7 @@ class Addons {
      * 2. Run the addon's bootstrap.php if it exists.
      *
      * @param string $addon_key The key of the addon to enable.
-     * @return bool
+     * @return bool Returns true if the addon was enabled. False otherwise.
      */
     public static function startAddon($addon_key) {
         $addon = static::enabled($addon_key);
@@ -500,5 +500,6 @@ class Addons {
         if ($bootstrap_path = val(self::K_BOOTSTRAP, $addon)) {
             include_once $bootstrap_path;
         }
+        return true;
     }
 }

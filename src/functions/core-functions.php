@@ -21,18 +21,16 @@
  * Optionally, you may provide an $indexKey to index the values in the returned
  * array by the values from the $indexKey column in the input array.
  *
- * @param array $input A multi-dimensional array (record set) from which to pull
- *                     a column of values.
- * @param mixed $columnKey The column of values to return. This value may be the
- *                         integer key of the column you wish to retrieve, or it
- *                         may be the string key name for an associative array.
- * @param mixed $indexKey The column to use as the index/keys for
- *                        the returned array. This value may be the integer key
- *                        of the column, or it may be the string key name.
- * @return array
+ * @param array $array A multi-dimensional array (record set) from which to pull a column of values.
+ * @param int|string $columnKey The column of values to return.
+ * This value may be the integer key of the column you wish to retrieve, or it
+ * may be the string key name for an associative array.
+ * @param mixed $indexKey The column to use as the index/keys for the returned array.
+ * This value may be the integer key of the column, or it may be the string key name.
+ * @return array Returns an array of values representing a single column from the input array.
  * @category Array Functions
  */
-function array_column_php($input, $columnKey = null, $indexKey = null) {
+function array_column_php($array, $columnKey, $indexKey = null) {
     // Using func_get_args() in order to check for proper number of
     // parameters and trigger errors exactly as the built-in array_column()
     // does in PHP 5.5.
@@ -40,12 +38,10 @@ function array_column_php($input, $columnKey = null, $indexKey = null) {
 
     if ($argc < 2) {
         trigger_error("array_column() expects at least 2 parameters, {$argc} given", E_USER_WARNING);
-//        return null;
     }
 
-    if (!is_array($input)) {
-        trigger_error('array_column() expects parameter 1 to be array, '.gettype($input).' given', E_USER_WARNING);
-//        return null;
+    if (!is_array($array)) {
+        trigger_error('array_column() expects parameter 1 to be array, '.gettype($array).' given', E_USER_WARNING);
     }
 
     if (!is_int($columnKey)
@@ -55,7 +51,6 @@ function array_column_php($input, $columnKey = null, $indexKey = null) {
         && !(is_object($columnKey) && method_exists($columnKey, '__toString'))
     ) {
         trigger_error('array_column(): The column key should be either a string or an integer', E_USER_WARNING);
-//        return false;
     }
 
     if (isset($indexKey)
@@ -65,7 +60,6 @@ function array_column_php($input, $columnKey = null, $indexKey = null) {
         && !(is_object($indexKey) && method_exists($indexKey, '__toString'))
     ) {
         trigger_error('array_column(): The index key should be either a string or an integer', E_USER_WARNING);
-//        return false;
     }
 
     $paramsColumnKey = ($columnKey !== null) ? (string)$columnKey : null;
@@ -81,7 +75,7 @@ function array_column_php($input, $columnKey = null, $indexKey = null) {
 
     $resultArray = array();
 
-    foreach ($input as $row) {
+    foreach ($array as $row) {
 
         $key = $value = null;
         $keySet = $valueSet = false;
@@ -116,13 +110,13 @@ if (!function_exists('array_column')) {
     /**
      * A custom implementation of array_column for older versions of php.
      *
-     * @param array|null $input The dataset to test.
-     * @param int|string|null $columnKey The column of values to return.
+     * @param array $array The dataset to test.
+     * @param int|string $columnKey The column of values to return.
      * @param int|string|null $indexKey The column to use as the index/keys for the returned array.
      * @return array Returns the columns from the {@link $input} array.
      */
-    function array_column($input = null, $columnKey = null, $indexKey = null) {
-        return array_column_php($input, $columnKey, $indexKey);
+    function array_column($array, $columnKey, $indexKey = null) {
+        return array_column_php($array, $columnKey, $indexKey);
     }
 }
 

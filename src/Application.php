@@ -60,17 +60,17 @@ class Application {
     /**
      * Add a new route.
      *
-     * @param string|Route $path The path to the route or the {@link Route} object itself.
-     * @param mixed $callback Either a callback to map the route to or a string representing a format for
-     * {@link sprintf()}.
+     * @param string|Route $pathOrRoute The path to the route or the {@link Route} object itself.
+     * @param callable|string|null $callback Either a callback to map the route to or a string representing
+     * a format for {@link sprintf()}.
      * @return Route Returns the route that was added.
      * @throws \InvalidArgumentException Throws an exceptio if {@link $path} isn't a string or {@link Route}.
      */
-    public function route($path, $callback = null) {
-        if (is_object($path) && $path instanceof Route) {
-            $route = $path;
-        } elseif (is_string($path)) {
-            $route = Route::create($path, $callback);
+    public function route($pathOrRoute, $callback = null) {
+        if (is_object($pathOrRoute) && $pathOrRoute instanceof Route) {
+            $route = $pathOrRoute;
+        } elseif (is_string($pathOrRoute)) {
+            $route = Route::create($pathOrRoute, $callback);
         } else {
             throw new \InvalidArgumentException("Argument #1 must be either a Garden\\Route or a string.", 500);
         }

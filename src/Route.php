@@ -46,7 +46,8 @@ abstract class Route {
      * Create and return a new route.
      *
      * @param string $pattern The pattern for the route.
-     * @param mixed $callback
+     * @param callable|string $callback Either a callback to map the route to or a string representing
+     * a format for {@link sprintf()}.
      * @return \Garden\Route Returns the new route.
      */
     public static function create($pattern, $callback) {
