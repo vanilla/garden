@@ -263,7 +263,7 @@ class Schema implements \JsonSerializable {
      * @throws ValidationException Throws an exception when the data does not validate against the schema.
      */
     public function validate(array &$data, Validation &$validation = null) {
-        if (!$this->isValidInternal($data, $this->schema, $validation)) {
+        if (!$this->isValidInternal($data, $this->schema, $validation, '')) {
             if ($validation === null) {
                 // Although this should never be null, scrutinizer complains that it might be.
                 $validation = new Validation();
@@ -282,7 +282,7 @@ class Schema implements \JsonSerializable {
      * @return bool Returns true if the data is valid. False otherwise.
      */
     public function isValid(array &$data, Validation &$validation = null) {
-        return $this->isValidInternal($data, $this->schema, '', $validation);
+        return $this->isValidInternal($data, $this->schema, $validation, '');
     }
 
     /**
@@ -290,11 +290,11 @@ class Schema implements \JsonSerializable {
      *
      * @param array &$data The data to validate.
      * @param array $schema The schema array to validate against.
-     * @param string $path The path to the current path for nested objects.
      * @param Validation &$validation This argument will be filled with the validation result.
+     * @param string $path The path to the current path for nested objects.
      * @return bool Returns true if the data is valid. False otherwise.
      */
-    protected function isValidInternal(array &$data, array $schema, $path = '', Validation &$validation = null) {
+    protected function isValidInternal(array &$data, array $schema, Validation &$validation = null, $path = '') {
         if ($validation === null) {
             $validation = new Validation();
         }
@@ -461,7 +461,7 @@ class Schema implements \JsonSerializable {
                     $validType = false;
                 } elseif (isset($field['properties'])) {
                     // Validate the data against the internal schema.
-                    $valid &= $this->isValidInternal($value, $field['properties'], $path.'.', $validation);
+                    $valid &= $this->isValidInternal($value, $field['properties'], $validation, $path.'.');
                 }
                 break;
             case '':
