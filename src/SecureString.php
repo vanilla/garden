@@ -97,16 +97,17 @@ class SecureString {
     public function decode($str, array $spec, $throw = false) {
         $decodeFirst = false;
         $last = true;
+        $wstr = $str;
 
-        while ($token = $this->popString($str)) {
-            if ($str === '') {
+        while ($token = $this->popString($wstr)) {
+            if ($wstr === '') {
                 if ($last) {
                     // The string has not been secured in any way.
                     return $this->exception($throw, "The string is not secure.", 403);
                 } elseif ($decodeFirst) {
-                    $str = static::base64urlDecode($token);
+                    $wstr = static::base64urlDecode($token);
                 } else {
-                    $str = $token;
+                    $wstr = $token;
                 }
                 break;
             }
@@ -125,24 +126,24 @@ class SecureString {
 
             switch ($decode) {
                 case 'decrypt':
-                    $str = $this->decrypt($str, $method, $password, $throw);
+                    $wstr = $this->decrypt($wstr, $method, $password, $throw);
                     break;
                 case 'verifyHmac':
-                    $str = $this->verifyHmac($str, $method, $password, $throw);
+                    $wstr = $this->verifyHmac($wstr, $method, $password, $throw);
                     break;
                 default:
                     return $this->exception($throw, "Invalid method $decode.", 500);
             }
 
-            if ($str === null) {
+            if ($wstr === null) {
                 return null;
             }
             $last = false;
         }
 
-        $data = json_decode($str, true);
+        $data = json_decode($wstr, true);
         if ($data === null) {
-            return $this->exception($throw, 'The final string is not valid json.', 400);
+            return $this->exception($throw, 'The final string is not valid json.', 403);
         }
 
         return $data;

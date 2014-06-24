@@ -43,16 +43,24 @@ class SecureStringTest extends PHPUnit_Framework_TestCase {
 
         $this->assertNotNull($data);
 
-        $encoded = $ss->encode($data, $spec, true);
+        try {
+            $encoded = $ss->encode($data, $spec, true);
 
-        foreach ($spec as &$password) {
-            $password = uniqid('bad', true);
+            $badSpec = $spec;
+            foreach ($badSpec as &$password) {
+                $password = uniqid('bad', true);
+            }
+
+            $null = $ss->decode($encoded, $badSpec, false);
+            $this->assertNull($null);
+
+            $decoded = $ss->decode($encoded, $badSpec, true);
+        } catch (\Exception $ex) {
+            if ($ex->getCode() === 400) {
+                throw new \Exception('Bad descrypt', 444);
+            }
+            throw $ex;
         }
-
-        $null = $ss->decode($encoded, $spec, false);
-        $this->assertNull($null);
-
-        $decoded = $ss->decode($encoded, $spec, true);
     }
 
     /**
@@ -175,6 +183,26 @@ class SecureStringTest extends PHPUnit_Framework_TestCase {
         $this->assertNull($decoded);
 
         $ss->decode($str, [], true);
+    }
+
+    /**
+     * There is a test case where the string decrypts, but comes up with garbage.
+     *
+     * @expectedException \Exception
+     * @expectedExceptionCode 403
+     */
+    public function testEdgePw() {
+        $ss = new SecureString();
+
+        $data = 1;
+        $spec = ['aes256' => 'pw53a8f0c6f2fa95.12344432'];
+        $encoded = 'cCAX_rOEtQYn30sFZFVI5g.7eQq12ifs9nDjEQGRHkoiw.aes256';
+        $badSpec = ['aes256' => 'bad53a8f0c704ada8.12162063'];
+
+        $decoded = $ss->decode($encoded, $spec);
+        $this->assertEquals($data, $decoded);
+
+        $badDecoded = $ss->decode($encoded, $badSpec, true);
     }
 
     /**
