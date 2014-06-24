@@ -42,10 +42,10 @@ class Application {
     /**
      * Get all of the matched routes for a request.
      *
-     * @param \Garden\Request $request
+     * @param Request $request The {@link Request} to match against.
      * @return array An array of arrays corresponding to matching routes and their args.
      */
-    public function matchRoutes(\Garden\Request $request) {
+    public function matchRoutes(Request $request) {
         $result = array();
 
         foreach ($this->routes as $route) {
@@ -228,5 +228,6 @@ class Application {
                 echo "Unsupported response type: $contentType";
                 break;
         }
+        return null;
     }
 }
