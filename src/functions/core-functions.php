@@ -220,6 +220,24 @@ function array_save($data, $path, $php_var = 'config') {
 }
 
 /**
+ * Select the first non-empty value from an array.
+ *
+ * @param array $keys An array of keys to try.
+ * @param array $array The array to select from.
+ * @param mixed $default The default value if non of the keys exist.
+ * @return mixed Returns the first non-empty value of {@link $default} if non are found.
+ * @category Array Functions
+ */
+function array_select(array $keys, array $array, $default = null) {
+    foreach ($keys as $key) {
+        if (isset($array[$key]) && $array[$key]) {
+            return $array[$key];
+        }
+    }
+    return $default;
+}
+
+/**
  * Take all of the items in an array and make a new array with them specified by mappings.
  *
  * @param array $array The input array to translate.
