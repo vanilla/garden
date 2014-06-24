@@ -259,6 +259,70 @@ class BasicSchemaTest extends SchemaTest {
     }
 
     /**
+     * Test {@link Schema::requireOneOf()}.
+     */
+    public function testRequireOneOf() {
+        $schema = $this
+            ->getAtomicSchema()
+            ->requireOneOf(['description', 'enabled']);
+
+        $valid1 = ['id' => 123, 'name' => 'Foo', 'description' => 'Hello'];
+        $this->assertTrue($schema->isValid($valid1));
+
+        $valid2 = ['id' => 123, 'name' => 'Foo', 'enabled' => true];
+        $this->assertTrue($schema->isValid($valid2));
+
+        $invalid1 = ['id' => 123, 'name' => 'Foo'];
+        $this->assertFalse($schema->isValid($invalid1));
+
+        // Test requiring one of nested.
+        $schema = $this
+            ->getAtomicSchema()
+            ->requireOneOf(['description', ['amount', 'enabled']]);
+
+        $this->assertTrue($schema->isValid($valid1));
+
+        $valid3 = ['id' => 123, 'name' => 'Foo', 'amount' => 99, 'enabled' => true];
+        $this->assertTrue($schema->isValid($valid3));
+
+        $this->assertFalse($schema->isValid($invalid1));
+
+        $invalid2 = ['id' => 123, 'name' => 'Foo', 'enabled' => true];
+        $this->assertFalse($schema->isValid($invalid2));
+
+        // Test requiring 2 of.
+        $schema = $this
+            ->getAtomicSchema()
+            ->requireOneOf(['description', 'amount', 'enabled'], 2);
+
+        $valid4 = ['id' => 123, 'name' => 'Foo', 'description' => 'Hello', 'enabled' => true];
+        $this->assertTrue($schema->isValid($valid4));
+
+        $this->assertFalse($schema->isValid($valid1));
+        $this->assertFalse($schema->isValid($valid2));
+    }
+
+    /**
+     * Test a variety of invalid values.
+     *
+     * @param string $type The type short code.
+     * @param mixed $value A value that should be invalid for the type.
+     * @dataProvider provideInvalideData
+     */
+    public function testInvalidValues($type, $value) {
+        $schema = new Schema([
+            "$type:col?"
+        ]);
+        $strval = print_r($value, true);
+
+        $invaldData = ['col' => $value];
+        /* @var Validation $validation */
+        $isValid = $schema->isValid($invaldData, $validation);
+        $this->assertFalse($isValid, "isValid: type $type with value $strval should not be valid.");
+        $this->assertFalse($validation->fieldValid('col'), "fieldValid: type $type with value $strval should not be valid.");
+    }
+
+    /**
      * Provide a variety of valid boolean data.
      *
      * @return array Returns an array of boolean data.
