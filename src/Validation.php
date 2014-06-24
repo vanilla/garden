@@ -62,7 +62,7 @@ class Validation {
      * If you add a message that starts with "@" then no translation will take place.
      * @param string|array $field The name of the field to add or an array of fields if the error applies to
      * more than one field.
-     * @param array $options An array of additional information to add to the error entry.
+     * @param int|array $options An array of additional information to add to the error entry or a numeric error code.
      * @return Validation Returns $this for fluent calls.
      */
     public function addError($messageCode, $field = '*', $options = []) {
@@ -73,8 +73,14 @@ class Validation {
             $error['code'] = $messageCode;
         }
         if (is_array($field)) {
-            $fieldKey = '*';
-            $error['field'] = $field;
+            if (isset($field['name'])) {
+                // This is a full field object.
+                $fieldKey = $field['name'];
+                $error['field'] = $fieldKey;
+            } else {
+                $fieldKey = '*';
+                $error['field'] = $field;
+            }
         } else {
             $fieldKey = $field;
             if ($field !== '*') {
@@ -82,7 +88,11 @@ class Validation {
             }
         }
 
-        $error += $options;
+        if (is_array($options)) {
+            $error += $options;
+        } else if (is_int($options)) {
+            $error['status'] = $options;
+        }
 
         $this->errors[$fieldKey][] = $error;
 
@@ -154,8 +164,10 @@ class Validation {
 
                 if (isset($error['message'])) {
                     $message = $error['message'];
-                } else {
+                } elseif (strpos($error['code'], '%s') === false) {
                     $message = sprintft($error['code'].': %s.', $field);
+                } else {
+                    $message = sprintft($error['code'], $field);
                 }
 
                 $messages[] = $message;
