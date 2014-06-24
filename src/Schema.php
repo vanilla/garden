@@ -356,7 +356,7 @@ class Schema implements \JsonSerializable {
                         '0' => false, 'false' => false, 'no' => false, 'off' => false,
                         '1' => true,  'true'  => true, 'yes' => true,  'on'  => true
                     ];
-                    if (isset($bools[$value])) {
+                    if ((is_string($value) || is_numeric($value)) && isset($bools[$value])) {
                         $value = $bools[$value];
                         $validType = true;
                     } else {
@@ -429,12 +429,16 @@ class Schema implements \JsonSerializable {
                 if (!is_string($value)) {
                     $validType = false;
                 } else {
-                    $decoded = @base64_decode($value);
-                    if ($decoded === false) {
+                    if (!preg_match('`^[a-zA-Z0-9/+]*={0,2}$`', $value)) {
                         $validType = false;
                     } else {
-                        $value = $decoded;
-                        $validType = true;
+                        $decoded = @base64_decode($value);
+                        if ($decoded === false) {
+                            $validType = false;
+                        } else {
+                            $value = $decoded;
+                            $validType = true;
+                        }
                     }
                 }
                 break;
