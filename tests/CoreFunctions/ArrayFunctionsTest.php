@@ -48,11 +48,11 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
      * @expectedException \Garden\Exception\ErrorException
      */
     public function testArrayColumnError1() {
-        $r = array_column_php();
+        $r = array_column_php(null, null);
     }
 
     /**
-     * Test array_column() errors and warnings.
+     * Test {@link array_column()} errors and warnings.
      *
      * @expectedException \Garden\Exception\ErrorException
      */
@@ -68,7 +68,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     public function testArrayColumnError3() {
         $ds = $this->getDataset();
 
-        $r = array_column_php($ds);
+        array_column_php($ds, null);
     }
 
     /**
@@ -79,7 +79,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     public function testArrayColumnError4() {
         $ds = $this->getDataset();
 
-        $r = array_column_php($ds, []);
+        array_column_php($ds, []);
     }
 
     /**
@@ -149,6 +149,18 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
+     * Test {@link array_select()}.
+     */
+    public function testArraySelect() {
+        $arr = ['foo', 'bar' => 'baz', 'blank' => ''];
+
+        $this->assertEquals('bun', array_select([], $arr, 'bun'));
+        $this->assertEquals('foo', array_select(['blank', 0], $arr));
+        $this->assertNull(array_select(['zz'], $arr));
+        $this->assertEquals('baz', array_select(['zz', 'bar'], $arr));
+    }
+
+    /**
      * Test {@link array_touch()}.
      */
     public function testArrayTouch() {
@@ -167,6 +179,9 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($mod, $arr);
     }
 
+    /**
+     * Test {@link array_translate()}.
+     */
     public function testArrayTranslate() {
         $arr = ['a' => 'b', 'c' => 'd', 'e' => 'f'];
 
@@ -178,7 +193,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
-     * Test val() with an array.
+     * Test {@link val()} with an array.
      */
     public function testValArray() {
         $arr = ['foo' => 'bar'];
