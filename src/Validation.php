@@ -2,7 +2,7 @@
 /**
  * @author Todd Burry <todd@vanillaforums.com>
  * @copyright 2009-2014 Vanilla Forums Inc.
- * @license Proprietary
+ * @license MIT
  */
 
 namespace Garden;
@@ -10,6 +10,9 @@ namespace Garden;
 
 use Garden\Exception\ValidationException;
 
+/**
+ * An class for collecting validation errors.
+ */
 class Validation {
     /// Properties ///
 
@@ -73,9 +76,11 @@ class Validation {
             $error['code'] = $messageCode;
         }
         if (is_array($field)) {
-            if (isset($field['name'])) {
+            $fieldname = array_select(['path', 'name'], $field);
+
+            if ($fieldname) {
                 // This is a full field object.
-                $fieldKey = $field['name'];
+                $fieldKey = $fieldname;
                 $error['field'] = $fieldKey;
             } else {
                 $fieldKey = '*';

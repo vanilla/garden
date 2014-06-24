@@ -89,14 +89,25 @@ class Schema implements \JsonSerializable {
                             if (isset($value['items'])) {
                                 // The value includes array schema information.
                                 $param = array_replace($param, $value);
-                            } else {
-                                // The value is a schema of items.
+                            } elseif (isset($value['type'])) {
+                                // The value is a long-form schema.
                                 $param['items'] = $value;
+                            } else {
+                                // The value is another shorthand schema.
+                                $param['items'] = [
+                                    'type' => 'object',
+                                    'required' => true,
+                                    'properties' => static::parseSchema($value)
+                                ];
                             }
                             break;
                         case 'object':
                             // The value is a schema of the object.
-                            $param['properties'] = static::parseSchema($value);
+                            if (isset($value['properties'])) {
+                                $param['properties'] = static::parseSchema($value['properties']);
+                            } else {
+                                $param['properties'] = static::parseSchema($value);
+                            }
                             break;
                         default:
                             $param = array_replace($param, $value);
@@ -108,11 +119,11 @@ class Schema implements \JsonSerializable {
                         if (isset(self::$types[$value])) {
                             $arrType = self::$types[$value];
                         } elseif (($index = array_search($value, self::$types)) !== false) {
-                            $arrType = self::$types[$value];
+                            $arrType = self::$types[$index];
                         }
 
                         if (isset($arrType)) {
-                            $param['items'] = ['type' => $arrType];
+                            $param['items'] = ['type' => $arrType, 'required' => true];
                         } else {
                             $param['description'] = $value;
                         }
@@ -271,7 +282,7 @@ class Schema implements \JsonSerializable {
      * @return bool Returns true if the data is valid. False otherwise.
      */
     public function isValid(array &$data, Validation &$validation = null) {
-        return $this->isValidInternal($data, $this->schema, $validation);
+        return $this->isValidInternal($data, $this->schema, '', $validation);
     }
 
     /**
@@ -279,25 +290,31 @@ class Schema implements \JsonSerializable {
      *
      * @param array &$data The data to validate.
      * @param array $schema The schema array to validate against.
+     * @param string $path The path to the current path for nested objects.
      * @param Validation &$validation This argument will be filled with the validation result.
      * @return bool Returns true if the data is valid. False otherwise.
      */
-    protected function isValidInternal(array &$data, array $schema, Validation &$validation = null) {
+    protected function isValidInternal(array &$data, array $schema, $path = '', Validation &$validation = null) {
         if ($validation === null) {
             $validation = new Validation();
         }
 
         // Loop through the schema fields and validate each one.
-        foreach ($schema as $field => $params) {
-            if (isset($data[$field])) {
-                $this->validateField($data[$field], $params, $validation);
-            } elseif (val('required', $params)) {
-                $validation->addError('missing_field', $field);
+        foreach ($schema as $name => $field) {
+            // Prepend the path the field label.
+            if ($path) {
+                $field['path'] = $path.array_select(['path', 'name'], $field);
+            }
+
+            if (array_key_exists($name, $data)) {
+                $this->validateField($data[$name], $field, $validation);
+            } elseif (val('required', $field)) {
+                $validation->addError('missing_field', array_select(['path', 'name'], $field));
             }
         }
 
         // Validate the global validators.
-        if (isset($this->validators['*'])) {
+        if ($path == '' && isset($this->validators['*'])) {
             foreach ($this->validators['*'] as $callback) {
                 call_user_func($callback, $data, $validation);
             }
@@ -317,7 +334,7 @@ class Schema implements \JsonSerializable {
      * @return bool Returns true if the field is valid, false otherwise.
      */
     protected function validateField(&$value, array $field, Validation $validation) {
-        $fieldname = $field['name'];
+        $path = array_select(['path', 'name'], $field);
         $type = val('type', $field, '');
         $valid = true;
 
@@ -422,21 +439,29 @@ class Schema implements \JsonSerializable {
                 }
                 break;
             case 'array':
-                if (!is_array($value) || (count($value) > 0 && !isset($value[0]))) {
+                if (!is_array($value) || (count($value) > 0 && !array_key_exists(0, $value))) {
                     $validType = false;
-                } elseif (isset($field['items'])) {
-                    // Validate each of the types.
-                    $itemField = $field['items'];
-                    $itemField['validatorName'] = "$fieldname.items"; // custom validators attach here
-                    foreach ($value as $i => &$item) {
-                        $itemField['name'] = "$fieldname.$i";
-                        $this->validateField($item, $itemField, $validation);
+                } else {
+                    // Cast the items into a proper numeric array.
+                    $value = array_values($value);
+
+                    if (isset($field['items'])) {
+                        // Validate each of the types.
+                        $itemField = $field['items'];
+                        $itemField['validatorName'] = array_select(['validatorName', 'path', 'name'], $field).'.items';
+                        foreach ($value as $i => &$item) {
+                            $itemField['path'] = "$path.$i";
+                            $this->validateField($item, $itemField, $validation);
+                        }
                     }
                 }
                 break;
             case 'object':
                 if (!is_array($value) || isset($value[0])) {
                     $validType = false;
+                } elseif (isset($field['properties'])) {
+                    // Validate the data against the internal schema.
+                    $valid &= $this->isValidInternal($value, $field['properties'], $path.'.', $validation);
                 }
                 break;
             case '':
@@ -450,19 +475,19 @@ class Schema implements \JsonSerializable {
             $valid = false;
             $validation->addError(
                 'invalid_type',
-                $fieldname,
+                $path,
                 [
                     'type' => $type,
-                    'message' => sprintft('%1$s is not a valid %2$s.', $fieldname, $type),
+                    'message' => sprintft('%1$s is not a valid %2$s.', $path, $type),
                     'status' => 422
                 ]
             );
         }
 
         // Validate a custom field validator.
-        $validatorFieldname = val('validatorName', $field, $fieldname);
-        if (isset($this->validators[$validatorFieldname])) {
-            foreach ($this->validators[$validatorFieldname] as $callback) {
+        $validatorName = val('validatorName', $field, $path);
+        if (isset($this->validators[$validatorName])) {
+            foreach ($this->validators[$validatorName] as $callback) {
                 call_user_func_array($callback, [&$value, $field, $validation]);
             }
         }
@@ -501,7 +526,7 @@ class Schema implements \JsonSerializable {
                         return true;
                     }
             }
-            $validation->addError('missing_field', $field['name']);
+            $validation->addError('missing_field', $field);
             return false;
         }
         return null;
