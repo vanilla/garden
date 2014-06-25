@@ -124,8 +124,9 @@ class PhpassPassword implements IPassword {
     }
 
     /**
+     * Generate a password salt appropriate for blowfish.
      *
-     * @param string $input
+     * @param string $input The random input to generate the salt from.
      * @return string The generated salt.
      */
     protected function gensaltBlowfish($input) {

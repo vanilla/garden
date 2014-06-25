@@ -11,6 +11,19 @@ namespace Garden\Password;
  * Implements tha password hashing algorithm from the Django framework.
  */
 class DjangoPassword implements IPassword {
+    /**
+     * @var string The hash method to use when hashing passwords.
+     */
+    public $hashMethod;
+
+    /**
+     * Initiailize an instance of the {@link DjangoPassword} class.
+     *
+     * @param string $hashMethod The hasm method used to hash the passwords.
+     */
+    public function __construct($hashMethod = 'crypt') {
+        $this->hashMethod = $hashMethod;
+    }
 
     /**
      * Hashes a plaintext password.
@@ -19,9 +32,15 @@ class DjangoPassword implements IPassword {
      * @return string Returns the hashed password.
      */
     public function hash($password) {
-        $salt = base64_encode(openssl_random_pseudo_bytes(12));
-        $hash = crypt($password, $salt);
-        $result = 'crypt$'.$salt.'$'.$hash;
+        if ($this->hashMethod === 'crypt') {
+            $salt = base64_encode(openssl_random_pseudo_bytes(12));
+            $hash = crypt($password, $salt);
+        } elseif (in_array($this->hashMethod, hash_algos())) {
+            $salt = base64_encode(openssl_random_pseudo_bytes(12));
+            $hash = hash($this->hashMethod, $salt.$password);
+        }
+
+        $result = $this->hashMethod.'$'.$salt.'$'.$hash;
         return $result;
     }
 
@@ -55,16 +74,13 @@ class DjangoPassword implements IPassword {
             return md5($password) == $hash;
         } else {
             list($method, $salt, $rawHash) = explode('$', $hash);
-            switch (strtolower($method)) {
-                case 'crypt':
-                    return crypt($password, $salt) == $rawHash;
-                case 'md5':
-                    return md5($salt.$password) == $rawHash;
-                case 'sha256':
-                    return hash('sha256', $salt.$password) == $rawHash;
-                case 'sha1':
-                default:
-                    return sha1($salt.$password) == $rawHash;
+
+            if ($method === 'crypt') {
+                return crypt($password, $salt) === $rawHash;
+            } elseif (in_array($method, hash_algos())) {
+                return hash($method, $salt.$password) === $rawHash;
+            } else {
+                return false;
             }
         }
     }

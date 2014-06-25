@@ -7,6 +7,7 @@
 
 namespace Garden\Tests\Passwords;
 
+use Garden\Password\DjangoPassword;
 use Garden\Password\IPassword;
 use Garden\Password\PhpassPassword;
 use Garden\Password\VanillaPassword;
@@ -14,7 +15,7 @@ use Garden\Password\VanillaPassword;
 /**
  * Basic tests for the password objects.
  */
-class BasicTest extends \PHPUnit_Framework_TestCase {
+class PasswordTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * Tests that a password will hash and verify against that hash.
@@ -92,6 +93,10 @@ class BasicTest extends \PHPUnit_Framework_TestCase {
         $password = 'password';
         $wrongPassword = 'letmein';
 
+        $this->testHashAndVerify($pw);
+        $this->testWrongPassword($pw);
+        $this->testNullHash($pw);
+
         $hash = $pw->hash($password);
 
         $this->assertTrue($pw->verify($password, $hash));
@@ -100,6 +105,50 @@ class BasicTest extends \PHPUnit_Framework_TestCase {
         if (CRYPT_BLOWFISH === 1) {
             $this->assertTrue($pw->needsRehash($hash));
         }
+    }
+
+    /**
+     * Test the specifics of the Django password hashing algorithm.
+     *
+     * @param string $hashMethod The hash method to use.
+     * @dataProvider provideDjangoHashMethods
+     */
+    public function testDjangoPassword($hashMethod) {
+        $pw = new DjangoPassword($hashMethod);
+
+        $this->testHashAndVerify($pw);
+        $this->testWrongPassword($pw);
+        $this->testNullHash($pw);
+
+        $hash = $pw->hash('password');
+        if (in_array($hashMethod, ['sha256', 'crypt'])) {
+            $this->assertFalse($pw->needsRehash($hash));
+        } else {
+            $this->assertTrue($pw->needsRehash($hash));
+        }
+
+        // Test a few edge cases.
+        $this->assertTrue($pw->needsRehash('foo'));
+        $parts = explode('$', $hash);
+        $parts[0] = 'foo';
+        $badHash = implode('$', $parts);
+
+        $this->assertTrue($pw->needsRehash($badHash));
+        $this->assertFalse($pw->verify('password', $badHash));
+    }
+
+    /**
+     * Get the hash methods suitable for Django.
+     *
+     * @return array Returns an array of django hash methods.
+     */
+    public function provideDjangoHashMethods() {
+        return [
+            'md5' => ['md5'],
+            'sha1' => ['sha1'],
+            'sha256' => ['sha256'],
+            'crypt' => ['crypt']
+        ];
     }
 
     /**
