@@ -1,12 +1,12 @@
 <?php
 /**
  * @author Todd Burry <todd@vanillaforums.com>
- * @copyright 2009 Vanilla Forums Inc.
+ * @copyright 2009-2014 Vanilla Forums Inc.
  * @license MIT
- * @since 1.0
  */
 
 namespace Garden;
+
 use JsonSerializable;
 
 /**
@@ -69,9 +69,9 @@ class Request implements JsonSerializable {
      *
      * @param string $url The url of the request or blank to use the current environment.
      * @param string $method The request method.
-     * @param mixed $input The request input. This is the query string for GET requests or the body for other requests.
+     * @param mixed $data The request data. This is the query string for GET requests or the body for other requests.
      */
-    public function __construct($url = '', $method = '', $input = null) {
+    public function __construct($url = '', $method = '', $data = null) {
         if ($url) {
             $this->env = (array)static::defaultEnvironment();
             // Instantiate the request from the url.
@@ -79,8 +79,10 @@ class Request implements JsonSerializable {
             if ($method) {
                 $this->method($method);
             }
-            if ($input) {
-                $this->input($input);
+            if ($this->hasInput($method)) {
+                $this->input($data);
+            } else {
+                $this->query($data);
             }
         } else {
             // Instantiate the request from the global environment.
@@ -88,8 +90,8 @@ class Request implements JsonSerializable {
             if ($method) {
                 $this->method($method);
             }
-            if ($input) {
-                $this->input($input);
+            if ($data) {
+                $this->data($data);
             }
         }
 
@@ -210,7 +212,10 @@ class Request implements JsonSerializable {
             $env['QUERY'] = $get;
 
             // SERVER_NAME.
-            $env['SERVER_NAME'] = isset($_SERVER['HTTP_X_FORWARDED_HOST']) ? val('HTTP_X_FORWARDED_HOST', $_SERVER) : (isset($_SERVER['HTTP_HOST']) ? val('HTTP_HOST', $_SERVER) : val('SERVER_NAME', $_SERVER));
+            $env['SERVER_NAME'] = array_select(
+                ['HTTP_X_FORWARDED_HOST', 'HTTP_HOST', 'SERVER_NAME'],
+                $_SERVER
+            );
 
             // HTTP_* headers.
             $env = array_replace($env, static::extractHeaders($_SERVER));
@@ -230,6 +235,7 @@ class Request implements JsonSerializable {
             if (!is_null($org_protocol)) {
                 $url_scheme = $org_protocol;
             }
+            $env['URL_SCHEME'] = $url_scheme;
 
             // SERVER_PORT.
             if (isset($_SERVER['SERVER_PORT'])) {
@@ -240,8 +246,6 @@ class Request implements JsonSerializable {
                 $server_port = 80;
             }
             $env['SERVER_PORT'] = $server_port;
-
-            $env['URL_SCHEME'] = $url_scheme;
 
             // INPUT: The entire input.
             // Input stream (readable one time only; not available for multipart/form-data requests)
@@ -263,14 +267,13 @@ class Request implements JsonSerializable {
 
             // IP Address.
             // Load balancers set a different ip address.
-            $ip = isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? val('HTTP_X_FORWARDED_FOR', $_SERVER) : val('REMOTE_ADDR', $_SERVER, '127.0.0.1');
+            $ip = array_select(
+                ['HTTP_X_ORIGINALLY_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'],
+                $_SERVER,
+                '127.0.0.1'
+            );
             if (strpos($ip, ',') !== false) {
                 $ip = substr($ip, 0, strpos($ip, ','));
-            }
-            // Varnish
-            $original_ip = val('HTTP_X_ORIGINALLY_FORWARDED_FOR', $_SERVER, null);
-            if (!is_null($original_ip)) {
-                $ip = $original_ip;
             }
 
             // Make sure we have a valid ip.
@@ -342,8 +345,8 @@ class Request implements JsonSerializable {
     /**
      * Replace an environment variable with another one and back up the old one in a *_RAW key.
      *
-     * @param array $env The environment array.
-     * @param string $key The environment key
+     * @param array &$env The environment array.
+     * @param string $key The environment key.
      * @param mixed $value The new environment value.
      * @return mixed Returns the old value or null if there was no old value.
      */
@@ -362,8 +365,8 @@ class Request implements JsonSerializable {
     /**
      * Restore an environment variable that was replaced with {@link Request::replaceEnv()}.
      *
-     * @param array $env The environment array.
-     * @param string $key The environment key
+     * @param array &$env The environment array.
+     * @param string $key The environment key.
      * @return mixed Returns the current environment value.
      */
     public static function restoreEnv(&$env, $key) {
@@ -411,13 +414,27 @@ class Request implements JsonSerializable {
         return $this->query($key, $default);
     }
 
+    /**
+     * Get or set the host (server) name.
+     *
+     * @param string|null $host Set a new host or pass null to get the current host.
+     * @return string|Request Returns the current host or $this for fluent calls.
+     */
     public function host($host = null) {
         if ($host !== null) {
             $this->env['SERVER_NAME'] = $host;
+            return $this;
         }
         return $this->env['SERVER_NAME'];
     }
 
+    /**
+     * Get the host and port, but only if the port is not the standard port for the request scheme.
+     *
+     * @return string Returns the host and port or just the host if this is the standard port.
+     * @see Request::host()
+     * @see Request::port()
+     */
     public function hostAndPort() {
         $host = $this->host();
         $port = $this->port();
@@ -533,7 +550,7 @@ class Request implements JsonSerializable {
      */
     public function path($path = null) {
         if ($path !== null) {
-            $this->env['PATH_INFO'] = $path;
+            $this->env['PATH_INFO'] = (string)$path;
             return $this;
         }
 
@@ -572,6 +589,8 @@ class Request implements JsonSerializable {
                 $ext = substr($path, $pos);
                 $path = substr($path, 0, $pos);
                 $this->env['EXT'] = $ext;
+            } else {
+                $this->env['EXT'] = '';
             }
             $this->env['PATH_INFO'] = $path;
             return $this;
@@ -589,6 +608,14 @@ class Request implements JsonSerializable {
     public function port($port = null) {
         if ($port !== null) {
             $this->env['SERVER_PORT'] = $port;
+
+            // Override the scheme for standard ports.
+            if ($port === 80) {
+                $this->scheme('http');
+            } elseif ($port === 443) {
+                $this->scheme('https');
+            }
+
             return $this;
         }
         return $this->env['SERVER_PORT'];
@@ -611,6 +638,7 @@ class Request implements JsonSerializable {
         }
         if (is_array($key)) {
             $this->env['QUERY'] = $key;
+            return $this;
         }
         throw \InvalidArgumentException("Argument #1 must be one of null, string, array.", 500);
     }
@@ -646,21 +674,45 @@ class Request implements JsonSerializable {
     /**
      * Gets the query on input depending on the http method.
      *
+     * @param array|null $data The new data array.
      * @return array Returns the data.
      */
-    public function data() {
-        switch ($this->method()) {
+    public function data($data = null) {
+        if ($data === null) {
+            if ($this->hasInput()) {
+                return $this->env['INPUT'];
+            } else {
+                return $this->env['QUERY'];
+            }
+        } else {
+            if ($this->hasInput()) {
+                $this->env['INPUT'] = $data;
+            } else {
+                $this->env['QUERY'] = $data;
+            }
+            return $this;
+        }
+    }
+
+    /**
+     * Returns true if an http method has input (a post body).
+     *
+     * @param string $method The http method to test.
+     * @return bool Returns true if the http method has input, false otherwise.
+     */
+    public function hasInput($method = '') {
+        if (!$method) {
+            $method = $this->method();
+        }
+
+        switch (strtoupper($method)) {
             case self::METHOD_GET:
             case self::METHOD_DELETE:
             case self::METHOD_HEAD:
             case self::METHOD_OPTIONS:
-                return $this->env['QUERY'];
-            case self::METHOD_POST:
-            case self::METHOD_PATCH:
-            case self::METHOD_PUT:
-            default:
-                return $this->env['INPUT'];
+                return false;
         }
+        return true;
     }
 
     /**
@@ -671,8 +723,12 @@ class Request implements JsonSerializable {
      */
     public function root($value = null) {
         if ($value !== null) {
-            $value = rtrim($value, '/');
+            $value = trim($value, '/');
+            if ($value) {
+                $value = '/'.$value;
+            }
             $this->env['SCRIPT_NAME'] = $value;
+            return $this;
         }
         return $this->env['SCRIPT_NAME'];
     }
@@ -722,16 +778,16 @@ class Request implements JsonSerializable {
                 $path = $url_parts['path'];
 
                 // Try stripping the root out of the path first.
-                $root = (string)static::globalEnvironment('SCRIPT_NAME');
+                $root = (string)$this->root();
 
-                if (strpos($path, $root) === 0) {
+                if ($root && strpos($path, $root) === 0) {
                     $path = substr($path, strlen($root));
 
-                    if (substr($path, 0, 1) === '/') {
-                        // The root was part of the path, but wasn't a directory.
+                    if (!$path || substr($path, 0, 1) === '/') {
                         $this->root($root);
                         $this->path($path);
                     } else {
+                        // The root was part of the path, but wasn't a directory.
                         $this->root('');
                         $this->path($root.$path);
                     }
