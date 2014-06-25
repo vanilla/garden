@@ -30,6 +30,7 @@ class DjangoPassword implements IPassword {
      *
      * @param string $password The password to hash.
      * @return string Returns the hashed password.
+     * @throws \Exception Throws an exception when the hash method is invalid.
      */
     public function hash($password) {
         if ($this->hashMethod === 'crypt') {
@@ -38,6 +39,8 @@ class DjangoPassword implements IPassword {
         } elseif (in_array($this->hashMethod, hash_algos())) {
             $salt = base64_encode(openssl_random_pseudo_bytes(12));
             $hash = hash($this->hashMethod, $salt.$password);
+        } else {
+            throw new \Exception("The {$this->hashMethods} hash method is invalid.", 500);
         }
 
         $result = $this->hashMethod.'$'.$salt.'$'.$hash;

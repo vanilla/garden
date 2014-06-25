@@ -126,15 +126,27 @@ class PasswordTest extends \PHPUnit_Framework_TestCase {
         } else {
             $this->assertTrue($pw->needsRehash($hash));
         }
+    }
 
-        // Test a few edge cases.
+    /**
+     * Test some Django password edge cases.
+     */
+    public function testDjangoPasswordEdgeCases() {
+        $pw = new DjangoPassword('sha256');
+
         $this->assertTrue($pw->needsRehash('foo'));
+
+        $hash = $pw->hash('password');
         $parts = explode('$', $hash);
         $parts[0] = 'foo';
         $badHash = implode('$', $parts);
 
         $this->assertTrue($pw->needsRehash($badHash));
         $this->assertFalse($pw->verify('password', $badHash));
+
+        $pw = new DjangoPassword('foo');
+        $this->setExpectedException('\Exception');
+        $hash = $pw->hash('fooo');
     }
 
     /**
