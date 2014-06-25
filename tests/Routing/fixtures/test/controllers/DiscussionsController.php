@@ -34,19 +34,19 @@ class DiscussionsController {
 
     }
 
-    public function post() {
+    public function post($input) {
 
     }
 
-    public function patch() {
+    public function patch($input) {
 
     }
 
-    public function patchPin() {
+    public function patchPin($input) {
 
     }
 
-    public function patchFollow() {
+    public function patchFollow($input) {
 
     }
 
