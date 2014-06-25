@@ -311,10 +311,12 @@ class Request implements JsonSerializable {
             $getMethods = array(self::METHOD_GET, self::METHOD_HEAD, self::METHOD_OPTIONS);
 
             // Don't allow get style methods to be overridden to post style methods.
-            if (!in_array($method, $getMethods) || in_array($method, $getMethods)) {
+            if (!in_array($env['REQUEST_METHOD'], $getMethods) || in_array($method, $getMethods)) {
                 static::replaceEnv($env, 'REQUEST_METHOD', $method);
-                unset($get['REQUEST_METHOD']);
+            } else {
+                $env['X_METHOD_BLOCKED'] = true;
             }
+            unset($get['x-method']);
         }
 
         // Check to override the accepts header.
@@ -335,9 +337,14 @@ class Request implements JsonSerializable {
      * @return mixed The environment value.
      */
     public function env($key) {
-        $key = strtoupper($key);
-        if (isset($this->env[$key])) {
-            return $this->env[$key];
+        if (is_array($key)) {
+            $this->env = $key;
+            return $this;
+        } elseif (is_string($key)) {
+            $key = strtoupper($key);
+            if (isset($this->env[$key])) {
+                return $this->env[$key];
+            }
         }
         return null;
     }
@@ -640,7 +647,7 @@ class Request implements JsonSerializable {
             $this->env['QUERY'] = $key;
             return $this;
         }
-        throw \InvalidArgumentException("Argument #1 must be one of null, string, array.", 500);
+        throw new \InvalidArgumentException("Argument #1 must be one of null, string, array.", 500);
     }
 
     /**
@@ -668,7 +675,7 @@ class Request implements JsonSerializable {
             $this->env['INPUT'] = $key;
             return $this;
         }
-        throw \InvalidArgumentException("Argument #1 must be one of null, string, array.", 500);
+        throw new \InvalidArgumentException("Argument #1 must be one of null, string, array.", 500);
     }
 
     /**
@@ -702,7 +709,7 @@ class Request implements JsonSerializable {
      */
     public function hasInput($method = '') {
         if (!$method) {
-            $method = $this->method();
+            $method = (string)$this->method();
         }
 
         switch (strtoupper($method)) {
@@ -785,15 +792,15 @@ class Request implements JsonSerializable {
 
                     if (!$path || substr($path, 0, 1) === '/') {
                         $this->root($root);
-                        $this->path($path);
+                        $this->fullPath($path);
                     } else {
                         // The root was part of the path, but wasn't a directory.
                         $this->root('');
-                        $this->path($root.$path);
+                        $this->fullPath($root.$path);
                     }
                 } else {
                     $this->root('');
-                    $this->path($path);
+                    $this->fullPath($path);
                 }
             }
 

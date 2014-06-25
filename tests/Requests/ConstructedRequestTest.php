@@ -92,6 +92,11 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
 
         $r->ext('');
         $this->assertEquals('/foo.bar', $r->fullPath());
+
+        $r2 = new Request('http://localhost.com/foo.json?bar=baz');
+        $this->assertEquals('.json', $r2->ext());
+        $this->assertEquals('/foo', $r2->path());
+        $this->assertEquals(['bar' => 'baz'], $r2->query());
     }
 
     /**
@@ -140,6 +145,105 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
     }
 
     /**
+     * Test {@link Request::makeUrl()}.
+     */
+    public function testMakeUrl() {
+        $r = new Request('https://google.com:8080/v1/something');
+
+        $url = $r->makeUrl('/foo', true);
+        $this->assertEquals('https://google.com:8080/foo', $url);
+
+        $url = $r->makeUrl('/foo', false);
+        $this->assertEquals('/foo', $url);
+
+        $url = $r->makeUrl('/foo', '//');
+        $this->assertEquals('//google.com:8080/foo', $url);
+
+        $url = $r->makeUrl('/foo', '/');
+        $this->assertEquals('/foo', $url);
+
+        $url = $r->makeUrl('/foo', 'http');
+        $this->assertEquals('http://google.com:8080/foo', $url);
+
+        $r->scheme('http');
+        $url = $r->makeUrl('/foo', 'https');
+        $this->assertEquals('https://google.com:8080/foo', $url);
+
+        // Start some tests with a different root.
+        $r->root('v1');
+        $url = $r->makeUrl('/foo', true);
+        $this->assertEquals('http://google.com:8080/v1/foo', $url);
+
+        $url = $r->makeUrl('/foo', false);
+        $this->assertEquals('/v1/foo', $url);
+
+        $url = $r->makeUrl('/foo', '//');
+        $this->assertEquals('//google.com:8080/v1/foo', $url);
+
+        $url = $r->makeUrl('/foo', '/');
+        $this->assertEquals('/foo', $url);
+
+        $r->scheme('https');
+        $url = $r->makeUrl('/foo', 'http');
+        $this->assertEquals('http://google.com:8080/v1/foo', $url);
+
+        $r->scheme('http');
+        $url = $r->makeUrl('/foo', 'https');
+        $this->assertEquals('https://google.com:8080/v1/foo', $url);
+    }
+
+    /**
+     * Test getting and setting with {@link Request::input()} and {@link Request::query()}.
+     */
+    public function testInputAndQuery() {
+        $r = new Request('http://localhost/foo.txt');
+
+        $input = ['foo' => 'bar'];
+        $r->input($input);
+        $this->assertEquals($input, $r->input());
+        $this->assertEquals('bar', $r->input('foo'));
+        $this->assertEquals('baz', $r->input('hello', 'baz'));
+
+        $r = new Request('http://localhost/foo.txt');
+
+        $query = ['foo' => 'bar'];
+        $r->input($query);
+        $this->assertEquals($query, $r->input());
+        $this->assertEquals('bar', $r->input('foo'));
+        $this->assertEquals('baz', $r->input('hello', 'baz'));
+    }
+
+    /**
+     * Test {@link Request::input()} with a bad argument.
+     *
+     * @expectedException \InvalidArgumentException
+     */
+    public function testBadInput() {
+        $r = new Request('http://localhost/foo.txt');
+        $foo = $r->input(true);
+    }
+
+    /**
+     * Test {@link Request::query()} with a bad argument.
+     *
+     * @expectedException \InvalidArgumentException
+     */
+    public function testBadQuery() {
+        $r = new Request('http://localhost/foo.txt');
+        $foo = $r->query(true);
+    }
+
+    public function testJsonSerialize() {
+        $r = new Request('http://localhost/foo.json?help=1', 'post', ['foo' => 'bar']);
+        $json = $r->jsonSerialize();
+
+        $r2 = new Request('http://foo.com');
+        $r2->env($json);
+
+        $this->assertEquals($json, $r2->jsonSerialize());
+    }
+
+    /**
      * Provide some of the basic methods of the {@link Request} object.
      *
      * @return array Returns an array of method names.
@@ -160,6 +264,47 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         return array_combine($result, array_map(function ($v) {
             return [$v];
         }, $result));
+    }
+
+    /**
+     * Test setting a standard port to flip the scheme.
+     */
+    public function testPorts() {
+        $r = new Request('http://localhost/foo.txt');
+
+        $r->port(443);
+        $this->assertEquals('https', $r->scheme());
+
+        $r->port(80);
+        $this->assertEquals('http', $r->scheme());
+    }
+
+    /**
+     * Test that the http can be overridden with the x-method qs paramter.
+     *
+     * @param string $method The http method to test.
+     * @dataProvider provideHttpMethods
+     */
+    public function testMethodOverriding($method) {
+        // Test on a get request.
+        $r = new Request('http://localhost.com?x-method='.strtolower($method), 'GET');
+        if (in_array($method, ['GET', 'HEAD', 'OPTIONS'])) {
+            $this->assertEquals($method, $r->method());
+        } else {
+            $this->assertEquals(Request::METHOD_GET, $r->method());
+            $this->assertTrue($r->env('X_METHOD_BLOCKED'));
+        }
+        $this->assertNull($r->query('x-method'));
+
+        // The post method can be made into anything.
+        $r2 = new Request('http://localhost.com?x-method='.strtolower($method), 'POST');
+        $this->assertEquals($method, $r2->method());
+        $this->assertNull($r2->query('x-method'));
+
+        // Check the backup.
+        if ($method !== 'POST') {
+            $this->assertEquals('POST', $r2->env('REQUEST_METHOD_RAW'));
+        }
     }
 
     /**
