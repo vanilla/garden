@@ -5,6 +5,8 @@
  * @license MIT
  */
 
+namespace Garden\Tests\Passwords;
+
 use Garden\Password\IPassword;
 
 /**

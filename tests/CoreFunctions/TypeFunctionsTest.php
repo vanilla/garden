@@ -5,7 +5,9 @@
  * @license MIT
  */
 
-class TypeFunctionsTest extends PHPUnit_Framework_TestCase {
+namespace Garden\Tests\CoreFunctions;
+
+class TypeFunctionsTest extends \PHPUnit_Framework_TestCase {
     /**
      * Test {@link force_bool()} with truthy values.
      */

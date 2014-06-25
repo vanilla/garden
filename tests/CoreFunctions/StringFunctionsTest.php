@@ -5,7 +5,9 @@
  * @license MIT
  */
 
-class StringFunctionsTest extends PHPUnit_Framework_TestCase {
+namespace Garden\Tests\CoreFunctions;
+
+class StringFunctionsTest extends \PHPUnit_Framework_TestCase {
     public function setUp() {
         global $translations;
         $translations = [];

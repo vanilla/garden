@@ -5,10 +5,10 @@
  * @license MIT
  */
 
+namespace Garden\Tests\Schemas;
+
 use Garden\Schema;
 use Garden\Validation;
-
-require_once __DIR__.'/SchemaTest.php';
 
 /**
  * Tests for nested object schemas.

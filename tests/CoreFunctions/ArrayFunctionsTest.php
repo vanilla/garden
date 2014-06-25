@@ -5,10 +5,14 @@
  * @license MIT
  */
 
+namespace Garden\Tests\CoreFunctions;
+
+use \stdClass;
+
 /**
  * Test core array functions.
  */
-class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
+class ArrayFunctionsTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * Test {@link array_column_php()}.
@@ -196,7 +200,7 @@ class ArrayFunctionsTest extends PHPUnit_Framework_TestCase {
      * Test val() with an object.
      */
     public function testValObject() {
-        $obj = new stdClass();
+        $obj = new \stdClass();
         $obj->foo = 'bar';
 
         $this->assertEquals('bar', val('foo', $obj));

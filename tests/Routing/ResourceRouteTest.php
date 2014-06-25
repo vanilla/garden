@@ -5,6 +5,8 @@
  * @license MIT
  */
 
+namespace Garden\Tests\Routing;
+
 use Garden\Application;
 use Garden\Addons;
 use Garden\Event;

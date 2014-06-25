@@ -5,10 +5,10 @@
  * @license MIT
  */
 
+namespace Garden\Tests\Schemas;
+
 use Garden\Schema;
 use Garden\Validation;
-
-require_once __DIR__.'/SchemaTest.php';
 
 /**
  * Tess for the {@link Schema} object.
@@ -72,7 +72,7 @@ class BasicSchemaTest extends SchemaTest {
             'name' => 'foo',
             'descriptiom' => 456,
             'timestamp' => time(),
-            'date' => new DateTime(),
+            'date' => new \DateTime(),
             'amount' => 5.99,
             '64ish' => base64_encode(123),
             'enabled' => true

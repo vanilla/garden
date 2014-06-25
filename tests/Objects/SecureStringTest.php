@@ -5,12 +5,14 @@
  * @license MIT
  */
 
+namespace Garden\Tests\Objects;
+
 use Garden\SecureString;
 
 /**
  * Unit tests for the {@link Garden\SecureString} class.
  */
-class SecureStringTest extends PHPUnit_Framework_TestCase {
+class SecureStringTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * Test a set of data against a spec.

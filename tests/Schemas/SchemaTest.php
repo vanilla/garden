@@ -5,6 +5,8 @@
  * @license MIT
  */
 
+namespace Garden\Tests\Schemas;
+
 /**
  * Base class for schema tests.
  */

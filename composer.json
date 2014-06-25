@@ -29,5 +29,10 @@
       "files": [
          "src/functions/autoload.php"
       ]
-   }
+   },
+	"autoload-dev": {
+		"psr-4": {
+			"Garden\\Tests\\": "tests"
+		}
+	}
 }
