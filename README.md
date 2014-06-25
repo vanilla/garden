@@ -86,7 +86,7 @@ $app->route('/hello', function () use ($app) {
     echo "Hello World!";
 });
 
-$app->route('/hello', function () use ($app) {
+$app->route('/ping', function () use ($app) {
     return "Pong";
 });
 
