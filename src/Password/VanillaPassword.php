@@ -13,13 +13,17 @@ namespace Garden\Password;
 class VanillaPassword extends PhpassPassword {
     /**
      * Initialize an instance of the {@link VanillaPassword} class.
+     * @param bool $portable Whether or not the password should be portable to old versions of php.
      */
-    public function __construct() {
-        parent::__construct(false);
+    public function __construct($portable = false) {
+        parent::__construct($portable);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function hash($password) {
-        if (function_exists('password_hash')) {
+        if (!$this->portable && function_exists('password_hash')) {
             return password_hash($password, PASSWORD_DEFAULT);
         } else {
             return parent::hash($password);
@@ -30,7 +34,7 @@ class VanillaPassword extends PhpassPassword {
      * {@inheritdoc}
      */
     public function needsRehash($hash) {
-        if (function_exists('password_needs_rehash')) {
+        if (!$this->portable && function_exists('password_needs_rehash')) {
             return password_needs_rehash($hash, PASSWORD_DEFAULT);
         } elseif (CRYPT_BLOWFISH === 1) {
             return !(preg_match('`^\$(2[axy]|[56])\$`', $hash) && strlen($hash) === 60);
@@ -45,7 +49,7 @@ class VanillaPassword extends PhpassPassword {
      * {@inheritdoc}
      */
     public function verify($password, $hash) {
-        if (function_exists('password_verify')) {
+        if (!$this->portable && function_exists('password_verify')) {
             return password_verify((string)$password, (string)$hash);
         }
 

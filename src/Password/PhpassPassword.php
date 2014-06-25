@@ -80,9 +80,10 @@ class PhpassPassword implements IPassword {
         if (strlen($random) < 6) {
             $random = $this->getRandomBytes(6);
         }
-        $hash =
-            $this->cryptPrivate($password,
-                $this->gensaltPrivate($random));
+        $hash = $this->cryptPrivate(
+            $password,
+            $this->gensaltPrivate($random)
+        );
         if (strlen($hash) == 34) {
             return $hash;
         }

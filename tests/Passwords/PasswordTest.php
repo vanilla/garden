@@ -8,6 +8,8 @@
 namespace Garden\Tests\Passwords;
 
 use Garden\Password\IPassword;
+use Garden\Password\PhpassPassword;
+use Garden\Password\VanillaPassword;
 
 /**
  * Basic tests for the password objects.
@@ -62,6 +64,42 @@ class BasicTest extends \PHPUnit_Framework_TestCase {
      */
     public function testNullHash(IPassword $alg) {
         $this->assertFalse($alg->verify('password', null));
+    }
+
+    /**
+     * Test some edge cases of {@link PhpassPassword}.
+     */
+    public function testPhpassPassword() {
+        $pw = new PhpassPassword(false, 1);
+
+        $password = 'password';
+        $wrongPassword = 'letmein';
+
+        $hash = $pw->hash($password);
+
+        $this->assertTrue($pw->verify($password, $hash));
+        $this->assertFalse($pw->verify($wrongPassword, $hash));
+        $this->assertFalse($pw->verify(null, $hash));
+
+    }
+
+    /**
+     * Test some edge cases of {@link PhpassPassword}.
+     */
+    public function testVanillaPassword() {
+        $pw = new VanillaPassword(true);
+
+        $password = 'password';
+        $wrongPassword = 'letmein';
+
+        $hash = $pw->hash($password);
+
+        $this->assertTrue($pw->verify($password, $hash));
+        $this->assertFalse($pw->verify($wrongPassword, $hash));
+        $this->assertFalse($pw->verify(null, $hash));
+        if (CRYPT_BLOWFISH === 1) {
+            $this->assertTrue($pw->needsRehash($hash));
+        }
     }
 
     /**
