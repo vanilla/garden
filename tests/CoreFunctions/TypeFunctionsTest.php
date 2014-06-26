@@ -7,6 +7,8 @@
 
 namespace Garden\Tests\CoreFunctions;
 
+use Garden\Request;
+
 class TypeFunctionsTest extends \PHPUnit_Framework_TestCase {
     /**
      * Test {@link force_bool()} with truthy values.
@@ -57,6 +59,52 @@ class TypeFunctionsTest extends \PHPUnit_Framework_TestCase {
         $this->assertExact(1, force_int('enabled'));
         $this->assertExact(1, force_int(['enabled']));
     }
+
+    /**
+     * Test {@link reflect_args()} with just named arguments.
+     */
+    public function testReflectArgsNamed() {
+        $get = ['default' => 123, 'KEY' => 'foo', 'array' => ['foo' => 'bar']];
+        $rargs = reflect_args('val', $get);
+
+        $expected = val($get['KEY'], $get['array'], $get['default']);
+        $actual = call_user_func_array('val', $rargs);
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * Test {@link reflect_args()} with named and indexed arguments.
+     */
+    public function testReflectArgsNamedAndIndex() {
+        $path = ['baz'];
+        $get = ['default' => 123, 'array' => ['foo' => 'bar']];
+        $rargs = reflect_args('val', $path, $get);
+
+        $expected = val($path[0], $get['array'], $get['default']);
+        $actual = call_user_func_array('val', $rargs);
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * Test {@link reflect_args()} with a method.
+     */
+    public function testReflectArgsObject() {
+        $r = new Request('http://localhost/foo.txt?foo=bar', 'GET');
+
+        $callback = [$r, 'get'];
+        $args = ['KEY' => 'foo', 'default' => 123];
+        $expected = $r->get($args['KEY'], $args['default']);
+        $actual = call_user_func_array([$r, 'get'], reflect_args([$r, 'get'], $args));
+        $this->assertEquals($expected, $actual);
+
+        // Test a static method.
+        $callback2 = [get_class($r), 'defaultEnvironment'];
+        $args2 = ['Key' => 'PATH_INFO'];
+        $expected2 = Request::defaultEnvironment('PATH_INFO');
+        $actual2 = call_user_func_array($callback2, reflect_args($callback2, $args2));
+        $this->assertEquals($expected2, $actual2);
+    }
+
 
     /**
      * Assert that two values are the same value and same type.

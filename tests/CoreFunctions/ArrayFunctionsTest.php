@@ -46,6 +46,18 @@ class ArrayFunctionsTest extends \PHPUnit_Framework_TestCase {
         $this->assertEquals([456 => 'hello-world', 777 => 'smacker'], $r2);
     }
 
+    public function testArrayColumnEdges() {
+        $ds = [
+            ['a', 'b', 'z'],
+            ['c', 'd', 'y']
+        ];
+
+        $r = array_column_php($ds, 0, 1.1);
+        $this->assertEquals(['b' => 'a', 'd' => 'c'], $r);
+
+        $r = array_column_php($ds, null);
+    }
+
     /**
      * Test {@link array_column_php()} errors and warnings.
      *
@@ -84,6 +96,17 @@ class ArrayFunctionsTest extends \PHPUnit_Framework_TestCase {
         $ds = $this->getDataset();
 
         $r = array_column_php($ds, 'id', []);
+    }
+
+    /**
+     * Test array_column() errors and warnings.
+     *
+     * @expectedException \Garden\Exception\ErrorException
+     */
+    public function testArrayColumnError5() {
+        $ds = $this->getDataset();
+
+        $r = array_column_php($ds, []);
     }
 
 
@@ -127,6 +150,27 @@ class ArrayFunctionsTest extends \PHPUnit_Framework_TestCase {
         $this->assertTrue($saved);
         $loaded = array_load($path);
         $this->assertEquals($arr, $loaded);
+    }
+
+    /**
+     * Test an invalid file extension.
+     *
+     * @expectedException \InvalidArgumentException
+     */
+    public function testArrayLoadError() {
+        $path = $this->tempPath('.foo');
+        file_put_contents($path, 'foo');
+        $arr = array_load($path);
+    }
+
+    /**
+     * Test an invalid file extension.
+     *
+     * @expectedException \InvalidArgumentException
+     */
+    public function testArraySaveError() {
+        $path = $this->tempPath('.foo');
+        array_save(['foo'], $path);
     }
 
     /**

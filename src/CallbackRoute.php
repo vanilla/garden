@@ -55,7 +55,7 @@ class CallbackRoute extends Route {
      */
     public function dispatch(Request $request, array &$args) {
         $callback = $args['callback'];
-        $callback_args = reflectArgs($callback, $args['args']);
+        $callback_args = reflect_args($callback, $args['args']);
 
         $result = call_user_func_array($callback, $callback_args);
         return $result;

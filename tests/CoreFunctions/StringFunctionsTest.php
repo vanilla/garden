@@ -8,6 +8,9 @@
 namespace Garden\Tests\CoreFunctions;
 
 class StringFunctionsTest extends \PHPUnit_Framework_TestCase {
+    /**
+     * Do some initial setup.
+     */
     public function setUp() {
         global $translations;
         $translations = [];
@@ -117,6 +120,26 @@ class StringFunctionsTest extends \PHPUnit_Framework_TestCase {
 
         $this->assertEquals('Bonjour Montreal!', sprintft('Hello %s!', 'Montreal'));
         $this->assertEquals('Hello Montreal!', sprintft('@Hello %s!', 'Montreal'));
+    }
+
+    /**
+     * Test {@link mime2ext()}.
+     */
+    public function testMime2Ext() {
+        $this->assertEquals('.txt', mime2ext('text/plain'));
+        $this->assertEquals('.jpg', mime2ext('image/jpg'));
+        $this->assertEquals('.jpg', mime2ext('image/jpeg'));
+        $this->assertEquals('.json', mime2ext('application/json'));
+        $this->assertEquals('.rss', mime2ext('application/rss+xml'));
+        $this->assertEquals('.aac', mime2ext('audio/x-aac'));
+    }
+
+    /**
+     * Test adding new mime types to {@link mime2ext()}.
+     */
+    public function testMime2ExtAdd() {
+        mime2ext('foo/bar', '.baz');
+        $this->assertEquals('.baz', mime2ext('foo/bar'));
     }
 
     /**

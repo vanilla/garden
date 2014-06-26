@@ -22,7 +22,7 @@
  * array by the values from the $indexKey column in the input array.
  *
  * @param array $array A multi-dimensional array (record set) from which to pull a column of values.
- * @param int|string $columnKey The column of values to return.
+ * @param int|string|null $columnKey The column of values to return.
  * This value may be the integer key of the column you wish to retrieve, or it
  * may be the string key name for an associative array.
  * @param mixed $indexKey The column to use as the index/keys for the returned array.
@@ -30,20 +30,7 @@
  * @return array Returns an array of values representing a single column from the input array.
  * @category Array Functions
  */
-function array_column_php($array, $columnKey, $indexKey = null) {
-    // Using func_get_args() in order to check for proper number of
-    // parameters and trigger errors exactly as the built-in array_column()
-    // does in PHP 5.5.
-    $argc = func_num_args();
-
-    if ($argc < 2) {
-        trigger_error("array_column() expects at least 2 parameters, {$argc} given", E_USER_WARNING);
-    }
-
-    if (!is_array($array)) {
-        trigger_error('array_column() expects parameter 1 to be array, '.gettype($array).' given', E_USER_WARNING);
-    }
-
+function array_column_php(array $array, $columnKey = null, $indexKey = null) {
     if (!is_int($columnKey)
         && !is_float($columnKey)
         && !is_string($columnKey)
@@ -417,7 +404,7 @@ function file_put_contents_safe($filename, $data, $mode = 0644) {
     if (!($fp = @fopen($temp, 'wb'))) {
         $temp = dirname($filename).DIRECTORY_SEPARATOR.uniqid('atomic');
         if (!($fp = @fopen($temp, 'wb'))) {
-            trigger_error("file_put_contents_atomic() : error writing temporary file '$temp'", E_USER_WARNING);
+            trigger_error("file_put_contents_safe() : error writing temporary file '$temp'", E_USER_WARNING);
             return false;
         }
     }
@@ -566,11 +553,11 @@ function ltrim_substr($mainstr, $substr) {
  * @category String Functions
  */
 function mime2ext($mime, $ext = null) {
-    static $known = array('text/plain' => 'txt', 'image/jpeg' => 'jpg');
+    static $known = array('text/plain' => '.txt', 'image/jpeg' => '.jpg', 'application/rss+xml' => '.rss');
     $mime = strtolower($mime);
 
     if ($ext !== null) {
-        $known[$mime] = ltrim($ext, '.');
+        $known[$mime] = '.'.ltrim($ext, '.');
     }
 
     if (array_key_exists($mime, $known)) {
@@ -584,7 +571,7 @@ function mime2ext($mime, $ext = null) {
         $result = substr($result, 2);
     }
 
-    return $result;
+    return '.'.$result;
 }
 
 /**
@@ -667,22 +654,14 @@ function pnormaldist($qn) {
 /**
  * Reflect the arguments on a callback and returns them as an associative array.
  *
- * @param callback $callback A callback to the function.
+ * @param callable $callback A callback to the function.
  * @param array $args An array of arguments.
  * @param array $get An optional other array of arguments.
  * @return array The arguments in an associative array, in order ready to be passed to call_user_func_array().
  * @throws Exception Throws an exception when {@link callback} isn't a valid callback.
  * @category Type Functions
  */
-function reflectArgs($callback, $args, $get = null) {
-    if (is_string($callback) && !function_exists($callback)) {
-        throw new Exception("Function $callback does not exist");
-    }
-
-    if (is_array($callback) && !method_exists($callback[0], $callback[1])) {
-        throw new Exception("Method {$callback[1]} does not exist.");
-    }
-
+function reflect_args(callable $callback, $args, $get = null) {
     if (is_array($get)) {
         $args = array_merge($get, $args);
     }
