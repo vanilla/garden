@@ -217,7 +217,7 @@ abstract class Db {
     /**
      * Drop a table in the database.
      *
-     * @param string $table The name of the table.
+     * @param string|array $table The name of the table or an array of table names without prefixes.
      */
     abstract public function dropTable($table);
 

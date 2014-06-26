@@ -10,8 +10,14 @@ namespace Garden\Tests\Db;
 use Garden\Db;
 use Garden\DbDef;
 
+/**
+ * Test various aspects of the {@link DbDef} class and the {@link Db} class as it relates to it.
+ */
 abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
 
+    /**
+     * Set up the db link for the test cases.
+     */
     public static function setUpBeforeClass() {
         // Drop all of the tables in the database.
         $db = static::getDb();
@@ -19,6 +25,23 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
         $db->dropTable($tables);
     }
 
+    /**
+     * Test calling {@link Db::dropTable()} with no tables.
+     */
+    public function testDropTableEmpty() {
+        static::getDb()->dropTable([]);
+    }
+
+    /**
+     * Test calling {@link Db::dropTable()} with a non-existant table.
+     */
+    public function testDropTableDoesntExist() {
+        static::getDb()->dropTable('lfdsjfod');
+    }
+
+    /**
+     * Test a basic call to {@link Db::createTable()}.
+     */
     public function testCreateTable() {
         $def = $this->getDbDef();
 

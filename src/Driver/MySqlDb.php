@@ -122,13 +122,16 @@ class MySqlDb extends Db {
      */
     public function dropTable($table) {
         $tables = (array)$table;
+        if (empty($tables)) {
+            return;
+        }
+
         $tables = array_map(function ($v) {
             return $this->backtick($this->px.$v);
         }, $tables);
 
         $sql = 'drop table if exists '.implode(', ', $tables);
-        $result = $this->query($sql, Db::QUERY_DEFINE);
-        return $result;
+        $this->query($sql, Db::QUERY_DEFINE);
     }
 
     /**
