@@ -47,22 +47,19 @@ class SecureStringTest extends \PHPUnit_Framework_TestCase {
 
         try {
             $encoded = $ss->encode($data, $spec, true);
-
-            $badSpec = $spec;
-            foreach ($badSpec as &$password) {
-                $password = uniqid('bad', true);
-            }
-
-            $null = $ss->decode($encoded, $badSpec, false);
-            $this->assertNull($null);
-
-            $decoded = $ss->decode($encoded, $badSpec, true);
         } catch (\Exception $ex) {
-            if ($ex->getCode() === 400) {
-                throw new \Exception('Bad descrypt', 444);
-            }
-            throw $ex;
+            throw new \Exception("Error encoding data.", 400);
         }
+
+        $badSpec = $spec;
+        foreach ($badSpec as &$password) {
+            $password = uniqid('bad', true);
+        }
+
+        $null = $ss->decode($encoded, $badSpec, false);
+        $this->assertNull($null);
+
+        $decoded = $ss->decode($encoded, $badSpec, true);
     }
 
     /**
