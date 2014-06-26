@@ -138,16 +138,16 @@ class Request implements JsonSerializable {
                 'SCRIPT_NAME' => '',
                 'PATH_INFO' => '/',
                 'EXT' => '',
-                'QUERY' => array(),
+                'QUERY' => [],
                 'SERVER_NAME' => 'localhost',
                 'SERVER_PORT' => 80,
                 'HTTP_ACCEPT' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'HTTP_ACCEPT_LANGUAGE' => 'en-US,en;q=0.8',
                 'HTTP_ACCEPT_CHARSET' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-                'HTTP_USER_AGENT' => 'Vanilla Framework',
+                'HTTP_USER_AGENT' => 'Garden/0.1 (Howdy stranger)',
                 'REMOTE_ADDR' => '127.0.0.1',
                 'URL_SCHEME' => 'http',
-                'INPUT' => array(),
+                'INPUT' => [],
             );
         }
 
