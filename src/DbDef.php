@@ -4,108 +4,233 @@ namespace Garden;
 /**
  * A helper class for creating database tables.
  */
-class DbDef {
-   /// Properties ///
+class DbDef implements \JsonSerializable {
+    /// Properties ///
 
-   /**
-    * @var Db
-    */
-   public $db;
+    /**
+     * @var Db
+     */
+    protected $db;
 
-   /**
-    * @var array
-    */
-   public $columns;
+    /**
+     * @var array
+     */
+    protected $columns;
 
-   /**
-    *
-    * @var string The name of the currently working table.
-    */
-   public $table;
+    /**
+     *
+     * @var string The name of the currently working table.
+     */
+    protected $table;
 
-   /// Methods ///
+    /**
+     * @var array An array of indexes.
+     */
+    protected $indexes;
 
-   public function __construct($db) {
-      $this->db = $db;
-      $this->reset();
-   }
+    /// Methods ///
 
-   /**
-    *
-    * @param string $name The column name.
-    * @param string $type The column type.
-    * @param mixed $nullDefault Whether the column is required or it's default.
-    *
-    * null|true
-    * : The column is not required.
-    * false
-    * : The column is required.
-    * Anything else
-    * : The column is required and this is its default.
-    *
-    * @param string|array $index The index that the column participates in.
-    * @return DbDef
-    */
-   public function column($name, $type, $nullDefault = false, $index = null) {
-      $this->columns[$name] = $this->columnDef($type, $nullDefault, $index);
+    /**
+     * Initialize an instance of the {@link DbDef} class.
+     *
+     * @param Db $db The database to execute against.
+     */
+    public function __construct($db) {
+        $this->db = $db;
+        $this->reset();
+    }
 
-      return $this;
-   }
+    /**
+     * @param Db $db
+     * @return Db|DbDef
+     */
+    public function db(Db $db = null) {
+        if ($db !== null) {
+            $this->db = $db;
+            return $this;
+        }
+        return $this->db;
+    }
 
-   public function columnDef($type, $nullDefault = false, $index = null) {
-      $column = array(
-         'type' => $type);
+    /**
+     * Reset the internal state of this object so that it can be re-used.
+     *
+     * @return DbDef Returns $this for fluent calls.
+     */
+    public function reset() {
+        $this->table = null;
+        $this->columns = [];
+        $this->indexes = [];
 
-      if ($nullDefault === null || $nullDefault == true)
-         $column['required'] = false;
-      if ($nullDefault === false)
-         $column['required'] = true;
-      else {
-         $column['required'] = true;
-         $column['default'] = $nullDefault;
-      }
+        return $this;
+    }
 
-      if ($index)
-         $column['index'] = $index;
+    /**
+     * Define a column.
+     *
+     * @param string $name The column name.
+     * @param string $type The column type.
+     * @param mixed $nullDefault Whether the column is required or it's default.
+     *
+     * null|true
+     * : The column is not required.
+     * false
+     * : The column is required.
+     * Anything else
+     * : The column is required and this is its default.
+     *
+     * @param string|array $index The index that the column participates in.
+     * @return DbDef
+     */
+    public function column($name, $type, $nullDefault = false, $index = null) {
+        $this->columns[$name] = $this->columnDef($type, $nullDefault);
 
-      return $column;
-   }
+        $index = (array)$index;
+        foreach ($index as $typeStr) {
+            if (strpos($typeStr, '.') === false) {
+                $indexType = $typeStr;
+                $suffix = '';
+            } else {
+                list($indexType, $suffix) = explode('.', $typeStr);
+            }
+            $this->index($indexType, $name, $suffix);
+        }
 
-   /**
-    * Define the primary key in the database.
-    *
-    * @param string $name The name of the column.
-    * @param string $type The datatype for the column.
-    * @return DbDef
-    */
-   public function primaryKey($name, $type = 'uint') {
-      $column = $this->columnDef($type, false, Db::INDEX_PK);
-      $column['autoincrement'] = true;
+        return $this;
+    }
 
-      $this->columns[$name] = $column;
+    /**
+     * Get an array column def from a structured function call.
+     *
+     * @param string $type The database type of the column.
+     * @param mixed $nullDefault Whether or not to allow null or the default value.
+     *
+     * null|true
+     * : The column is not required.
+     * false
+     * : The column is required.
+     * Anything else
+     * : The column is required and this is its default.
+     *
+     * @return array Returns the column def as an array.
+     */
+    protected function columnDef($type, $nullDefault = false) {
+        $column = ['type' => $type];
 
-      return $this;
-   }
+        if ($nullDefault === null || $nullDefault == true) {
+            $column['required'] = false;
+        }
+        if ($nullDefault === false) {
+            $column['required'] = true;
+        } else {
+            $column['required'] = true;
+            $column['default'] = $nullDefault;
+        }
 
-   public function reset() {
-      $this->table = null;
-      $this->columns = array();
+        return $column;
+    }
 
-      return $this;
-   }
+    /**
+     * Define the primary key in the database.
+     *
+     * @param string $name The name of the column.
+     * @param string $type The datatype for the column.
+     * @return DbDef
+     */
+    public function primaryKey($name, $type = 'int') {
+        $column = $this->columnDef($type, false);
+        $column['autoincrement'] = true;
 
-   public function set() {
-      $this->db->defineTable(
-         $this->table,
-         $this->columns);
+        $this->columns[$name] = $column;
 
-      $this->reset();
+        // Add the pk index.
+        $this->index(Db::INDEX_PK, $name);
 
-      return $this;
-   }
+        return $this;
+    }
 
-   public function table($name) {
-      $this->table = $name;
-      return $this;
-   }
+    public function exec() {
+        $this->db->defineTable(
+            $this->jsonSerialize()
+        );
+        return $this;
+    }
+
+    public function set() {
+        $this->exec();
+        $this->reset();
+
+        return $this;
+    }
+
+    /**
+     * Set the name of the table.
+     *
+     * @param strin $name The name of the table.
+     * @return DbDef Returns $this for fluent calls.
+     */
+    public function table($name) {
+        $this->table = $name;
+        return $this;
+    }
+
+    /**
+     * Add or update an index.
+     *
+     * @param string $type One of the `Db::INDEX_*` constants.
+     * @param string|array $columns An array of columns or a single column name.
+     * @param string $suffix An index suffix to group columns together in an index.
+     * @return DbDef Returns $this for fluent calls.
+     */
+    public function index($type, $columns, $suffix = '') {
+        $type = strtolower($type);
+        $columns = (array)$columns;
+        $suffix = strtolower($suffix);
+
+        // Look for a current index row.
+        $currentIndex = null;
+        foreach ($this->indexes as $i => $index) {
+            if ($type !== $index['type']) {
+                continue;
+            }
+
+            $indexSuffix = val('suffix', $index, '');
+
+            if ($type === Db::INDEX_PK ||
+                ($type === Db::INDEX_UNIQUE && $suffix == $indexSuffix) ||
+                ($type === Db::INDEX_IX && $suffix && $suffix == $indexSuffix) ||
+                ($type === Db::INDEX_IX && !$suffix && array_diff($index['columns'], $columns) == [])
+            ) {
+                $currentIndex =& $this->indexes[$i];
+                break;
+            }
+        }
+
+        if ($currentIndex) {
+            $currentIndex['columns'] = array_unique(array_merge($currentIndex['columns'], $columns));
+        } else {
+            $this->indexes[] = [
+                'type' => $type,
+                'columns' => $columns,
+                'suffix' => $suffix
+            ];
+        }
+
+        return $this;
+    }
+
+    /**
+     * Specify data which should be serialized to JSON.
+     *
+     * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
+     * @return mixed data which can be serialized by {@link json_encode()},
+     * which is a value of any type other than a resource.
+     */
+    public function jsonSerialize() {
+        return [
+            'name' => $this->table,
+            'columns' => $this->columns,
+            'indexes' => $this->indexes
+        ];
+    }
 }

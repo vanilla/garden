@@ -1,15 +1,17 @@
-<?php namespace Garden;
+<?php
+
+namespace Garden;
 
 use Garden\Exception\ClientException;
 
-define('OP_EQ', 'eq');
-define('OP_GT', 'gt');
-define('OP_GTE', 'gte');
+define('OP_EQ', '=');
+define('OP_GT', '>');
+define('OP_GTE', '>=');
 define('OP_IN', 'in');
 define('OP_LIKE', 'like');
-define('OP_LT', 'lt');
-define('OP_LTE', 'lte');
-define('OP_NE', 'ne');
+define('OP_LT', '<');
+define('OP_LTE', '<=');
+define('OP_NE', '<>');
 
 define('OP_AND', 'and');
 define('OP_OR', 'or');
@@ -31,7 +33,6 @@ abstract class Db {
     const UPDATE_UPSERT = 'upsert';
 
     const INDEX_PK = 'primary';
-    const INDEX_FK = 'key';
     const INDEX_IX = 'index';
     const INDEX_UNIQUE = 'unique';
 
@@ -46,6 +47,24 @@ abstract class Db {
     const COLUMNS = 'columns';
     const LIMIT = 'limit';
     const ORDERBY = 'orderby';
+
+    const DEF_COLUMNS = 0x1;
+    const DEF_INDEXES = 0x2;
+
+    const OP_EQ = '=';
+    const OP_GT = '>';
+    const OP_GTE = '>=';
+    const OP_IN = 'in';
+    const OP_LIKE = 'like';
+    const OP_LT = '<';
+    const OP_LTE = '<=';
+    const OP_NE = '<>';
+
+    const OP_AND = 'and';
+    const OP_OR = 'or';
+
+    const OP_ASC = 'asc';
+    const OP_DESC = 'desc';
 
     /// Properties ///
 
@@ -80,6 +99,7 @@ abstract class Db {
 
     /**
      * Initialize this object.
+     *
      * @param array $config A config array used to initialize this object.
      */
     public function __construct($config = []) {
@@ -88,6 +108,7 @@ abstract class Db {
 
     /**
      * Create the appropriate db driver given a config.
+     *
      * @param array $config The configuration used to initialize the object.
      * The config must have a driver key which names the db class to create.
      * @throws Exception\ClientException Throws an exception when the config isn't complete.
@@ -125,9 +146,6 @@ abstract class Db {
      * Db::INDEX_PK
      * : This index is the primary key
      *
-     * Db::INDEX_FK
-     * : This index is a foreign key. Its column(s) point to the primary key of another table.
-     *
      * Db::INDEX_IX
      * : This is a regular index.
      *
@@ -154,10 +172,11 @@ abstract class Db {
         if ($type === Db::INDEX_PK) {
             $name = 'PRIMARY';
         } else {
-            $prefixes = array(Db::INDEX_FK => 'FK_', Db::INDEX_IX => 'IX_', Db::INDEX_UNIQUE => 'UX_');
-            $px = val($type, $prefixes, 'IX_');
-            if (!$suffix && $type != Db::INDEX_UNIQUE)
+            $prefixes = array(Db::INDEX_IX => 'ix_', Db::INDEX_UNIQUE => 'ux_');
+            $px = val($type, $prefixes, 'ix_');
+            if (!$suffix && $type != Db::INDEX_UNIQUE) {
                 $suffix = implode('', $columns);
+            }
             $name = "{$px}{$table}".($suffix ? "_{$suffix}" : '');
         }
 
@@ -172,18 +191,18 @@ abstract class Db {
     /**
      * Define a table in the database.
      *
-     * @param array $table The table structure definition. The array should have the following keys:
+     * @param array $tabledef The table structure definition. The array should have the following keys:
      *
      * name
      * : The name of the table.
      *
      * columns
      * : The table's columns. This array should have the following format:
-     *     <pre>
-     *     array(
-     *        columnName => array('type' => 'dbtype' [,'required' => bool] [, 'index' => string|array])
-     *     )
-     *     </pre>
+     *     ```
+     *     [
+     *         columnName => array('type' => 'dbtype' [,'required' => bool] [, 'index' => string|array])
+     *     ]
+     *     ```
      *
      * indexes
      * : Any additional indexes the table should have.
@@ -194,6 +213,13 @@ abstract class Db {
      * : The database collation for the table. Not all database drivers support this option.
      */
     abstract public function defineTable($tabledef, $options = array());
+
+    /**
+     * Drop a table in the database.
+     *
+     * @param string $table The name of the table.
+     */
+    abstract public function dropTable($table);
 
     /**
      * Delete data from a table.
@@ -207,25 +233,27 @@ abstract class Db {
 
     /**
      * Guess a database type from a value.
-     * @param mixed $value
+     *
+     * @param mixed $value The value to guess the type for.
      * @return string
      */
     public function guessType($value) {
         $type = 'varchar(255)';
 
-        if (is_bool($value))
+        if (is_bool($value)) {
             $type = 'tinyint';
-        elseif (is_int($value))
+        } elseif (is_int($value)) {
             $type = 'int';
-        elseif (is_float($value))
+        } elseif (is_float($value)) {
             $type = 'float';
-        elseif (is_double($value))
+        } elseif (is_double($value)) {
             $type = 'double';
-        elseif (preg_match('`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)Z?`', $value))
+        } elseif (preg_match('`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)Z?`', $value)) {
             $type = 'datetime';
-        elseif (is_string($value)) {
-            if (strlen($value) > 255)
+        } elseif (is_string($value)) {
+            if (strlen($value) > 255) {
                 $type = 'text';
+            }
         }
 
         return $type;
@@ -234,58 +262,24 @@ abstract class Db {
     /**
      * Get the index definitions for a table.
      *
-     * @param string $table The name of the table
+     * @param string $table The name of the table.
      * @return array An array in the form:
      *
-     *     array (
-     *        index name => array('columns' => array('column'), 'type' => Db::INDEX_TYPE)
-     *     )
+     * ```
+     * [
+     *     indexName => [
+     *         'columns' => ['column'],
+     *         'type' => Db::INDEX_TYPE
+     *     ],
+     *     ...
+     * ]
+     * ```
      */
     abstract public function indexDefinitions($table);
 
     /**
-     * Join data from the database to a result array. This is the basic code join.
-     * In a scalable system doing joins in the database can be costly and thus moving
-     * joins to code is necessary.
-     *
-     * @param array $data
-     * @param string|array $on The on column.
-     * @param array $childcolumns
-     * @param array $options
-     */
-    public function join(&$data, $on, $childcolumns = array(), $options = array()) {
-
-    }
-
-    /**
-     * Start loading a table.
-     * This method is part of the data loading api.
-     * The loadStart(), loadRow(), and loadFinish() methods are meant to be used together for this.
-     *
-     * @param string $table The name of the table to load.
-     */
-    public function loadStart($table) {
-        $this->loadContexts = (array)$this->loadContexts;
-        array_touch($table, $this->loadContexts, array('calls' => 0, 'count' => 0));
-        $this->loadContexts[$table]['calls']++;
-
-        $this->loadCurrent = $table;
-    }
-
-    /**
-     * Load a row in a table.
-     * This method is part of the data loading api.
-     * The loadStart(), loadRow(), and loadFinish() methods are meant to be used together for this.
-     *
-     * @param array $row The row to load.
-     */
-    public function loadRow($row) {
-        $this->insert($this->loadCurrent, $row);
-        $this->loadContexts[$this->loadCurrent]['count']++;
-    }
-
-    /**
      * Insert a row into the database.
+     *
      * @param string $table The name of the table to insert into.
      * @param array $row The row to insert into the table.
      * @param array $options Options to modify the insert.
@@ -293,21 +287,8 @@ abstract class Db {
     abstract public function insert($table, $row, $options = array());
 
     /**
-     * Finish loading a table.
-     *
-     * This method is part of the data loading api.
-     * The loadStart(), loadRow(), and loadFinish() methods are meant to be used together for this.
-     */
-    public function loadFinish() {
-        $context = $this->loadContexts[$this->loadCurrent];
-        $this->loadContexts[$this->loadCurrent]['calls']--;
-        $this->loadCurrent = null;
-
-        return $context;
-    }
-
-    /**
      * Returns the number of rows affected by the last query.
+     *
      * @return int
      */
     public function rowCount() {
@@ -315,7 +296,7 @@ abstract class Db {
     }
 
     public function tableExists($table) {
-        return $this->tableDefinition($table) !== null;
+        return $this->tableDefinitions($table) !== null;
     }
 
     /**
@@ -324,54 +305,61 @@ abstract class Db {
      * @param string $table The name of the table.
      * @return array
      */
-    abstract public function tableDefinition($table);
+    abstract public function tableDefinitions($table);
 
+    /**
+     * Get all of the tables in the database.
+     *
+     * @param bool $withdefs Wether or not to return full table definitions or just the table names.
+     * @return array Returns an array in one of the table names or an array of table defs indexed by table name.
+     */
     abstract public function tables($withdefs = false);
 
     abstract public function update($table, $row, $where, $options = array());
 
-    protected function fixTableDef($table, $columns = null) {
-        $tabledef = array();
-        $columns = array();
-        $indexes = array();
-
-        if (is_array($table)) {
-            $tabledef = $table;
-            if (isset($tabledef['columns']))
-                $columns = $tabledef['columns'];
-        } else {
-            $tabledef = array('name' => $table);
-        }
-
-        foreach ($columns as $name => $def) {
-            $index = val('index', $def);
-            if ($index) {
-                // The column has one or more indexes on them.
-                foreach ((array)$index as $typeString) {
-                    $parts = explode('.', $typeString, 2);
-                    $type = strtolower($parts[0]);
-                    $suffix = val(1, $parts);
-
-                    if ($type == Db::INDEX_PK)
-                        $columns[$name]['required'] = true;
-
-                    // Save the index for later.
-                    if ($type == Db::INDEX_PK || $type == Db::INDEX_UNIQUE || $suffix) {
-                        // There is only one index of this type.
-                        $indexes[$typeString]['columns'][] = $name;
-                        $indexes[$typeString]['type'] = $type;
-                        $indexes[$typeString]['suffix'] = $suffix;
-                    } else {
-                        // One columns, one index.
-                        $indexes[] = array('columns' => $name, 'type' => $type);
-                    }
-                }
-            }
-        }
-
-        $tabledef['columns'] = $columns;
-        $tabledef['indexes'] = $indexes;
-
-        return $tabledef;
-    }
+//    protected function fixTableDef($table, $columns = null) {
+//        $tabledef = [];
+//        $columns = [];
+//        $indexes = [];
+//
+//        if (is_array($table)) {
+//            $tabledef = $table;
+//            if (isset($tabledef['columns'])) {
+//                $columns = $tabledef['columns'];
+//            }
+//        } else {
+//            $tabledef = array('name' => $table);
+//        }
+//
+//        foreach ($columns as $name => $def) {
+//            $index = val('index', $def);
+//            if ($index) {
+//                // The column has one or more indexes on them.
+//                foreach ((array)$index as $typeString) {
+//                    $parts = explode('.', $typeString, 2);
+//                    $type = strtolower($parts[0]);
+//                    $suffix = val(1, $parts);
+//
+//                    if ($type == Db::INDEX_PK)
+//                        $columns[$name]['required'] = true;
+//
+//                    // Save the index for later.
+//                    if ($type == Db::INDEX_PK || $type == Db::INDEX_UNIQUE || $suffix) {
+//                        // There is only one index of this type.
+//                        $indexes[$typeString]['columns'][] = $name;
+//                        $indexes[$typeString]['type'] = $type;
+//                        $indexes[$typeString]['suffix'] = $suffix;
+//                    } else {
+//                        // One columns, one index.
+//                        $indexes[] = array('columns' => $name, 'type' => $type);
+//                    }
+//                }
+//            }
+//        }
+//
+//        $tabledef['columns'] = $columns;
+//        $tabledef['indexes'] = $indexes;
+//
+//        return $tabledef;
+//    }
 }

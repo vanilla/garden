@@ -1,4 +1,9 @@
-<?php namespace Garden\Driver;
+<?php
+
+namespace Garden\Driver;
+
+use Garden\Db;
+use PDO;
 
 /**
  * A connection between Vanilla and MySQL.
@@ -21,6 +26,11 @@ class MySqlDb extends Db {
 
     /// Methods ///
 
+    /**
+     * Initialize an instance of the {@link MySqlDb} class.
+     *
+     * @param array $config The database config.
+     */
     public function __construct($config = []) {
         if ($dsn = val('dsn', $config)) {
             $this->dsn = $dsn;
@@ -31,19 +41,12 @@ class MySqlDb extends Db {
 
         $this->username = val('username', $config, '');
         $this->password = val('password', $config, '');
-   }
-
-    /**
-     *
-     * @param array $args
-     * @return MySqlDb
-     */
-    public static function fromArgs($args) {
-        return new MySqlDb($args['host'], $args['user'], val('password', $args, ''), $args['dbname'], val('port', $args));
     }
 
-    public function defineTable($tabledef, $options = array()) {
-        $tabledef = $this->fixTableDef($tabledef);
+    /**
+     * {@inheritdoc}
+     */
+    public function defineTable($tabledef, $options = []) {
         $options = (array)$options;
 
         $table = $tabledef['name'];
@@ -51,7 +54,7 @@ class MySqlDb extends Db {
         $indexes = $tabledef['indexes'];
 
         // Get the current definition.
-        $currentDef = $this->tableDefinition($table);
+        $currentDef = $this->tableDefinitions($table);
 
         if (!$currentDef) {
             // The table doesn't exist so this is a create table.
@@ -115,14 +118,40 @@ class MySqlDb extends Db {
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function dropTable($table) {
+        $tables = (array)$table;
+        $tables = array_map(function ($v) {
+            return $this->backtick($this->px.$v);
+        }, $tables);
+
+        $sql = 'drop table if exists '.implode(', ', $tables);
+        $result = $this->query($sql, Db::QUERY_DEFINE);
+        return $result;
+    }
+
+    /**
+     * Surround a field with backticks.
+     *
+     * @param string $field The field to backtick.
+     * @return string Returns the field properly escaped and backticked.
+     * @link http://www.php.net/manual/en/pdo.quote.php#112169
+     */
+    protected function backtick($field) {
+        return '`'.str_replace('`', '``', $field).'`';
+    }
+
+    /**
      * Return the definition for a table.
      *
      * @param string $table The name of the table.
      * @return array
      */
-    public function tableDefinition($table) {
-        if (!$this->tableExists($table))
+    public function tableDefinitions($table) {
+        if (!$this->tableExists($table)) {
             return null;
+        }
 
         $result = array('name' => $table);
 
@@ -138,12 +167,14 @@ class MySqlDb extends Db {
         }
 
         $result['columns'] = $columns;
+        $result['indexes'] = $this->indexDefinitions($table);
 
         return $result;
     }
 
     public function tableExists($table) {
-        $sql = "show tables like '{$this->px}$table'";
+        $tableName = $this->pdo()->quote($this->px.$table);
+        $sql = "show tables like $tableName";
         $data = $this->query($sql, Db::QUERY_READ);
         return (count($data) > 0);
     }
@@ -178,7 +209,7 @@ class MySqlDb extends Db {
     protected function query($sql, $type = Db::QUERY_READ, $options = array()) {
         $start_time = microtime(true);
 
-        $this->pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, !val(Db::GET_UNBUFFERED, $options, false));
+        $this->pdo()->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, !val(Db::GET_UNBUFFERED, $options, false));
 
         if ($this->mode === Db::MODE_ECHO && $type != Db::QUERY_READ) {
             echo rtrim($sql, ';').";\n\n";
@@ -205,12 +236,13 @@ class MySqlDb extends Db {
 
             if (!val(Db::GET_UNBUFFERED, $options)) {
                 $result = $result->fetchAll();
+                $this->rowCount = count($result);
             }
         }
 
-        if (method_exists($result, 'rowCount'))
+        if (is_object($result) && method_exists($result, 'rowCount')) {
             $this->rowCount = $result->rowCount();
-
+        }
 
         $this->time += microtime(true) - $start_time;
 
@@ -228,8 +260,9 @@ class MySqlDb extends Db {
 
         if (substr($type, 0, 4) === 'enum') {
             // This is an enum which will come in as an array.
-            if (preg_match_all("`'([^']+)'`", $typeString, $matches))
+            if (preg_match_all("`'([^']+)'`", $typeString, $matches)) {
                 $type = $matches[1];
+            }
         } else {
             if (preg_match('`([a-z]+)\s*(?:\((\d+(?:\s*,\s*\d+)*)\))?\s*(unsigned)?`', $typeString, $matches)) {
                 //         var_dump($matches);
@@ -252,8 +285,9 @@ class MySqlDb extends Db {
                     $length = str_replace(' ', '', $length);
                     $type .= "($length)";
                 }
-                if ($unsigned)
+                if ($unsigned) {
                     $type .= ' unsigned';
+                }
             }
         }
 
@@ -265,6 +299,11 @@ class MySqlDb extends Db {
         return $type;
     }
 
+    /**
+     * Gets the {@link PDO} object for this connection.
+     *
+     * @return \PDO
+     */
     public function pdo() {
         if (!isset($this->pdo)) {
             $this->pdo = new PDO($this->dsn, $this->username, $this->password);
@@ -276,8 +315,9 @@ class MySqlDb extends Db {
     protected function columnDef($name, $def) {
         $result = "`$name` ".$this->parseType($def['type']);
 
-        if (val('required', $def))
+        if (val('required', $def)) {
             $result .= ' not null';
+        }
 
         if (val('autoincrement', $def)) {
             $result .= ' auto_increment';
@@ -322,10 +362,11 @@ class MySqlDb extends Db {
         if ($type === Db::INDEX_PK) {
             $name = 'PRIMARY';
         } else {
-            $prefixes = array(Db::INDEX_FK => 'FK_', Db::INDEX_IX => 'IX_', Db::INDEX_UNIQUE => 'UX_');
-            $px = val($type, $prefixes, 'IX_');
-            if (!$suffix && $type != Db::INDEX_UNIQUE)
+            $prefixes = array(Db::INDEX_IX => 'ix_', Db::INDEX_UNIQUE => 'ux_');
+            $px = val($type, $prefixes, 'ix_');
+            if (!$suffix && $type != Db::INDEX_UNIQUE) {
                 $suffix = implode('', $columns);
+            }
             $name = "{$px}{$table}".($suffix ? "_{$suffix}" : '');
         }
 
@@ -372,11 +413,11 @@ class MySqlDb extends Db {
 
         if ($addIndex) {
             if ($type === Db::INDEX_PK) {
-                $sqls[] = "alter table `$pxtable` add primary key ".bracketList($columns, '`');
+                $sqls[] = "alter table `$pxtable` add primary key ".$this->bracketList($columns, '`');
             } else {
                 $sqls[] = "create".
                     ($type === Db::INDEX_UNIQUE ? ' unique' : '').
-                    " index `$name` on `$pxtable` ".bracketList($columns, '`');
+                    " index `$name` on `$pxtable` ".$this->bracketList($columns, '`');
             }
         }
 
@@ -390,7 +431,7 @@ class MySqlDb extends Db {
     /**
      * Get the index definitions for a table.
      *
-     * @param string $table The name of the table
+     * @param string $table The name of the table.
      * @return array An array in the form:
      *
      *     array (
@@ -398,12 +439,6 @@ class MySqlDb extends Db {
      *     )
      */
     public function indexDefinitions($table) {
-        // Keep an internal cache for repeated calls to this function.
-        static $cache = array();
-
-        if (isset($cache[$table]))
-            return $cache[$table];
-
         // Query the indexes from the database.
         $rawdata = $this->query("show indexes from `{$this->px}$table`");
 
@@ -413,14 +448,15 @@ class MySqlDb extends Db {
             $name = $row['Key_name'];
 
             // Figure out the type.
-            if (strcasecmp($name, 'PRIMARY') === 0)
+            if (strcasecmp($name, 'PRIMARY') === 0) {
                 $type = Db::INDEX_PK;
-            elseif ($row['Non_unique'] == 0)
+            } elseif ($row['Non_unique'] == 0) {
                 $type = Db::INDEX_UNIQUE;
-            elseif (strcasecmp(substr($name, 0, 2), 'fk') === 0)
+            } elseif (strcasecmp(substr($name, 0, 2), 'fk') === 0) {
                 $type = Db::INDEX_FK;
-            else
+            } else {
                 $type = Db::INDEX_IX;
+            }
 
             $result[$name]['columns'][] = $row['Column_name'];
             $result[$name]['type'] = $type;
@@ -430,6 +466,9 @@ class MySqlDb extends Db {
         return $result;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function delete($table, $where) {
         trigger_error(__CLASS__.'->'.__FUNCTION__.'() not implemented', E_USER_ERROR);
     }
@@ -453,8 +492,9 @@ class MySqlDb extends Db {
 
         // Build the where clause.
         $whereString = $this->whereString($where);
-        if ($whereString)
+        if ($whereString) {
             $sql .= "\nwhere ".$whereString;
+        }
 
         // Build the order.
         if (isset($options[Db::ORDERBY])) {
@@ -484,14 +524,15 @@ class MySqlDb extends Db {
         if (isset($options[Db::LIMIT])) {
             $limit = $options[Db::LIMIT];
 
-            if (is_numeric($limit))
+            if (is_numeric($limit)) {
                 $sql .= "\nlimit $limit";
-            elseif (is_array($limit)) {
+            } elseif (is_array($limit)) {
                 // The limit is in the form (limit, offset) or (limit, 'page' => page)
-                if (isset($limit['page']))
+                if (isset($limit['page'])) {
                     $offset = $limit[0] * ($limit['page'] - 1);
-                else
+                } else {
                     list($limit, $offset) = $limit;
+                }
 
                 $sql .= "\nlimit $limit offset $offset";
             }
@@ -505,63 +546,69 @@ class MySqlDb extends Db {
      * Build a where clause from a where array.
      *
      * @param array $where
+     * @param string $op The logical operator.
      */
-    protected function whereString($where, $op = OP_AND) {
-        static $map = array(OP_GT => '>', OP_GTE => '>=', OP_LT => '<', OP_LTE => '<=', OP_LIKE => 'like');
+    protected function whereString($where, $op = Db::OP_AND) {
+        static $map = array(Db::OP_GT => '>', Db::OP_GTE => '>=', Db::OP_LT => '<', Db::OP_LTE => '<=', Db::OP_LIKE => 'like');
         $result = '';
 
-        if (!$where)
+        if (!$where) {
             return $result;
+        }
 
         foreach ($where as $column => $value) {
-            if ($result)
+            if ($result) {
                 $result .= ' and ';
+            }
 
             if (is_array($value)) {
                 foreach ($value as $op => $rval) {
                     switch ($op) {
-                        case OP_AND:
-                        case OP_OR:
+                        case Db::OP_AND:
+                        case Db::OP_OR:
                             $result .= '('.$this->whereString($rval, $op).')';
                             break;
-                        case OP_EQ:
-                            if ($value === null)
+                        case Db::OP_EQ:
+                            if ($value === null) {
                                 $result .= "`$column` is null";
-                            elseif (is_array($rval)) {
+                            } elseif (is_array($rval)) {
                                 $rval = array_map(array($this->pdo, 'quote'), $rval);
                                 $result .= "`$column` in (".implode(',', $rval).')';
-                            } else
+                            } else {
                                 $result .= "`$column` = ".$this->pdo->quote($rval);
+                            }
                             break;
-                        case OP_GT:
-                        case OP_GTE:
-                        case OP_LT:
-                        case OP_LTE:
-                        case OP_LIKE:
+                        case Db::OP_GT:
+                        case Db::OP_GTE:
+                        case Db::OP_LT:
+                        case Db::OP_LTE:
+                        case Db::OP_LIKE:
                             $result .= "`$column` {$map[$op]} ".$this->pdo->quote($rval);
                             break;
-                        case OP_IN:
+                        case Db::OP_IN:
                             // Quote the in values.
                             $rval = array_map(array($this->pdo, 'quote'), (array)$rval);
                             $result .= "`$column` in (".implode(', ', $rval).')';
                             break;
-                        case OP_NE:
-                            if ($value === null)
+                        case Db::OP_NE:
+                            if ($value === null) {
                                 $result .= "`$column` is null";
-                            elseif (is_array($rval)) {
+                            } elseif (is_array($rval)) {
                                 $rval = array_map(array($this->pdo, 'quote'), $rval);
                                 $result .= "`$column` not in (".implode(',', $rval).')';
-                            } else
+                            } else {
                                 $result .= "`$column` = ".$this->pdo->quote($rval);
+                            }
                             break;
                     }
                 }
             } else {
                 // This is just an equality operator.
-                if ($value === null)
+                if ($value === null) {
                     $result .= "`$column` is null";
-                else
+                } else {
                     $result .= "`$column` = ".$this->pdo->quote($value);
+                }
             }
         }
         return $result;
@@ -577,8 +624,9 @@ class MySqlDb extends Db {
     }
 
     public function insertMulti($table, $rows, $options = array()) {
-        if (count($rows) == 0)
+        if (count($rows) == 0) {
             return;
+        }
 
         reset($rows);
         $columns = array_keys(current($rows));
@@ -587,7 +635,7 @@ class MySqlDb extends Db {
         if (val(Db::INSERT_REPLACE, $options)) {
             $sql = 'replace ';
         } else {
-            $sql = 'insert '.valif(Db::INSERT_IGNORE, $options, 'ignore ');
+            $sql = 'insert '.val(Db::INSERT_IGNORE, $options) ? 'ignore ' : '';
         }
 
         $sql .= "`{$this->px}$table`\n";
@@ -597,15 +645,13 @@ class MySqlDb extends Db {
 
         $first = true;
         foreach ($rows as $row) {
-            if ($first)
+            if ($first) {
                 $first = false;
-            else
+            } else {
                 $sql .= ",\n";
+            }
 
-            // Escape the values.
-            $row = array_map(array($this->pdo, 'quote'), $row);
-//         $row = array_map(array($this->mysqli, 'real_escape_string'), $row);
-            $sql .= bracketList($row, '');
+            $sql .= $this->bracketList($row, "'");
         }
 
         $result = $this->query($sql, Db::QUERY_WRITE, $options);
@@ -617,24 +663,25 @@ class MySqlDb extends Db {
         return $result;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function tables($withdefs = false) {
         // Get the table names.
         $tables = $this->query("show tables", Db::QUERY_READ, array(Db::GET_COLUMN => 0));
 
         // Strip the table prefixes.
-        $tables = array_filter($tables, function ($name) {
-            return str_begins($name, $this->px);
-        });
         $tables = array_map(function ($name) {
             return ltrim_substr($name, $this->px);
         }, $tables);
 
-        if (!$withdefs)
+        if (!$withdefs) {
             return $tables;
+        }
 
         $result = array();
         foreach ($tables as $table) {
-            $tabledef = $this->tableDefinition($table);
+            $tabledef = $this->tableDefinitions($table);
             $tabledef['indexes'] = $this->indexDefinitions($table);
             $result[$table] = $tabledef;
         }
@@ -642,8 +689,9 @@ class MySqlDb extends Db {
     }
 
     public function update($table, $row, $where, $options = array()) {
-        if (empty($row))
+        if (empty($row)) {
             return 0; // no rows updated.
+        }
 
         $sql = "update `{$this->px}$table`";
 
@@ -656,24 +704,42 @@ class MySqlDb extends Db {
 
         // Build the where clause.
         $whereString = $this->whereString($where);
-        if ($whereString)
+        if ($whereString) {
             $sql .= "\nwhere ".$whereString;
+        }
 
         $result = $this->query($sql, Db::QUERY_WRITE, $options);
 
-        if ($this->mode === Db::MODE_EXEC)
+        if ($this->mode === Db::MODE_EXEC) {
             return $result->rowCount();
-        else
+        } else {
             return true;
+        }
     }
-}
 
-/**
- *
- * @param type $row
- * @param type $quote
- * @return type
- */
-function bracketList($row, $quote = "'") {
-    return "($quote".implode("$quote, $quote", $row)."$quote)";
+    /**
+     * Convert an array into a bracketed list suitable for MySQL clauses.
+     *
+     * @param array $row The row to expand.
+     * @param string $quote The quotes to surroud the items with. There are two special cases.
+     * ' (single quote)
+     * : The row will be passed through {@link PDO::quote()}.
+     * ` (backticks)
+     * : The row will be passed through {@link MySqlDb::backtick()}.
+     * @return string Returns the bracket list.
+     */
+    public function bracketList($row, $quote = "'") {
+        switch ($quote) {
+            case "'":
+                $row = array_map([$this->pdo(), 'quote'], $row);
+                $quote = '';
+                break;
+            case '`':
+                $row = array_map([$this, 'backtick'], $row);
+                $quote = '';
+                break;
+        }
+
+        return "($quote".implode("$quote, $quote", $row)."$quote)";
+    }
 }

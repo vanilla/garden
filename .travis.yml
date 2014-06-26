@@ -11,6 +11,9 @@ install:
 
 script: phpunit -c phpunit.xml.dist --coverage-clover=coverage.clover
 
+before_script:
+    - mysql -uroot -e 'create database if not exists phpunit_garden;'
+
 after_script:
     - wget https://scrutinizer-ci.com/ocular.phar
     - php ocular.phar code-coverage:upload --format=php-clover coverage.clover
