@@ -14,11 +14,16 @@ use Garden\DbDef;
  * Test various aspects of the {@link DbDef} class and the {@link Db} class as it relates to it.
  */
 abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
+    protected static $cachePath;
 
     /**
      * Set up the db link for the test cases.
      */
     public static function setUpBeforeClass() {
+        $path = __DIR__.'/../../cache/'.date('Y-m-d-Hi');
+        touchdir($path);
+        self::$cachePath = realpath($path);
+
         // Drop all of the tables in the database.
         $db = static::getDb();
         $tables = $db->tables();
@@ -53,6 +58,8 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
 
         $defArray = $def->jsonSerialize();
         $defArrayDb = $def->db()->tableDefinitions('user');
+
+        $def->db()->insert('user', ['userID' => 1, 'name' => 'todd']);
     }
 
     /**

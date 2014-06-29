@@ -248,10 +248,10 @@ abstract class Db {
             $type = 'float';
         } elseif (is_double($value)) {
             $type = 'double';
-        } elseif (preg_match('`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)Z?`', $value)) {
-            $type = 'datetime';
         } elseif (is_string($value)) {
-            if (strlen($value) > 255) {
+            if (preg_match('`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)Z?`', $value)) {
+                $type = 'datetime';
+            } elseif (strlen($value) > 255) {
                 $type = 'text';
             }
         }

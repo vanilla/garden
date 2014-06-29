@@ -1,290 +1,305 @@
-<?php namespace Garden\Driver;
+<?php
 
+namespace Garden\Driver;
+
+use Garden\Db;
 
 class CsvDb extends Db {
-   /// Constants ///
+    /// Constants ///
 
-   const DELIM = ',';
-   const ESCAPE = '\\';
-   const NEWLINE = "\n";
-   const NULL = '\N';
-   const QUOTE = '"';
+    const DELIM = ',';
+    const ESCAPE = '\\';
+    const NEWLINE = "\n";
+    const NULL = '\N';
+    const QUOTE = '"';
 
+    /**
+     * @var int The maximum number of files that can be open at any time.
+     */
+    public $maxOpenFiles = 5;
 
-   /// Properties ///
+    /// Protected Properties ///
 
-   /**
-    * How many rows to buffer before writing to a csv file.
-    * Specifying a value of 1 or less means no buffering.
-    * @var int
-    */
-   public $buffer = 100;
+    /**
+     * Whether or not the mb_* functions are supported.
+     *
+     * @var bool
+     */
+    protected static $mb = false;
 
+    /**
+     * The directory that the csv files are in.
+     *
+     * @var string
+     */
+    protected $dir;
 
-   /// Protected Properties ///
+    /**
+     * @var array
+     */
+    protected $structure = [];
 
-   /**
-    * The directory that the csv files are in.
-    * @var string
-    */
-   protected $dir;
+    protected $fps = [];
 
-   /**
-    * The names of the currently loading columns.
-    *
-    * @var array
-    */
-   protected $loadColumns;
+    /// Methods ///
 
-   /**
-    * A pointer to the currently loading table.
-    *
-    * @var resource
-    */
-   protected $loadfp;
+    /**
+     * Initialize an instance of the {@link CsvDb} class.
+     *
+     * @param array $dir The base directory of the csv's.
+     */
+    public function __construct($dir) {
+        $dir = rtrim($dir, '/');
 
-   /**
-    * Whether or not the mb_* functions are supported.
-    *
-    * @var bool
-    */
-   protected static $mb = false;
+        // Create the directory.
+        touchdir($dir);
 
-   /**
-    *
-    * @var array
-    */
-   protected $structure = array();
+        $this->dir = $dir;
+        $this->loadStructure();
 
-   /// Methods ///
+        self::$mb = function_exists('mb_detect_encoding');
+    }
 
-   public function __construct($dir) {
-      $dir = rtrim($dir, '/');
+    /**
+     * Clean up the file open pointers in the database.
+     */
+    public function __destruct() {
+        foreach ($this->fps as $fp) {
+            fclose($fp);
+        }
+    }
 
-      // Create the directory.
-      touch_dir($dir);
+    /**
+     * Return the file pointer for a given table.
+     *
+     * @param string $tablename The name of the table.
+     * @param string $mode The file mode for new files. You should only use r+b and a+b.
+     * @return resource Returns the file pointer.
+     */
+    protected function fp($tablename, $mode = 'a+b') {
+        if (isset($this->fps[$tablename])) {
+            $fp = $this->fps[$tablename];
+        } else {
+            $fp = fopen($this->tablePath($tablename), $mode);
+            $this->fps[$tablename] = $fp;
 
-      $this->dir = $dir;
-      $this->loadStructure();
-
-      self::$mb = function_exists('mb_detect_encoding');
-   }
-
-   public function defineIndex($table, $column, $type, $suffix = null) {
-      $def = parent::defineIndex($table, $column, $type, $suffix);
-      $this->structure[$table]['indexes'][$def['name']] = $def;
-      $this->saveStructure();
-   }
-
-   public function defineTable($tabledef, $options = array()) {
-      $tabledef = $this->fixTableDef($tabledef, $options);
-      $table = $tabledef['name'];
-
-      $path = $this->tablePath($table);
-
-
-      $currentDef = $this->tableDefinition($table);
-
-      if ($currentDef) {
-         // There is already a definition which won't work if there is already data in the table.
-         if (file_exists($path)) {
-            // Make sure the tables have the same columns.
-            if (array_keys($tabledef['columns']) !== array_keys($currentDef['columns'])) {
-               throw new Exception("You can't change the definition of the $table.csv table after it has data in it.", 400);
+            if (count($this->fps) > $this->maxOpenFiles) {
+                $fp = array_shift($this->fps);
+                fclose($fp);
             }
-         }
+        }
+        return $fp;
+    }
 
-         // We can merge indexes.
-         if (isset($currentDef['indexes'])) {
-            $tabledef['indexes'] = array_merge($currentDef['indexes'], $tabledef['indexes']);
-         }
-      }
+    /**
+     * Load the structure file that describes the csvs.
+     */
+    protected function loadStructure() {
+        $path = $this->dir.'/structure.json';
+        if (file_exists($path)) {
+            $this->structure = json_decode(file_get_contents($path), true);
+            if ($this->structure === null) {
+                throw new \Exception("Could not decode the structure file.", 500);
+            }
+        } else {
+            $this->structure = [];
+        }
+    }
 
-      $this->structure[$tabledef['name']] = $tabledef;
-      $this->saveStructure();
-   }
+    public function defineIndex($table, $column, $type, $suffix = null) {
+        $def = parent::defineIndex($table, $column, $type, $suffix);
+        $this->structure[$table]['indexes'][$def['name']] = $def;
+        $this->saveStructure();
+    }
 
-   public function delete($table, $where) {
-      if (!empty($where)) {
-         throw new NotImplementedException("CsvDb->delete() does not implement a delete with a where filter.");
-      }
-      $path = $this->tablePath($table);
-      if (file_exists($path))
-         unlink($path);
-   }
+    protected function saveStructure() {
+        $path = $this->dir.'/structure.json';
+        $result = file_put_contents_safe($path, json_encode($this->structure, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        if (!$result) {
+            throw new \Exception("Error saving CsvDb structure.");
+        }
+    }
 
-   static function formatValue($value) {
-      // Format the value for writing.
-      if (is_null($value)) {
-         $value = self::NULL;
-      } elseif (is_numeric($value)) {
-         // Do nothing, formats as is.
-      } elseif (is_string($value)) {
-         if (self::$mb && mb_detect_encoding($value) != 'UTF-8')
-            $value = utf8_encode($value);
+    /**
+     * {@inheritdoc}
+     */
+    public function dropTable($table) {
+        $tables = (array)$table;
 
-         $value = str_replace(array("\r\n", "\r"), array(self::NEWLINE, self::NEWLINE), $value);
-         $value = self::QUOTE .
-            str_replace(array(self::ESCAPE, self::DELIM, self::NEWLINE, self::QUOTE), array(self::ESCAPE . self::ESCAPE, self::ESCAPE . self::DELIM, self::ESCAPE . self::NEWLINE, self::ESCAPE . self::QUOTE), $value) .
-            self::QUOTE;
-      } elseif (is_bool($value)) {
-         $value = $value ? 1 : 0;
-      } else {
-         // Unknown format.
-         $value = self::NULL;
-      }
-      return $value;
-   }
+        foreach ($tables as $tablename) {
+            $path = $this->tablePath($tablename);
+            if (file_exists($path)) {
+                unlink($path);
+            }
+            if (isset($this->structure[$tablename])) {
+                unset($this->structure[$tablename]);
+            }
+        }
+    }
 
-   public function get($table, $where, $order = array(), $limit = false, $options = array()) {
-      throw NotImplementedException(__CLASS__, 'get');
-   }
+    /**
+     * {@inheritdoc}
+     */
+    public function delete($table, $where) {
+        if (!empty($where)) {
+            throw new NotImplementedException("CsvDb->delete() does not implement a delete with a where filter.");
+        }
+        $this->dropTable($table);
+    }
 
-   public function indexDefinitions($table) {
-      $tabledef = $this->tableDefinition($table);
-      if (!$tabledef)
-         return null;
-      return val('indexes', $tabledef, array());
-   }
+    public function get($table, $where, $order = array(), $limit = false, $options = array()) {
+        throw \NotImplementedException(__CLASS__, 'get');
+    }
 
-   public function insert($table, $row, $options = array()) {
-      if ($this->buffer > 1) {
-         // Buffer the insert.
-         $this->insertBuffer[$table][] = $row;
+    public function indexDefinitions($table) {
+        $tabledef = $this->tableDefinition($table);
+        if (!$tabledef)
+            return null;
+        return val('indexes', $tabledef, array());
+    }
 
-         // Check to see if the insert buffer is full.
-         if (count($this->insertBuffer[$table]) >= $this->buffer) {
-            $this->insertMulti($table, $this->insertBuffer[$table], $options);
-            unset($this->insertBuffer[$table]);
-         }
-      } else {
-         return $this->insertMulti($table, array($row), $options);
-      }
-   }
+    public function insert($table, $rows, $options = array()) {
+        if (empty($rows)) {
+            return 0;
+        } elseif (!isset($rows[0])) {
+            $rows = [$rows];
+        }
 
-   public function insertMulti($table, $rows, $options = array()) {
-//      if (!$tabledef) {
-//         // Try and define the table from the row.
-//         $columns = array();
-//         foreach ($row as $column => $value) {
-//            $columns[$column] = array('type' => $this->guessType($value));
-//         }
-//
-//         $this->defineTable($table, $columns, $options);
-//         $tabledef = $this->tableDefinition($table);
-//      }
+        $tabledef = $this->tableDefinition($table);
+        if (!$tabledef) {
+            // Try and define the table from the row.
+            $columns = array();
+            foreach ($rows[0] as $column => $value) {
+                $columns[$column] = array('type' => $this->guessType($value));
+            }
 
-      // Loop through the rows and insert them.
-      $columns = array_keys($tabledef['columns']);
-      foreach ($rows as $row) {
-         fwrite($fp, self::format($row, $columns));
-      }
+            $this->defineTable($table, $columns, $options);
+            $tabledef = $this->tableDefinition($table);
+        }
+        $columns = array_keys($tabledef['columns']);
 
-      fclose($fp);
-   }
+        // Loop through the rows and insert them.
+        $fp = $this->fp($table);
+        foreach ($rows as $row) {
+            fwrite($fp, self::formatRow($row, $columns));
+        }
+    }
 
-   public static function formatRow($row, $columns) {
-      $outrow = array_fill_keys($columns, null);
+    public function defineTable($tabledef, $options = array()) {
+        $table = $tabledef['name'];
 
-      foreach ($columns as $column) {
-         if (isset($row[$column])) {
-            $outrow[$column] = self::formatValue($row[$column]);
-         }
-      }
+        $path = $this->tablePath($table);
 
-      return implode(self::DELIM, $outrow).self::NEWLINE;
-   }
+        $currentDef = $this->tableDefinition($table);
 
-   public function loadStart($table) {
-      parent::loadStart($table);
+        if ($currentDef) {
+            // There is already a definition which won't work if there is already data in the table.
+            if (file_exists($path)) {
+                // Make sure the tables have the same columns.
+                if (array_keys($tabledef['columns']) !== array_keys($currentDef['columns'])) {
+                    throw new Exception("You can't change the definition of the $table.csv table after it has data in it.", 400);
+                }
+            }
 
-      // Grab the table definition.
-      $tabledef = $this->tableDefinition($table);
+            // We can merge indexes.
+            if (isset($currentDef['indexes'])) {
+                $tabledef['indexes'] = array_merge($currentDef['indexes'], $tabledef['indexes']);
+            }
+        }
 
-      if (!$tabledef)
-         throw Exception("Table $table does not exist.");
+        $this->structure[$tabledef['name']] = $tabledef;
+        $this->saveStructure();
+    }
 
-      $context =& $this->loadContexts[$table];
+    protected function tablePath($table) {
+        return $this->dir."/$table.csv";
+    }
 
-      if (isset($context['fp']))
-         $fp = $context['fp'];
-      else {
-         // Set up the file for inserting.
-         $path = $this->tablePath($table);
-         if (!file_exists($path)) {
-            $fp = fopen($path, 'wb');
-            $this->writeHeaderRow($fp, $tabledef);
-         } else {
-            $fp = fopen($path, 'ab');
-         }
-         $context['fp'] = $fp;
-      }
+    public function tableDefinition($table) {
+        return val($table, $this->structure, null);
+    }
 
-      $this->loadfp = $fp;
-      $this->loadColumns = array_keys($tabledef['columns']);
-   }
+    protected function writeHeaderRow($fp, $table) {
+        if (is_string($table)) {
+            $table = $this->tableDefinition($table);
+        }
 
-   public function loadRow($row) {
-      $line = self::formatRow($row, $this->loadColumns);
-      fwrite($this->loadfp, $line);
-      $this->loadContexts[$this->loadCurrent]['count']++;
-   }
+        $columns = array_keys($table['columns']);
+        fwrite($fp, implode(self::DELIM, $columns));
+        fwrite($fp, self::NEWLINE);
+    }
 
-   public function loadFinish() {
-      $table = $this->loadCurrent;
-      $context =& $this->loadContexts[$table];
-      parent::loadFinish();
+    /**
+     * Format a row of data as a csv row.
+     *
+     * @param array $row The row of data.
+     * @param array $columns An array of column names in the table structure.
+     * @return string Returns the row formatted as a csv string.
+     */
+    public static function formatRow(array $row, array $columns) {
+        $outrow = array_fill_keys($columns, null);
 
-      if ($context['calls'] <= 0 && is_resource($this->loadfp)) {
-         fclose($this->loadfp);
-         unset($context['fp']);
-      }
+        foreach ($columns as $column) {
+            if (isset($row[$column])) {
+                $outrow[$column] = self::formatValue($row[$column]);
+            }
+        }
 
-      $this->loadfp = null;
-      $this->loadColumns = null;
+        return implode(self::DELIM, $outrow).self::NEWLINE;
+    }
 
-      return $context;
-   }
+    /**
+     * Format a value in a way suitable for a csv.
+     *
+     * @param mixed $value The valut to format.
+     * @return string Returns the string suitable to be put in a csv file.
+     */
+    public static function formatValue($value) {
+        // Format the value for writing.
+        if (is_null($value)) {
+            $value = self::NULL;
+        } elseif (is_numeric($value)) {
+            // Do nothing, formats as is.
+        } elseif (is_string($value)) {
+            if (self::$mb && mb_detect_encoding($value) != 'UTF-8') {
+                $value = utf8_encode($value);
+            }
 
-   protected function loadStructure() {
-      $path = $this->dir.'/structure.json';
-      if (file_exists($path))
-         $this->structure = json_decode(file_get_contents($path), true);
-      else
-         $this->structure = array();
-   }
+            $value = str_replace(["\r\n", "\r"], [self::NEWLINE, self::NEWLINE], $value);
+            $value = self::QUOTE.
+                str_replace(
+                    [self::ESCAPE, self::DELIM, self::NEWLINE, self::QUOTE],
+                    [self::ESCAPE.self::ESCAPE, self::ESCAPE.self::DELIM, self::ESCAPE.self::NEWLINE, self::ESCAPE.self::QUOTE],
+                    $value
+                ).self::QUOTE;
+        } elseif (is_bool($value)) {
+            $value = $value ? '1' : '0';
+        } else {
+            // Unknown format.
+            $value = self::NULL;
+        }
+        return $value;
+    }
 
-   protected function saveStructure() {
-      $path = $this->dir.'/structure.json';
-      file_put_contents($path, json_encode($this->structure));
-   }
+    /**
+     * {@inheritdoc}
+     */
+    public function tables($withdefs = false) {
+        if ($withdefs) {
+            return $this->structure;
+        } else {
+            return array_keys($this->structure);
+        }
+    }
 
-   public function tableDefinition($table) {
-      return val($table, $this->structure, null);
-   }
+    public function tableDefinitions($table) {
+        if (isset($this->structure[$table])) {
+            return $this->structure[$table];
+        }
+        return null;
+    }
 
-   protected function tablePath($table) {
-      return $this->dir."/$table.csv";
-   }
-
-   public function tables($withdefs = false) {
-      if ($withdefs) {
-         return $this->structure;
-      } else {
-         return array_keys($this->structure);
-      }
-   }
-
-   public function update($table, $row, $where, $options = array()) {
-      throw new NotImplementedException(__CLASS__, 'update');
-   }
-
-   protected function writeHeaderRow($fp, $table) {
-      if (is_string($table))
-         $table = $this->tableDefinition($table);
-
-      $columns = array_keys($table['columns']);
-      fwrite($fp, implode(self::DELIM, $columns));
-      fwrite($fp, self::NEWLINE);
-   }
+    public function update($table, $row, $where, $options = array()) {
+        throw new \BadFunctionCallException(__CLASS__.'->update() not implented.');
+    }
 }

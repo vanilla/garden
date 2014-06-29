@@ -149,16 +149,20 @@ class DbDef implements \JsonSerializable {
         return $this;
     }
 
-    public function exec() {
+    /**
+     * Execute the table def against the database.
+     *
+     * @param bool $reset Whether or not to reset the db def upon completion.
+     * @return DbDef $this Returns $this for fluent calls.
+     */
+    public function exec($reset = true) {
         $this->db->defineTable(
             $this->jsonSerialize()
         );
-        return $this;
-    }
 
-    public function set() {
-        $this->exec();
-        $this->reset();
+        if ($reset) {
+            $this->reset();
+        }
 
         return $this;
     }
@@ -166,12 +170,15 @@ class DbDef implements \JsonSerializable {
     /**
      * Set the name of the table.
      *
-     * @param strin $name The name of the table.
-     * @return DbDef Returns $this for fluent calls.
+     * @param string|null $name The name of the table.
+     * @return DbDef|string Returns $this for fluent calls.
      */
-    public function table($name) {
-        $this->table = $name;
-        return $this;
+    public function table($name = null) {
+        if ($name !== null) {
+            $this->table = $name;
+            return $this;
+        }
+        return $this->table;
     }
 
     /**

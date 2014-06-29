@@ -638,12 +638,12 @@ class MySqlDb extends Db {
         if (val(Db::INSERT_REPLACE, $options)) {
             $sql = 'replace ';
         } else {
-            $sql = 'insert '.val(Db::INSERT_IGNORE, $options) ? 'ignore ' : '';
+            $sql = 'insert '.(val(Db::INSERT_IGNORE, $options) ? 'ignore ' : '');
         }
 
         $sql .= "`{$this->px}$table`\n";
 
-        $sql .= bracketList($columns, '`')."\n".
+        $sql .= $this->bracketList($columns, '`')."\n".
             "values\n";
 
         $first = true;
