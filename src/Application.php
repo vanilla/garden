@@ -200,8 +200,8 @@ class Application {
     protected function finalize($result) {
         $response = Response::create($result);
         $response->meta(['request' => $this->request], true);
-        $response->contentTypeFromAccept($this->request->env('HTTP_ACCEPT'));
-        $response->contentAsset($this->request->env('HTTP_X_ASSET'));
+        $response->contentTypeFromAccept($this->request->getEnv('HTTP_ACCEPT'));
+        $response->contentAsset($this->request->getEnv('HTTP_X_ASSET'));
 
         $contentType = $response->contentType();
 

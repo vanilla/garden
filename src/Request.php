@@ -75,23 +75,21 @@ class Request implements JsonSerializable {
         if ($url) {
             $this->env = (array)static::defaultEnvironment();
             // Instantiate the request from the url.
-            $this->url($url);
+            $this->setUrl($url);
             if ($method) {
-                $this->method($method);
+                $this->setMethod($method);
             }
-            if ($this->hasInput($method)) {
-                $this->input($data);
-            } else {
-                $this->query($data);
+            if (is_array($data)) {
+                $this->setData($data);
             }
         } else {
             // Instantiate the request from the global environment.
             $this->env = static::globalEnvironment();
             if ($method) {
-                $this->method($method);
+                $this->setMethod($method);
             }
-            if ($data) {
-                $this->data($data);
+            if (is_array($data)) {
+                $this->setData($data);
             }
         }
 
@@ -104,7 +102,7 @@ class Request implements JsonSerializable {
      * @return string Returns the url of the request.
      */
     public function __toString() {
-        return $this->url();
+        return $this->getUrl();
     }
 
     /**
@@ -331,22 +329,38 @@ class Request implements JsonSerializable {
     }
 
     /**
-     * Gets a value from the environment.
+     * Get a value from the environment or the entire environment.
      *
-     * @param string $key The key to inspect.
-     * @return mixed The environment value.
+     * @param string|null $key The key to get or null to get the entire environment.
+     * @param mixed $default The default value if {@link $key} is not found.
+     * @return mixed|array Returns the value at {@link $key}, {$link $default} or the entire environment array.
+     * @see Request::setEnv()
      */
-    public function env($key) {
-        if (is_array($key)) {
-            $this->env = $key;
-            return $this;
-        } elseif (is_string($key)) {
-            $key = strtoupper($key);
-            if (isset($this->env[$key])) {
-                return $this->env[$key];
-            }
+    public function getEnv($key = null, $default = null) {
+        if ($key === null) {
+            return $this->env;
         }
-        return null;
+        return val(strtoupper($key), $this->env, $default);
+    }
+
+    /**
+     * Set a value from the environment or the entire environment.
+     *
+     * @param string|array $key The key to set or an array to set the entire environment.
+     * @param mixed $value The value to set.
+     * @return Request Returns $this for fluent calls.
+     * @throws \InvalidArgumentException Throws an exception when {@link $key} is invalid.
+     * @see Request::getEnv()
+     */
+    public function setEnv($key, $value = null) {
+        if (is_string($key)) {
+            $this->env[strtoupper($key)] = $value;
+        } elseif (is_array($key)) {
+            $this->env = $key;
+        } else {
+            throw new \InvalidArgumentException("Argument 1 must be either a string or array.", 422);
+        }
+        return $this;
     }
 
     /**
@@ -411,43 +425,38 @@ class Request implements JsonSerializable {
     }
 
     /**
-     * An alias of {@link query}. Get an item from the query.
+     * Get the hostname of the request.
      *
-     * @param string|null $key The key to get or null to get the entire array.
-     * @param string|null $default The default value if getting a particular {@link $key}.
-     * @return string|array Gets the value at {@link $key} or the entire array.
+     * @return string Returns the host.
      */
-    public function get($key = null, $default = null) {
-        return $this->query($key, $default);
+    public function getHost() {
+        return (string)$this->env['SERVER_NAME'];
     }
 
     /**
-     * Get or set the host (server) name.
+     * Set the hostname of the request.
      *
-     * @param string|null $host Set a new host or pass null to get the current host.
-     * @return string|Request Returns the current host or $this for fluent calls.
+     * @param string $host The hostname.
+     * @return Request Returns $this for fluent calls.
      */
-    public function host($host = null) {
-        if ($host !== null) {
-            $this->env['SERVER_NAME'] = $host;
-            return $this;
-        }
-        return $this->env['SERVER_NAME'];
+    public function setHost($host) {
+        $this->env['SERVER_NAME'] = $host;
+        return $this;
     }
 
     /**
      * Get the host and port, but only if the port is not the standard port for the request scheme.
      *
      * @return string Returns the host and port or just the host if this is the standard port.
-     * @see Request::host()
-     * @see Request::port()
+     * @see Request::getHost()
+     * @see Request::getPort()
      */
-    public function hostAndPort() {
-        $host = $this->host();
-        $port = $this->port();
+    public function getHostAndPort() {
+        $host = $this->getHost();
+        $port = $this->getPort();
 
         // Only append the port if it is non-standard.
-        if (($port == 80 && $this->scheme() === 'http') || ($port == 443 && $this->scheme() === 'https')) {
+        if (($port == 80 && $this->getScheme() === 'http') || ($port == 443 && $this->getScheme() === 'https')) {
             $port = '';
         } else {
             $port = ':'.$port;
@@ -458,15 +467,21 @@ class Request implements JsonSerializable {
     /**
      * Get the ip address of the request.
      *
-     * @param string|null $ip Pass a new ip address.
-     * @return string|Request Returns the current ip address or $this for fluent sets.
+     * @return string Returns the current ip address.
      */
-    public function ip($ip = null) {
-        if ($ip !== null) {
-            $this->env['REMOTE_ADDR'] = $ip;
-            return $this;
-        }
-        return $this->env['REMOTE_ADDR'];
+    public function getIP() {
+        return (string)$this->env['REMOTE_ADDR'];
+    }
+
+    /**
+     * Set the ip address of the request.
+     *
+     * @param string $ip The new ip address.
+     * @return Request Returns $this for fluent calls.
+     */
+    public function setIP($ip) {
+        $this->env['REMOTE_ADDR'] = $ip;
+        return $this;
     }
 
     /**
@@ -475,7 +490,7 @@ class Request implements JsonSerializable {
      * @return bool Returns true if this is a DELETE request, false otherwise.
      */
     public function isDelete() {
-        return $this->method() === self::METHOD_DELETE;
+        return $this->getMethod() === self::METHOD_DELETE;
     }
 
     /**
@@ -484,7 +499,7 @@ class Request implements JsonSerializable {
      * @return bool Returns true if this is a GET request, false otherwise.
      */
     public function isGet() {
-        return $this->method() === self::METHOD_GET;
+        return $this->getMethod() === self::METHOD_GET;
     }
 
     /**
@@ -493,7 +508,7 @@ class Request implements JsonSerializable {
      * @return bool Returns true if this is a HEAD request, false otherwise.
      */
     public function isHead() {
-        return $this->method() === self::METHOD_HEAD;
+        return $this->getMethod() === self::METHOD_HEAD;
     }
 
     /**
@@ -502,7 +517,7 @@ class Request implements JsonSerializable {
      * @return bool Returns true if this is an OPTIONS request, false otherwise.
      */
     public function isOptions() {
-        return $this->method() === self::METHOD_OPTIONS;
+        return $this->getMethod() === self::METHOD_OPTIONS;
     }
 
     /**
@@ -511,7 +526,7 @@ class Request implements JsonSerializable {
      * @return bool Returns true if this is a PATCH request, false otherwise.
      */
     public function isPatch() {
-        return $this->method() === self::METHOD_PATCH;
+        return $this->getMethod() === self::METHOD_PATCH;
     }
 
     /**
@@ -520,7 +535,7 @@ class Request implements JsonSerializable {
      * @return bool Returns true if this is a POST request, false otherwise.
      */
     public function isPost() {
-        return $this->method() === self::METHOD_POST;
+        return $this->getMethod() === self::METHOD_POST;
     }
 
     /**
@@ -529,176 +544,239 @@ class Request implements JsonSerializable {
      * @return bool Returns true if this is a PUT request, false otherwise.
      */
     public function isPut() {
-        return $this->method() === self::METHOD_PUT;
+        return $this->getMethod() === self::METHOD_PUT;
     }
 
     /**
-     * Gets or sets the request method.
+     * Get the http method of the request.
      *
-     * @param string|null $method Pass a new request method or null to get the current method.
-     * @return Request|string Returns the current request method or $this for fluent sets.
+     * @return string Returns the http method of the request.
      */
-    public function method($method = null) {
-        if ($method !== null) {
-            $this->env['REQUEST_METHOD'] = strtoupper($method);
-            return $this;
-        }
-        return $this->env['REQUEST_METHOD'];
+    public function getMethod() {
+        return (string)$this->env['REQUEST_METHOD'];
     }
 
     /**
-     * Gets or sets the request path.
+     * Set the http method of the request.
      *
-     * Not that this returns the path without the file extension.
-     * If you want the full path use {@link Request::fullPath()}.
-     *
-     * @param string|null $path Pass a new path or null to get the curren path.
-     * @return Request|string Returns the current path or $this for fluent sets.
+     * @param string $method The new request method.
+     * @return Request Returns $this for fluent calls.
      */
-    public function path($path = null) {
-        if ($path !== null) {
-            $this->env['PATH_INFO'] = (string)$path;
-            return $this;
-        }
-
-        return $this->env['PATH_INFO'];
+    public function setMethod($method) {
+        $this->env['REQUEST_METHOD'] = strtoupper($method);
+        return $this;
     }
 
     /**
-     * Gets or sets the file extension.
+     * Gets the request path.
      *
-     * @param string|null $ext Pass a new extension or null to get the current extension.
-     * @return Request|string Returns the current extension or $this for fluent sets.
+     * Note that this returns the path without the file extension.
+     * If you want the full path use {@link Request::getFullPath()}.
+     *
+     * @return string Returns the request path.
      */
-    public function ext($ext = null) {
-        if ($ext !== null) {
-            if ($ext) {
-                $this->env['EXT'] = '.'.ltrim($ext, '.');
-            } else {
-                $this->env['EXT'] = '';
-            }
-            return $this;
-        }
-
-        return $this->env['EXT'];
+    public function getPath() {
+        return (string)$this->env['PATH_INFO'];
     }
 
     /**
-     * Gets or sets the path + extension.
+     * Sets the request path.
      *
-     * @param string|null $path Pass a new full path or null to get the current full path.
-     * @return Request|string Returns the current full path or $this for fluent sets.
+     * @param string $path The path to set.
+     * @return Request Returns $this for fluent calls.
      */
-    public function fullPath($path = null) {
-        if ($path !== null) {
-            // Strip the extension from the path.
-            if (substr($path, -1) !== '/' && ($pos = strrpos($path, '.')) !== false) {
-                $ext = substr($path, $pos);
-                $path = substr($path, 0, $pos);
-                $this->env['EXT'] = $ext;
-            } else {
-                $this->env['EXT'] = '';
-            }
-            $this->env['PATH_INFO'] = $path;
-            return $this;
-        }
+    public function setPath($path) {
+        $this->env['PATH_INFO'] = (string)$path;
+        return $this;
+    }
 
+    /**
+     * Get the file extension of the request.
+     *
+     * @return string Returns the file extension.
+     */
+    public function getExt() {
+        return (string)$this->env['EXT'];
+    }
+
+    /**
+     * Sets the file extension of the request.
+     *
+     * @param string $ext The file extension to set.
+     * @return Request Returns $this for fluent calls.
+     */
+    public function setExt($ext) {
+        if ($ext) {
+            $this->env['EXT'] = '.'.ltrim($ext, '.');
+        } else {
+            $this->env['EXT'] = '';
+        }
+        return $this;
+    }
+
+    /**
+     * Get the path and file extenstion.
+     *
+     * @return string Returns the path and file extension.
+     */
+    public function getFullPath() {
         return $this->env['PATH_INFO'].$this->env['EXT'];
     }
 
     /**
-     * Gets or sets the port of the request.
+     * Set the path with file extension.
      *
-     * @param int|null $port Pass a new port or null to get the current port.
-     * @return Request|int Returns the current port or $this for fluent sets.
+     * @param string $path The path to set.
+     * @return Request Returns $this for fluent calls.
      */
-    public function port($port = null) {
-        if ($port !== null) {
-            $this->env['SERVER_PORT'] = $port;
-
-            // Override the scheme for standard ports.
-            if ($port === 80) {
-                $this->scheme('http');
-            } elseif ($port === 443) {
-                $this->scheme('https');
-            }
-
-            return $this;
+    public function setFullPath($path) {
+        // Strip the extension from the path.
+        if (substr($path, -1) !== '/' && ($pos = strrpos($path, '.')) !== false) {
+            $ext = substr($path, $pos);
+            $path = substr($path, 0, $pos);
+            $this->env['EXT'] = $ext;
+        } else {
+            $this->env['EXT'] = '';
         }
-        return $this->env['SERVER_PORT'];
+        $this->env['PATH_INFO'] = $path;
+        return $this;
     }
 
     /**
-     * Get an item from the query or the entire query array.
+     * Gets the port.
      *
-     * @param string|array|null $key The key to get or null to get the entire array.
-     * @param string|null $default The default value if getting a particular {@link $key}.
-     * @return string|array Gets the value at {@link $key} or the entire array.
-     * @throws \InvalidArgumentException Throws an exception when {@link $key} is not the correct type.
+     * @return int Returns the port.
      */
-    public function query($key = null, $default = null) {
+    public function getPort() {
+        return (int)$this->env['SERVER_PORT'];
+    }
+
+    /**
+     * Sets the port.
+     *
+     * Setting the port to 80 or 443 will also set the scheme to http or https respectively.
+     *
+     * @param int $port The port to set.
+     * @return Request Returns $this for fluent calls.
+     */
+    public function setPort($port) {
+        $this->env['SERVER_PORT'] = $port;
+
+        // Override the scheme for standard ports.
+        if ($port === 80) {
+            $this->setScheme('http');
+        } elseif ($port === 443) {
+            $this->setScheme('https');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get an item from the query string array.
+     *
+     * @param string|null $key Either a string key or null to get the entire array.
+     * @param mixed|null $default The default to return if {@link $key} is not found.
+     * @return string|array|null Returns the query string value or the query string itself.
+     * @see Request::setQuery()
+     */
+    public function getQuery($key = null, $default = null) {
         if ($key === null) {
             return $this->env['QUERY'];
         }
-        if (is_string($key)) {
-            return isset($this->env['QUERY'][$key]) ? $this->env['QUERY'][$key] : $default;
-        }
-        if (is_array($key)) {
-            $this->env['QUERY'] = $key;
-            return $this;
-        }
-        throw new \InvalidArgumentException("Argument #1 must be one of null, string, array.", 500);
+        return isset($this->env['QUERY'][$key]) ? $this->env['QUERY'][$key] : $default;
     }
 
     /**
-     * Gets or sets the current request input.
+     * Set an item from the query string array.
      *
-     * This method can get/set the entire input or indvidual keys from it.
-     * The input will usually refer to the {@link $_POST} array.
-     *
-     * @param string|array|null $key Pass one of the following to the {@link $key} parameter.
-     * - string: A sting will get an indivdual key of the input array.
-     * - array: An array will set the entire input array.
-     * - null: Calling the function without any args will return the entire input array.
-     * @param mixed|null $default The default value to return if {@link $key} is not found.
-     * @return Requst|mixed Returns the value at {@link $key}, {@link $default} or $this for fluent sets.
-     * @throws \InvalidArgumentException Throws an exception when {@link $key} is not the correct type.
+     * @param string|array $key Either a string key or an array to set the entire query string.
+     * @param mixed|null $value The value to set.
+     * @return Request Returns $this for fluent call.
+     * @throws \InvalidArgumentException Throws an exception when {@link $key is invalid}.
+     * @see Request::getQuery()
      */
-    public function input($key = null, $default = null) {
+    public function setQuery($key, $value = null) {
+        if (is_string($key)) {
+            $this->env['QUERY'][$key] = $value;
+        } elseif (is_array($key)) {
+            $this->env['QUERY'] = $key;
+        } else {
+            throw new \InvalidArgumentException("Argument 1 must be a string or array.", 422);
+        }
+        return $this;
+    }
+
+    /**
+     * Get an item from the input array.
+     *
+     * @param string|null $key Either a string key or null to get the entire array.
+     * @param mixed|null $default The default to return if {@link $key} is not found.
+     * @return string|array|null Returns the query string value or the input array itself.
+     */
+    public function getInput($key = null, $default = null) {
         if ($key === null) {
             return $this->env['INPUT'];
         }
+        return isset($this->env['INPUT'][$key]) ? $this->env['INPUT'][$key] : $default;
+    }
+
+    /**
+     * Set an item from the input array.
+     *
+     * @param string|array $key Either a string key or an array to set the entire input.
+     * @param mixed|null $value The value to set.
+     * @return Request Returns $this for fluent call.
+     * @throws \InvalidArgumentException Throws an exception when {@link $key is invalid}.
+     */
+    public function setInput($key, $value = null) {
         if (is_string($key)) {
-            return isset($this->env['INPUT'][$key]) ? $this->env['INPUT'][$key] : $default;
-        }
-        if (is_array($key)) {
+            $this->env['INPUT'][$key] = $value;
+        } elseif (is_array($key)) {
             $this->env['INPUT'] = $key;
-            return $this;
+        } else {
+            throw new \InvalidArgumentException("Argument 1 must be a string or array.", 422);
         }
-        throw new \InvalidArgumentException("Argument #1 must be one of null, string, array.", 500);
+        return $this;
     }
 
     /**
      * Gets the query on input depending on the http method.
      *
-     * @param array|null $data The new data array.
-     * @return array Returns the data.
+     * @param string|null $key Either a string key or null to get the entire array.
+     * @param mixed|null $default The default to return if {@link $key} is not found.
+     * @return mixed|array Returns the value at {@link $key} or the entire array.
+     * @see Request::setData()
+     * @see Request::getInput()
+     * @see Request::getQuery()
+     * @see Request::hasInput()
      */
-    public function data($data = null) {
-        if ($data === null) {
-            if ($this->hasInput()) {
-                return $this->env['INPUT'];
-            } else {
-                return $this->env['QUERY'];
-            }
+    public function getData($key = null, $default = null) {
+        if ($this->hasInput()) {
+            return $this->getInput($key, $default);
         } else {
-            if ($this->hasInput()) {
-                $this->env['INPUT'] = $data;
-            } else {
-                $this->env['QUERY'] = $data;
-            }
-            return $this;
+            return $this->getQuery($key, $default);
         }
+    }
+
+    /**
+     * Sets the query on input depending on the http method.
+     *
+     * @param string|array $key Either a string key or an array to set the entire data.
+     * @param mixed|null $value The value to set.
+     * @return Request Returns $this for fluent call.
+     * @see Request::getData()
+     * @see Request::setInput()
+     * @see Request::setQuery()
+     * @see Request::hasInput()
+     */
+    public function setData($key, $value = null) {
+        if ($this->hasInput()) {
+            $this->setInput($key, $value);
+        } else {
+            $this->setQuery($key, $value);
+        }
+        return $this;
     }
 
     /**
@@ -709,7 +787,7 @@ class Request implements JsonSerializable {
      */
     public function hasInput($method = '') {
         if (!$method) {
-            $method = (string)$this->method();
+            $method = $this->getMethod();
         }
 
         switch (strtoupper($method)) {
@@ -723,96 +801,130 @@ class Request implements JsonSerializable {
     }
 
     /**
-     * Get or set the root directory of the request.
+     * Get the root directory (SCRIPT_NAME) of the request.
      *
-     * @param string|null $value Pass a new root or null to get the current root.
-     * @return Request|string Returns the current route or $this for fluent sets.
+     * @return Returns the root directory of the request as a string.
+     * @see Request::setRoot()
      */
-    public function root($value = null) {
-        if ($value !== null) {
-            $value = trim($value, '/');
-            if ($value) {
-                $value = '/'.$value;
-            }
-            $this->env['SCRIPT_NAME'] = $value;
-            return $this;
-        }
-        return $this->env['SCRIPT_NAME'];
+    public function getRoot() {
+        return (string)$this->env['SCRIPT_NAME'];
     }
 
     /**
-     * Gets or sets the url scheme (ex. http or https).
+     * Set the root directory (SCRIPT_NAME) of the request.
      *
-     * @param string|null $value Pass a new scheme or null to get the current scheme.
-     * @return Request|null Returns the current scheme or $this for fluent sets.
+     * This method will modify the set root to include a leading slash if it does not have one.
+     * A root of just "/" will be coerced to an empty string.
+     *
+     * @param string $root The new root directory.
+     * @return Request Returns $this for fluent calls.
+     * @see Request::getRoot()
      */
-    public function scheme($value = null) {
-        if ($value !== null) {
-            $this->env['URL_SCHEME'] = $value;
-            return $this;
+    public function setRoot($root) {
+        $value = trim($root, '/');
+        if ($value) {
+            $value = '/'.$value;
         }
-        return $this->env['URL_SCHEME'];
+        $this->env['SCRIPT_NAME'] = $value;
+        return $this;
     }
 
     /**
-     * Gets or sets the entire url.
+     * Get the request scheme.
      *
-     * When you use this method to set the url it will be parsed and split into its component parts.
+     * The request scheme is usually http or https.
      *
-     * @param string|null $url Pass a new url or null to get the current url.
-     * @return string
+     * @return string Retuns the scheme.
+     * @see Request::setScheme()
      */
-    public function url($url = null) {
-        if ($url !== null) {
-            // Parse the url and set the individual components.
-            $url_parts = parse_url($url);
+    public function getScheme() {
+        return (string)$this->env['URL_SCHEME'];
+    }
 
-            if (isset($url_parts['scheme'])) {
-                $this->scheme($url_parts['scheme']);
-            }
+    /**
+     * Set the request scheme.
+     *
+     * The request scheme is usually http or https.
+     *
+     * @param string $scheme The new scheme to set.
+     * @return Request Returns $this for fluent calls.
+     * @see Request::getScheme()
+     */
+    public function setScheme($scheme) {
+        $this->env['URL_SCHEME'] = $scheme;
+        return $this;
+    }
 
-            if (isset($url_parts['host'])) {
-                $this->host($url_parts['host']);
-            }
+    /**
+     * Get the full url of the request.
+     *
+     * @return string Returns the full url of the request.
+     * @see Request::setUrl()
+     */
+    public function getUrl() {
+        $query = $this->getQuery();
+        return
+            $this->getScheme().
+            '://'.
+            $this->getHostAndPort().
+            $this->getRoot().
+            $this->getPath().
+            (!empty($query) ? '?'.http_build_query($query) : '');
+    }
 
-            if (isset($url_parts['port'])) {
-                $this->port($url_parts['port']);
-            } elseif (isset($url_parts['scheme'])) {
-                $this->port($this->scheme() === 'https' ? 443 : 80);
-            }
+    /**
+     * Set the full url of the request.
+     *
+     * @param string $url The new url.
+     * @return Request $this Returns $this for fluent calls.
+     * @see Request::getUrl()
+     */
+    public function setUrl($url) {
+        // Parse the url and set the individual components.
+        $url_parts = parse_url($url);
 
-            if (isset($url_parts['path'])) {
-                $path = $url_parts['path'];
+        if (isset($url_parts['scheme'])) {
+            $this->setScheme($url_parts['scheme']);
+        }
 
-                // Try stripping the root out of the path first.
-                $root = (string)$this->root();
+        if (isset($url_parts['host'])) {
+            $this->setHost($url_parts['host']);
+        }
 
-                if ($root && strpos($path, $root) === 0) {
-                    $path = substr($path, strlen($root));
+        if (isset($url_parts['port'])) {
+            $this->setPort($url_parts['port']);
+        } elseif (isset($url_parts['scheme'])) {
+            $this->setPort($this->getScheme() === 'https' ? 443 : 80);
+        }
 
-                    if (!$path || substr($path, 0, 1) === '/') {
-                        $this->root($root);
-                        $this->fullPath($path);
-                    } else {
-                        // The root was part of the path, but wasn't a directory.
-                        $this->root('');
-                        $this->fullPath($root.$path);
-                    }
+        if (isset($url_parts['path'])) {
+            $path = $url_parts['path'];
+
+            // Try stripping the root out of the path first.
+            $root = (string)$this->getRoot();
+
+            if ($root && strpos($path, $root) === 0) {
+                $path = substr($path, strlen($root));
+
+                if (!$path || substr($path, 0, 1) === '/') {
+                    $this->setRoot($root);
+                    $this->setFullPath($path);
                 } else {
-                    $this->root('');
-                    $this->fullPath($path);
+                    // The root was part of the path, but wasn't a directory.
+                    $this->setRoot('');
+                    $this->setFullPath($root.$path);
                 }
+            } else {
+                $this->setRoot('');
+                $this->setFullPath($path);
             }
-
-            if (isset($url_parts['query'])) {
-                parse_str($url_parts['query'], $query);
-                $this->query($query);
-            }
-            return $this;
-        } else {
-            $query = $this->query();
-            return $this->scheme().'://'.$this->hostAndPort().$this->root().$this->path().(!empty($query) ? '?'.http_build_query($query) : '');
         }
+
+        if (isset($url_parts['query'])) {
+            parse_str($url_parts['query'], $query);
+            $this->setQuery($query);
+        }
+        return $this;
     }
 
     /**
@@ -829,19 +941,23 @@ class Request implements JsonSerializable {
      * @return string Returns the url.
      */
     public function makeUrl($path, $domain = false) {
+        if (!$path) {
+            $path = $this->getPath();
+        }
+
         // Check for a specific scheme.
-        $scheme = $this->scheme();
+        $scheme = $this->getScheme();
         if ($domain === 'http' || $domain === 'https') {
             $scheme = $domain;
             $domain = true;
         }
 
         if ($domain === true) {
-            $prefix = $scheme.'://'.$this->hostAndPort().$this->root();
+            $prefix = $scheme.'://'.$this->getHostAndPort().$this->getRoot();
         } elseif ($domain === false) {
-            $prefix = $this->root();
+            $prefix = $this->getRoot();
         } elseif ($domain === '//') {
-            $prefix = '//'.$this->hostAndPort().$this->root();
+            $prefix = '//'.$this->getHostAndPort().$this->getRoot();
         } else {
             $prefix = '';
         }

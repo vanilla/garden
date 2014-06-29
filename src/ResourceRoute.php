@@ -301,7 +301,7 @@ class ResourceRoute extends Route {
             return null;
         }
 
-        $path = (string)$request->path();
+        $path = (string)$request->getPath();
 
         // If this route is off of a root then check that first.
         if ($root = $this->pattern()) {
@@ -342,10 +342,10 @@ class ResourceRoute extends Route {
 
         $result = array(
             'controller' => $classname,
-            'method' => $request->method(),
+            'method' => $request->getMethod(),
             'path' => $path,
             'pathArgs' => $pathParts,
-            'query' => $request->query()
+            'query' => $request->getQuery()
         );
         return $result;
     }

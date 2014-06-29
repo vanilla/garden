@@ -195,23 +195,13 @@ abstract class Route {
 
         switch (strtolower($mapping)) {
             case self::MAP_DATA:
-                switch ($request->method()) {
-                    case Request::METHOD_GET:
-                    case Request::METHOD_DELETE:
-                    case Request::METHOD_HEAD:
-                    case Request::METHOD_OPTIONS:
-                        $result = $request->query();
-                        break;
-                    default:
-                        $result = $request->input();
-                        break;
-                }
+                $result = $request->getData();
                 break;
             case self::MAP_INPUT:
-                $result = $request->input();
+                $result = $request->getInput();
                 break;
             case self::MAP_QUERY:
-                $result = $request->query();
+                $result = $request->getQuery();
                 break;
             default:
                 return null;
@@ -256,7 +246,7 @@ abstract class Route {
         if (empty($this->methods)) {
             return true;
         }
-        return in_array($request->method(), $this->methods);
+        return in_array($request->getMethod(), $this->methods);
     }
 
     /**

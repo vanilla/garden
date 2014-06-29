@@ -91,10 +91,10 @@ class TypeFunctionsTest extends \PHPUnit_Framework_TestCase {
     public function testReflectArgsObject() {
         $r = new Request('http://localhost/foo.txt?foo=bar', 'GET');
 
-        $callback = [$r, 'get'];
+        $callback = [$r, 'getQuery'];
         $args = ['KEY' => 'foo', 'default' => 123];
-        $expected = $r->get($args['KEY'], $args['default']);
-        $actual = call_user_func_array([$r, 'get'], reflect_args([$r, 'get'], $args));
+        $expected = $r->getQuery($args['KEY'], $args['default']);
+        $actual = call_user_func_array($callback, reflect_args($callback, $args));
         $this->assertEquals($expected, $actual);
 
         // Test a static method.

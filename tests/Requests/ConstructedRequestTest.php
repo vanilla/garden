@@ -23,13 +23,15 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
     public function testBasicMethods($methodName) {
         $request = new Request();
 
+        $getter = 'get'.ucfirst($methodName);
+        $setter = 'set'.ucfirst($methodName);
         $value = 'foo';
 
-        $setResult = $request->$methodName($value);
+        $setResult = $request->$setter($value);
         $this->assertInstanceOf('\Garden\Request', $setResult);
         $this->assertEquals($request, $setResult);
 
-        $getResult = $request->$methodName();
+        $getResult = (string)$request->$getter();
         $this->assertRegExp("`$value`i", $getResult);
     }
 
@@ -59,14 +61,14 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
 
         $r = new Request('/', 'GET');
 
-        $r->url($url);
-        $this->assertEquals('http', $r->scheme());
-        $this->assertEquals('foo.bar', $r->host());
-        $this->assertEquals('8080', $r->port());
-        $this->assertEquals('/this/path', $r->path());
-        $this->assertEquals('123', $r->get('q'));
+        $r->setUrl($url);
+        $this->assertEquals('http', $r->getScheme());
+        $this->assertEquals('foo.bar', $r->getHost());
+        $this->assertEquals('8080', $r->getPort());
+        $this->assertEquals('/this/path', $r->getPath());
+        $this->assertEquals('123', $r->getQuery('q'));
 
-        $this->assertEquals($url, $r->url());
+        $this->assertEquals($url, $r->getUrl());
     }
 
     /**
@@ -76,27 +78,27 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         $r = new Request('/', 'GET');
 
         $withExt = '/foo/bar.txt';
-        $r->fullPath($withExt);
-        $this->assertEquals('/foo/bar', $r->path());
-        $this->assertEquals('.txt', $r->ext());
+        $r->setFullPath($withExt);
+        $this->assertEquals('/foo/bar', $r->getPath());
+        $this->assertEquals('.txt', $r->getExt());
 
         $withoutExt = '/foo/bar';
-        $r->fullPath($withoutExt);
-        $this->assertEquals('/foo/bar', $r->path());
-        $this->assertEquals('', $r->ext());
+        $r->setFullPath($withoutExt);
+        $this->assertEquals('/foo/bar', $r->getPath());
+        $this->assertEquals('', $r->getExt());
 
         $doubleDot = '/foo.bar.txt';
-        $r->fullPath($doubleDot);
-        $this->assertEquals('/foo.bar', $r->path());
-        $this->assertEquals('.txt', $r->ext());
+        $r->setFullPath($doubleDot);
+        $this->assertEquals('/foo.bar', $r->getPath());
+        $this->assertEquals('.txt', $r->getExt());
 
-        $r->ext('');
-        $this->assertEquals('/foo.bar', $r->fullPath());
+        $r->setExt('');
+        $this->assertEquals('/foo.bar', $r->getFullPath());
 
         $r2 = new Request('http://localhost.com/foo.json?bar=baz');
-        $this->assertEquals('.json', $r2->ext());
-        $this->assertEquals('/foo', $r2->path());
-        $this->assertEquals(['bar' => 'baz'], $r2->query());
+        $this->assertEquals('.json', $r2->getExt());
+        $this->assertEquals('/foo', $r2->getPath());
+        $this->assertEquals(['bar' => 'baz'], $r2->getQuery());
     }
 
     /**
@@ -104,16 +106,16 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
      */
     public function testData() {
         $r = new Request('/', 'GET', ['foo' => 'bar']);
-        $this->assertEquals($r->get(), $r->data());
+        $this->assertEquals($r->getQuery(), $r->getData());
 
         $data = ['baz' => 123];
-        $r->data($data);
-        $this->assertEquals($data, $r->get());
+        $r->setData($data);
+        $this->assertEquals($data, $r->getQuery());
 
         $r2 = new Request('/', 'POST', ['foo' => 'bar']);
-        $this->assertEquals($r2->input(), $r2->data());
-        $r2->data($data);
-        $this->assertEquals($data, $r2->input());
+        $this->assertEquals($r2->getInput(), $r2->getData());
+        $r2->setData($data);
+        $this->assertEquals($data, $r2->getInput());
     }
 
     /**
@@ -123,25 +125,25 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         $r = new Request('http://foo.bar/moop', 'GET');
         $expected = 'http://foo.bar/vanilla/moop';
 
-        $r->root('vanilla');
+        $r->setRoot('vanilla');
         $this->assertEquals($expected, (string)$r);
 
-        $r->root('/vanilla');
+        $r->setRoot('/vanilla');
         $this->assertEquals($expected, (string)$r);
 
-        $r->root('/vanilla/');
+        $r->setRoot('/vanilla/');
         $this->assertEquals($expected, (string)$r);
 
         // Test setting a different url with the same root.
-        $r->url('http://foo.bar/vanilla/foo');
-        $this->assertEquals('/foo', $r->path());
+        $r->setUrl('http://foo.bar/vanilla/foo');
+        $this->assertEquals('/foo', $r->getPath());
 
-        $r->url('http://foo.bar/vanilla');
-        $this->assertEquals('/vanilla', $r->root());
-        $this->assertEquals('', $r->path());
+        $r->setUrl('http://foo.bar/vanilla');
+        $this->assertEquals('/vanilla', $r->getRoot());
+        $this->assertEquals('', $r->getPath());
 
-        $r->url('http://foo.bar/vanillamilla');
-        $this->assertEquals('', $r->root());
+        $r->setUrl('http://foo.bar/vanillamilla');
+        $this->assertEquals('', $r->getRoot());
     }
 
     /**
@@ -165,12 +167,12 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         $url = $r->makeUrl('/foo', 'http');
         $this->assertEquals('http://google.com:8080/foo', $url);
 
-        $r->scheme('http');
+        $r->setScheme('http');
         $url = $r->makeUrl('/foo', 'https');
         $this->assertEquals('https://google.com:8080/foo', $url);
 
         // Start some tests with a different root.
-        $r->root('v1');
+        $r->setRoot('v1');
         $url = $r->makeUrl('/foo', true);
         $this->assertEquals('http://google.com:8080/v1/foo', $url);
 
@@ -183,11 +185,11 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         $url = $r->makeUrl('/foo', '/');
         $this->assertEquals('/foo', $url);
 
-        $r->scheme('https');
+        $r->setScheme('https');
         $url = $r->makeUrl('/foo', 'http');
         $this->assertEquals('http://google.com:8080/v1/foo', $url);
 
-        $r->scheme('http');
+        $r->setScheme('http');
         $url = $r->makeUrl('/foo', 'https');
         $this->assertEquals('https://google.com:8080/v1/foo', $url);
     }
@@ -199,18 +201,18 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         $r = new Request('http://localhost/foo.txt');
 
         $input = ['foo' => 'bar'];
-        $r->input($input);
-        $this->assertEquals($input, $r->input());
-        $this->assertEquals('bar', $r->input('foo'));
-        $this->assertEquals('baz', $r->input('hello', 'baz'));
+        $r->setInput($input);
+        $this->assertEquals($input, $r->getInput());
+        $this->assertEquals('bar', $r->getInput('foo'));
+        $this->assertEquals('baz', $r->getInput('hello', 'baz'));
 
         $r = new Request('http://localhost/foo.txt');
 
         $query = ['foo' => 'bar'];
-        $r->input($query);
-        $this->assertEquals($query, $r->input());
-        $this->assertEquals('bar', $r->input('foo'));
-        $this->assertEquals('baz', $r->input('hello', 'baz'));
+        $r->setInput($query);
+        $this->assertEquals($query, $r->getInput());
+        $this->assertEquals('bar', $r->getInput('foo'));
+        $this->assertEquals('baz', $r->getInput('hello', 'baz'));
     }
 
     /**
@@ -220,7 +222,7 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
      */
     public function testBadInput() {
         $r = new Request('http://localhost/foo.txt');
-        $foo = $r->input(true);
+        $foo = $r->setInput(true);
     }
 
     /**
@@ -230,15 +232,18 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
      */
     public function testBadQuery() {
         $r = new Request('http://localhost/foo.txt');
-        $foo = $r->query(true);
+        $foo = $r->setQuery(true);
     }
 
+    /**
+     * Test that a request constructed from json serialized data is the same as its json serialize output.
+     */
     public function testJsonSerialize() {
         $r = new Request('http://localhost/foo.json?help=1', 'post', ['foo' => 'bar']);
         $json = $r->jsonSerialize();
 
         $r2 = new Request('http://foo.com');
-        $r2->env($json);
+        $r2->setEnv($json);
 
         $this->assertEquals($json, $r2->jsonSerialize());
     }
@@ -252,7 +257,6 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         $result = [
             'method',
             'host',
-            'port',
             'ip',
             'path',
             'fullPath',
@@ -272,11 +276,11 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
     public function testPorts() {
         $r = new Request('http://localhost/foo.txt');
 
-        $r->port(443);
-        $this->assertEquals('https', $r->scheme());
+        $r->setPort(443);
+        $this->assertEquals('https', $r->getScheme());
 
-        $r->port(80);
-        $this->assertEquals('http', $r->scheme());
+        $r->setPort(80);
+        $this->assertEquals('http', $r->getScheme());
     }
 
     /**
@@ -289,21 +293,21 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         // Test on a get request.
         $r = new Request('http://localhost.com?x-method='.strtolower($method), 'GET');
         if (in_array($method, ['GET', 'HEAD', 'OPTIONS'])) {
-            $this->assertEquals($method, $r->method());
+            $this->assertEquals($method, $r->getMethod());
         } else {
-            $this->assertEquals(Request::METHOD_GET, $r->method());
-            $this->assertTrue($r->env('X_METHOD_BLOCKED'));
+            $this->assertEquals(Request::METHOD_GET, $r->getMethod());
+            $this->assertTrue($r->getEnv('X_METHOD_BLOCKED'));
         }
-        $this->assertNull($r->query('x-method'));
+        $this->assertNull($r->getQuery('x-method'));
 
         // The post method can be made into anything.
         $r2 = new Request('http://localhost.com?x-method='.strtolower($method), 'POST');
-        $this->assertEquals($method, $r2->method());
-        $this->assertNull($r2->query('x-method'));
+        $this->assertEquals($method, $r2->getMethod());
+        $this->assertNull($r2->getQuery('x-method'));
 
         // Check the backup.
         if ($method !== 'POST') {
-            $this->assertEquals('POST', $r2->env('REQUEST_METHOD_RAW'));
+            $this->assertEquals('POST', $r2->getEnv('REQUEST_METHOD_RAW'));
         }
     }
 
