@@ -133,6 +133,7 @@ class Request implements JsonSerializable {
         if (self::$defaultEnv === null) {
             self::$defaultEnv = array(
                 'REQUEST_METHOD' => 'GET',
+                'X_REWRITE' => true,
                 'SCRIPT_NAME' => '',
                 'PATH_INFO' => '/',
                 'EXT' => '',
@@ -666,20 +667,16 @@ class Request implements JsonSerializable {
      * @return Request Returns $this for fluent calls.
      */
     public function setFullPath($fullPath) {
+        $fullPath = '/'.ltrim($fullPath, '/');
+
         // Try stripping the root out of the path first.
         $root = (string)$this->getRoot();
 
-        if ($root && strpos($fullPath, $root) === 0) {
-            $fullPath = substr($fullPath, strlen($root));
+        if ($root &&
+            strpos($fullPath, $root) === 0 &&
+            (strlen($fullPath) === strlen($root) || substr($fullPath, strlen($root), 1) === '/')) {
 
-            if (!$fullPath || substr($fullPath, 0, 1) === '/') {
-                $this->setRoot($root);
-                $this->setPathExt($fullPath);
-            } else {
-                // The root was part of the path, but wasn't a directory.
-                $this->setRoot('');
-                $this->setPathExt($root.$fullPath);
-            }
+            $this->setPathExt(substr($fullPath, strlen($root)));
         } else {
             $this->setRoot('');
             $this->setPathExt($fullPath);
@@ -944,14 +941,14 @@ class Request implements JsonSerializable {
         }
 
         if (isset($url_parts['path'])) {
-            $path = $url_parts['path'];
-
-            $this->setFullPath($path);
+            $this->setFullPath($url_parts['path']);
         }
 
-        if (isset($url_parts['query']) && is_string($url_parts['query'])) {
+        if (isset($url_parts['query'])) {
             parse_str($url_parts['query'], $query);
-            $this->setQuery($query);
+            if (is_array($query)) {
+                $this->setQuery($query);
+            }
         }
         return $this;
     }

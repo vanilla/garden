@@ -74,7 +74,7 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
     /**
      * Test the full path method.
      */
-    public function testFullPath() {
+    public function testPathExt() {
         $r = new Request('/', 'GET');
 
         $withExt = '/foo/bar.txt';
@@ -99,6 +99,21 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         $this->assertEquals('.json', $r2->getExt());
         $this->assertEquals('/foo', $r2->getPath());
         $this->assertEquals(['bar' => 'baz'], $r2->getQuery());
+    }
+
+    /**
+     * Test {@link Request::setFullPath()}.
+     */
+    public function testFullPath() {
+        $r = new Request('/', 'GET');
+
+        $r->setFullPath('foo/bar.txt');
+        $this->assertEquals('', $r->getRoot());
+        $this->assertEquals('/foo/bar', $r->getPath());
+        $this->assertEquals('/foo/bar.txt', $r->getFullPath());
+
+        $r->setRoot('vanilla');
+        $this->assertEquals('/vanilla/foo/bar.txt', $r->getFullPath());
     }
 
     /**
