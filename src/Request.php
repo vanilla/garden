@@ -618,8 +618,9 @@ class Request implements JsonSerializable {
      * Get the path and file extenstion.
      *
      * @return string Returns the path and file extension.
+     * @see Request::setPathExt()
      */
-    public function getFullPath() {
+    public function getPathExt() {
         return $this->env['PATH_INFO'].$this->env['EXT'];
     }
 
@@ -628,8 +629,9 @@ class Request implements JsonSerializable {
      *
      * @param string $path The path to set.
      * @return Request Returns $this for fluent calls.
+     * @see Request::getPathExt()
      */
-    public function setFullPath($path) {
+    public function setPathExt($path) {
         // Strip the extension from the path.
         if (substr($path, -1) !== '/' && ($pos = strrpos($path, '.')) !== false) {
             $ext = substr($path, $pos);
@@ -639,6 +641,50 @@ class Request implements JsonSerializable {
             $this->env['EXT'] = '';
         }
         $this->env['PATH_INFO'] = $path;
+        return $this;
+    }
+
+    /**
+     * Get the full path of the request.
+     *
+     * The full path consists of the root + path + extension.
+     *
+     * @return string Returns the full path.
+     */
+    public function getFullPath() {
+        return $this->getRoot().$this->getPathExt();
+    }
+
+    /**
+     * Set the full path of the request.
+     *
+     * The full path consists of the root + path + extension.
+     * This method examins the current root to see if the root can still be used or should be removed.
+     * Special care must be taken when calling this method to make sure you don't remove the root unintentionally.
+     *
+     * @param string $fullPath The full path to set.
+     * @return Request Returns $this for fluent calls.
+     */
+    public function setFullPath($fullPath) {
+        // Try stripping the root out of the path first.
+        $root = (string)$this->getRoot();
+
+        if ($root && strpos($fullPath, $root) === 0) {
+            $fullPath = substr($fullPath, strlen($root));
+
+            if (!$fullPath || substr($fullPath, 0, 1) === '/') {
+                $this->setRoot($root);
+                $this->setPathExt($fullPath);
+            } else {
+                // The root was part of the path, but wasn't a directory.
+                $this->setRoot('');
+                $this->setPathExt($root.$fullPath);
+            }
+        } else {
+            $this->setRoot('');
+            $this->setPathExt($fullPath);
+        }
+
         return $this;
     }
 
@@ -900,27 +946,10 @@ class Request implements JsonSerializable {
         if (isset($url_parts['path'])) {
             $path = $url_parts['path'];
 
-            // Try stripping the root out of the path first.
-            $root = (string)$this->getRoot();
-
-            if ($root && strpos($path, $root) === 0) {
-                $path = substr($path, strlen($root));
-
-                if (!$path || substr($path, 0, 1) === '/') {
-                    $this->setRoot($root);
-                    $this->setFullPath($path);
-                } else {
-                    // The root was part of the path, but wasn't a directory.
-                    $this->setRoot('');
-                    $this->setFullPath($root.$path);
-                }
-            } else {
-                $this->setRoot('');
-                $this->setFullPath($path);
-            }
+            $this->setFullPath($path);
         }
 
-        if (isset($url_parts['query'])) {
+        if (isset($url_parts['query']) && is_string($url_parts['query'])) {
             parse_str($url_parts['query'], $query);
             $this->setQuery($query);
         }

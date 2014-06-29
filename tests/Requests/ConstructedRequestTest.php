@@ -78,22 +78,22 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         $r = new Request('/', 'GET');
 
         $withExt = '/foo/bar.txt';
-        $r->setFullPath($withExt);
+        $r->setPathExt($withExt);
         $this->assertEquals('/foo/bar', $r->getPath());
         $this->assertEquals('.txt', $r->getExt());
 
         $withoutExt = '/foo/bar';
-        $r->setFullPath($withoutExt);
+        $r->setPathExt($withoutExt);
         $this->assertEquals('/foo/bar', $r->getPath());
         $this->assertEquals('', $r->getExt());
 
         $doubleDot = '/foo.bar.txt';
-        $r->setFullPath($doubleDot);
+        $r->setPathExt($doubleDot);
         $this->assertEquals('/foo.bar', $r->getPath());
         $this->assertEquals('.txt', $r->getExt());
 
         $r->setExt('');
-        $this->assertEquals('/foo.bar', $r->getFullPath());
+        $this->assertEquals('/foo.bar', $r->getPathExt());
 
         $r2 = new Request('http://localhost.com/foo.json?bar=baz');
         $this->assertEquals('.json', $r2->getExt());
@@ -209,10 +209,10 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
         $r = new Request('http://localhost/foo.txt');
 
         $query = ['foo' => 'bar'];
-        $r->setInput($query);
-        $this->assertEquals($query, $r->getInput());
-        $this->assertEquals('bar', $r->getInput('foo'));
-        $this->assertEquals('baz', $r->getInput('hello', 'baz'));
+        $r->setQuery($query);
+        $this->assertEquals($query, $r->getQuery());
+        $this->assertEquals('bar', $r->getQuery('foo'));
+        $this->assertEquals('baz', $r->getQuery('hello', 'baz'));
     }
 
     /**
@@ -259,6 +259,7 @@ class ConstructedRequestTest extends \PHPUnit_Framework_TestCase {
             'host',
             'ip',
             'path',
+            'pathExt',
             'fullPath',
             'root',
             'ext',
