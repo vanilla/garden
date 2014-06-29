@@ -40,7 +40,7 @@ class DjangoPassword implements IPassword {
             $salt = base64_encode(openssl_random_pseudo_bytes(12));
             $hash = hash($this->hashMethod, $salt.$password);
         } else {
-            throw new \Exception("The {$this->hashMethods} hash method is invalid.", 500);
+            throw new \Exception("The {$this->hashMethod} hash method is invalid.", 500);
         }
 
         $result = $this->hashMethod.'$'.$salt.'$'.$hash;
