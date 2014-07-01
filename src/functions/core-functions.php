@@ -108,6 +108,44 @@ if (!function_exists('array_column')) {
 }
 
 /**
+ * Converts a quick array into a key/value form.
+ *
+ * @param array $array The array to work on.
+ * @param mixed $default The default value for unspecified keys.
+ * @return array Returns the array converted to long syntax.
+ */
+function array_quick(array $array, $default) {
+    $result = [];
+    foreach ($array as $key => $value) {
+        if (is_int($key)) {
+            $result[$value] = $default;
+        } else {
+            $result[$key] = $value;
+        }
+    }
+    return $result;
+}
+
+/**
+ * Converts a quick array into a key/value form using a callback to convert the short items.
+ *
+ * @param array $array The array to work on.
+ * @param callable $callback The callback used to generate the default values.
+ * @return array Returns the array converted to long syntax.
+ */
+function array_uquick(array $array, callable $callback) {
+    $result = [];
+    foreach ($array as $key => $value) {
+        if (is_int($key)) {
+            $result[$value] = $callback($value);
+        } else {
+            $result[$key] = $value;
+        }
+    }
+    return $result;
+}
+
+/**
  * Load configuration data from a file into an array.
  *
  * @param string $path The path to load the file from.
@@ -222,6 +260,20 @@ function array_select(array $keys, array $array, $default = null) {
         }
     }
     return $default;
+}
+
+/**
+ * Make sure that a key exists in an array.
+ *
+ * @param string|int $key The array key to ensure.
+ * @param array &$array The array to modify.
+ * @param mixed $default The default value to set if key does not exist.
+ * @category Array Functions
+ */
+function array_touch($key, &$array, $default) {
+    if (!array_key_exists($key, $array)) {
+        $array[$key] = $default;
+    }
 }
 
 /**
@@ -810,20 +862,6 @@ function touchdir($dir, $mode = 0777) {
         mkdir($dir, $mode, true);
     } elseif (!is_dir($dir)) {
         throw new Exception("The specified directory already exists as a file. ($dir)", 400);
-    }
-}
-
-/**
- * Make sure that a key exists in an array.
- *
- * @param string|int $key The array key to ensure.
- * @param array &$array The array to modify.
- * @param mixed $default The default value to set if key does not exist.
- * @category Array Functions
- */
-function array_touch($key, &$array, $default) {
-    if (!array_key_exists($key, $array)) {
-        $array[$key] = $default;
     }
 }
 
