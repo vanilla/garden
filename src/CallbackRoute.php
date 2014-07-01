@@ -65,7 +65,7 @@ class CallbackRoute extends Route {
      * {@inheritdoc}
      */
     public function matches(Request $request, Application $app) {
-        $path = (string)$request->path();
+        $path = $request->getPath();
         $regex = static::patternRegex($this->pattern());
 
         if (preg_match($regex, $path, $matches)) {
