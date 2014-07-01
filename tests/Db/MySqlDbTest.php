@@ -11,9 +11,9 @@ namespace Garden\Tests\Db;
 use Garden\Db\Db;
 
 /**
- * Exectute the {@link DbTableTest} tests against MySQL.
+ * Exectute the {@link DbTest} tests against MySQL.
  */
-class MySqlDbTableTest extends DbTableTest {
+class MySqlDbTest extends DbTest {
 
     /**
      * Get the database connection for the test.
