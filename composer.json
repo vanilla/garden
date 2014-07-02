@@ -1,35 +1,46 @@
 {
-   "name": "vanilla/garden",
-   "description": "The garden framework.",
-   "type": "library",
-   "keywords": ["vanilla", "garden", "framework", "vanilla forums", "php"],
-   "license": "MIT",
-   "authors": [
-      { "name": "Todd Burry", "email": "todd@vanillaforums.com", "role": "developer" },
-      { "name": "Tim Gunter", "email": "tim@vanillaforums.com", "role": "developer" }
-   ],
-   "support": {
-       "issues": "https://github.com/vanilla/garden/issues",
-       "forum": "http://vanillaforums.org/discussions",
-       "source": "https://github.com/vanilla/garden"
-   },
-   "require": {
-      "php": ">=5.4.0",
-      "ext-json": "*",
-      "ext-PDO": "*",
-      "ext-pdo_mysql": "*",
-      "ext-Reflection": "*",
-      "lib-curl": "*",
-      "lib-pcre": "*"
-   },
-   "autoload": {
-      "psr-4": {
-          "Garden\\": "src"
-          },
-      "files": [
-         "src/functions/autoload.php"
-      ]
-   },
+	"name": "vanilla/garden",
+	"description": "The garden framework.",
+	"type": "library",
+	"keywords": ["vanilla", "garden", "framework", "vanilla forums", "php"],
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Todd Burry",
+			"email": "todd@vanillaforums.com",
+			"role": "developer"
+		},
+		{
+			"name": "Tim Gunter",
+			"email": "tim@vanillaforums.com",
+			"role": "developer"
+		}
+	],
+	"support": {
+		"issues": "https://github.com/vanilla/garden/issues",
+		"forum": "http://vanillaforums.org/discussions",
+		"source": "https://github.com/vanilla/garden"
+	},
+	"require": {
+		"php": ">=5.4.0",
+		"ext-json": "*",
+		"ext-PDO": "*",
+		"ext-pdo_mysql": "*",
+		"ext-Reflection": "*",
+		"lib-curl": "*",
+		"lib-pcre": "*"
+	},
+	"require-dev": {
+		"bobthecow/faker": "dev-master"
+	},
+	"autoload": {
+		"psr-4": {
+			"Garden\\": "src"
+		},
+		"files": [
+			"src/functions/autoload.php"
+		]
+	},
 	"autoload-dev": {
 		"psr-4": {
 			"Garden\\Tests\\": "tests"
