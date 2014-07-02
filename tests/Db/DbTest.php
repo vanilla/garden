@@ -12,7 +12,7 @@ use Garden\Db\Db;
 /**
  * Test the basic functionality of the Db* classes.
  */
-abstract class DbTableTest extends \PHPUnit_Framework_TestCase {
+abstract class DbTest extends \PHPUnit_Framework_TestCase {
     /// Properties ///
 
     /**
@@ -58,11 +58,12 @@ abstract class DbTableTest extends \PHPUnit_Framework_TestCase {
             ],
             'indexes' => [
                 ['columns' => ['name'], 'type' => Db::INDEX_UNIQUE],
+                ['columns' => ['email']],
                 ['columns' => ['insertTime']]
             ]
         ];
 
-        self::$db->setTable('user', $tableDef);
+        self::$db->setTableDef('user', $tableDef);
     }
 
     /**
@@ -73,7 +74,7 @@ abstract class DbTableTest extends \PHPUnit_Framework_TestCase {
     public function testInsert() {
         $db = self::$db;
 
-        $user = $this->provideUser('Test Insert');
+        $user = $this->provideUser('Insert Test');
         $userID = $db->insert('user', $user);
 
         $dbUser = $db->getOne('user', ['userID' => $userID]);
@@ -136,7 +137,7 @@ abstract class DbTableTest extends \PHPUnit_Framework_TestCase {
     public function testInsertUpsert() {
         $db = self::$db;
 
-        $user = $this->provideUser('Insert Upsert');
+        $user = $this->provideUser('Upsert Test');
 
         $userID = $db->insert('user', $user);
         $dbUser = $db->getOne('user', ['userID' => $userID]);
@@ -154,6 +155,132 @@ abstract class DbTableTest extends \PHPUnit_Framework_TestCase {
 
         $this->assertEquals($user2, array_intersect_key($dbUser2, $user2));
 
+    }
+
+    /**
+     * Test {@link Db::update()}.
+     */
+    public function testUpdate() {
+        $db = self::$db;
+
+        $user = $this->provideUser('Update Test');
+
+        $userID = $db->insert('user', $user);
+
+        $email = sha1(microtime()).'@foo.com';
+        $updated = $db->update(
+            'user',
+            ['email' => $email],
+            ['userID' => $userID]
+        );
+        $this->assertEquals(1, $updated, "Db->update() must return the number of rows updated.");
+
+        $dbUser = $db->getOne('user', ['userID' => $userID]);
+        $this->assertEquals($email, $dbUser['email'], "Update value not in the db.");
+
+        // Update on another column.
+        $updated2 = $db->update(
+            'user',
+            ['name' => 'tupdate'],
+            ['email' => $email]
+        );
+        $this->assertEquals(1, $updated2);
+
+        $dbUser2 = $db->getOne('user', ['userID' => $userID]);
+        $this->assertEquals('tupdate', $dbUser2['name'], "Update value not in the db.");
+    }
+
+    /**
+     * Test {@link Db::update()} with the ignore option.
+     */
+    public function testUpdateIgnore() {
+        $db = self::$db;
+
+        $user1 = $this->provideUser('First Update');
+        $userID1 = $db->insert('user', $user1);
+
+        $user2 = $this->provideUser('Second Update');
+        $userID2 = $db->insert('user', $user2);
+
+        $updated = $db->update(
+            'user',
+            ['name' => $user2['name']],
+            ['userID' => $userID1],
+            [Db::OPTION_IGNORE => true]
+        );
+        $this->assertEquals(0, $updated);
+    }
+
+    /**
+     * Test various where operators.
+     *
+     * @dataProvider provideTupleTests
+     */
+    public function testWhereOperators($where, $expected) {
+        $db = self::$db;
+
+        // Create a table for the test.
+        $db->setTableDef(
+            'tuple',
+            [
+                'columns' => [
+                    'id' => ['type' => 'int']
+                ],
+                'indexes' => [
+                    ['columns' => ['id']],
+                ]
+            ]
+        );
+        $db->delete('tuple', []);
+
+        $data = [['id' => null]];
+        for ($i = 1; $i <= 5; $i++) {
+            $data[] = ['id' => $i];
+        }
+
+        $db->load('tuple', $data);
+
+        // Test some logical gets.
+        $dbData = $db->get('tuple', $where, ['order' => ['id']]);
+        $values = array_column($dbData, 'id');
+        $this->assertEquals($expected, $values);
+    }
+
+    /**
+     * Provide somet tests for the where clause test.
+     *
+     * @return array Returns an array of function args.
+     */
+    public function provideTupleTests() {
+        $result = [
+            '>' => [['id' => [Db::OP_GT => 3]], [4, 5]],
+            '>=' => [['id' => [Db::OP_GTE => 3]], [3, 4, 5]],
+            '<' => [['id' => [Db::OP_LT => 3]], [1, 2]],
+            '<=' => [['id' => [Db::OP_LTE => 3]], [1, 2, 3]],
+            '=' => [['id' => [Db::OP_EQ => 2]], [2]],
+            '<>' => [['id' => [Db::OP_NE => 3]], [1, 2, 4, 5]],
+            'is null' => [['id' => null], [null]],
+            'is not null' => [['id' => [Db::OP_NE => null]], [1, 2, 3, 4, 5]],
+            'all' => [[], [null, 1, 2, 3, 4, 5]],
+            'in' => [['id' => [Db::OP_IN => [3, 4, 5]]], [3, 4, 5]],
+            'in (short)' => [['id' => [3, 4, 5]], [3, 4, 5]],
+            '= in' => [['id' => [Db::OP_EQ => [3, 4, 5]]], [3, 4, 5]],
+            '<> in' => [['id' => [Db::OP_NE => [3, 4, 5]]], [1, 2]],
+            'and' =>[['id' => [
+                Db::OP_AND => [
+                    Db::OP_GT => 3,
+                    Db::OP_LT => 5
+                ]
+            ]], [4]],
+            'or' =>[['id' => [
+                Db::OP_OR => [
+                    Db::OP_LT => 3,
+                    Db::OP_EQ => 5
+                ]
+            ]], [1, 2, 5]]
+        ];
+
+        return $result;
     }
 
     /**
@@ -197,6 +324,8 @@ abstract class DbTableTest extends \PHPUnit_Framework_TestCase {
      * @return \Generator Returns a {@link \Generator} of users.
      */
     public function provideUsers($count = 10) {
+        $result = [];
+
         for ($i = 0; $i < $count; $i++) {
             $name = \Faker\Name::name();
 
@@ -207,19 +336,27 @@ abstract class DbTableTest extends \PHPUnit_Framework_TestCase {
                 'insertTime' => time()
             ];
 
-            yield $user;
+            $result[] = $user;
         }
+
+        return new \ArrayIterator($result);
     }
 
-    public function provideUser($name = '') {
-        if (!$name) {
-            $name = \Faker\Name::name();
+    /**
+     * Provide a single random user.
+     *
+     * @param string $fullname The full name of the user.
+     * @return array
+     */
+    public function provideUser($fullname = '') {
+        if (!$fullname) {
+            $fullname = \Faker\Name::name();
         }
 
         $user = [
-            'name' => \Faker\Internet::userName($name),
-            'email' => \Faker\Internet::email($name),
-            'fullName' => $name,
+            'name' => \Faker\Internet::userName($fullname),
+            'email' => \Faker\Internet::email($fullname),
+            'fullName' => $fullname,
             'insertTime' => time()
         ];
 

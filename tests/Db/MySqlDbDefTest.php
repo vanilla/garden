@@ -7,15 +7,20 @@
 
 namespace Garden\Tests\Db;
 
-use Garden\Driver\MySqlDb;
+use Garden\Db\MySqlDb;
 
 class MySqlDbDefTest extends DbDefTest {
-    protected static function getDb() {
+    /**
+     * @return \Garden\Db\MySqlDb Returns the new database connection.
+     */
+    protected static function createDb() {
         $db = new MySqlDb([
             'host' => '127.0.0.1',
             'username' => 'root',
             'dbname' => 'phpunit_garden',
         ]);
+
+        $db->setPx('gdndef_');
 
         return $db;
     }

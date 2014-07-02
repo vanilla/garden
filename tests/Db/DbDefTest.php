@@ -7,69 +7,26 @@
 
 namespace Garden\Tests\Db;
 
-use Garden\Db;
-use Garden\DbDef;
+use Garden\Db\Db;
+use Garden\Db\DbDef;
 
 /**
  * Test various aspects of the {@link DbDef} class and the {@link Db} class as it relates to it.
  */
 abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
-    protected static $cachePath;
-
     /**
-     * Set up the db link for the test cases.
+     * @var Db The database connection for the tests.
      */
-    public static function setUpBeforeClass() {
-        $path = __DIR__.'/../../cache/'.date('Y-m-d-Hi');
-        touchdir($path);
-        self::$cachePath = realpath($path);
+    protected static $db;
 
-        // Drop all of the tables in the database.
-        $db = static::getDb();
-        $tables = $db->tables();
-        $db->dropTable($tables);
-    }
+    /// Methods ///
 
     /**
-     * Test calling {@link Db::dropTable()} with no tables.
-     */
-    public function testDropTableEmpty() {
-        return;
-        static::getDb()->dropTable([]);
-    }
-
-    /**
-     * Test calling {@link Db::dropTable()} with a non-existant table.
-     */
-    public function testDropTableDoesntExist() {
-        static::getDb()->dropTable('lfdsjfod');
-    }
-
-    /**
-     * Test a basic call to {@link Db::createTable()}.
-     */
-    public function testCreateTable() {
-        return;
-        $def = $this->getDbDef();
-
-        $def->table('user')
-            ->primaryKey('userID')
-            ->column('name', 'varchar(50)')
-            ->index(Db::INDEX_IX, 'name')
-            ->exec();
-
-        $defArray = $def->jsonSerialize();
-        $defArrayDb = $def->db()->tableDefinitions('user');
-
-        $def->db()->insert('user', ['userID' => 1, 'name' => 'todd']);
-    }
-
-    /**
-     * Get the database connection.
+     * Get the database connection for the test.
      *
-     * @return Db Returns the db.
+     * @return Db Returns the db object.
      */
-    protected static function getDb() {
+    protected static function createDb() {
         return null;
     }
 
@@ -78,7 +35,38 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
      *
      * @return DbDef Returns the db def.
      */
-    protected static function getDbDef() {
-        return new DbDef(static::getDb());
+    protected static function createDbDef() {
+        return new DbDef(self::$db);
+    }
+
+    /**
+     * Set up the db link for the test cases.
+     */
+    public static function setUpBeforeClass() {
+        // Drop all of the tables in the database.
+        self::$db = static::createDb();
+
+        $tables = self::$db->getAllTables();
+        foreach ($tables as $table) {
+            self::$db->dropTable($table);
+        }
+    }
+
+    /**
+     * Test a basic call to {@link Db::createTable()}.
+     */
+    public function testCreateTable() {
+        $def = static::createDbDef();
+
+        $def->table('user')
+            ->primaryKey('userID')
+            ->column('name', 'varchar(50)')
+            ->index(Db::INDEX_IX, 'name')
+            ->exec();
+
+        $defArray = $def->jsonSerialize();
+        $defArrayDb = $def->getDb()->getTableDef('user');
+
+        $def->getDb()->insert('user', ['userID' => 1, 'name' => 'todd']);
     }
 }

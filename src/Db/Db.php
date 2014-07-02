@@ -21,6 +21,11 @@ abstract class Db {
     const INDEX_IX = 'index';
     const INDEX_UNIQUE = 'unique';
 
+    const OPTION_REPLACE = 'replace';
+    const OPTION_IGNORE = 'ignore';
+    const OPTION_UPSERT = 'upsert';
+    const OPTION_TRUNCATE = 'truncate';
+
     const OP_EQ = '=';
     const OP_GT = '>';
     const OP_GTE = '>=';
@@ -56,6 +61,11 @@ abstract class Db {
      * @var int Whether or not all the tables have been fetched.
      */
     protected $allTablesFetched = 0;
+
+    /**
+     * @var int The number of rows that were affected by the last query.
+     */
+    protected $rowCount;
 
     /// Methods ///
 
@@ -94,13 +104,13 @@ abstract class Db {
      * @param array $tabledef The table definition.
      * @param array $options An array of additional options when adding the table.
      */
-    abstract protected function addTable($tablename, array $tabledef, array $options = []);
+    abstract protected function createTable($tablename, array $tabledef, array $options = []);
 
     /**
      * Alter a table in the database.
      *
      * When altering a table you pass an array with three optional keys: add, drop, and alter.
-     * Each value is consists of a table definition in a format that would be passed to {@link Db::setTable()}.
+     * Each value is consists of a table definition in a format that would be passed to {@link Db::setTableDef()}.
      *
      * @param string $tablename The name of the table.
      * @param array $alterdef The alter definition.
@@ -122,10 +132,10 @@ abstract class Db {
      * @param string $tableName The name of the table.
      * @return array|null Returns the table definition or null if the table does not exist.
      */
-    public function getTable($tableName) {
+    public function getTableDef($tableName) {
         // Check to see if the table isn't in the cache first.
         if ($this->allTablesFetched & Db::FETCH_TABLENAMES &&
-            !isset($this->table[$tableName])) {
+            !isset($this->tables[$tableName])) {
             return null;
         }
 
@@ -162,12 +172,14 @@ abstract class Db {
      * @param array $tableDef The table definition.
      * @param array $options An array of additional options when adding the table.
      */
-    public function setTable($tableName, array $tableDef, array $options = []) {
+    public function setTableDef($tableName, array $tableDef, array $options = []) {
         $drop = val('drop', $options);
-        $curTable = $this->getTable($tableName);
+        $curTable = $this->getTableDef($tableName);
+
+        $this->fixPrimaryKey($tableDef);
 
         if (!$curTable) {
-            $this->addTable($tableName, $tableDef, $options);
+            $this->createTable($tableName, $tableDef, $options);
             $this->tables[$tableName] = $tableDef;
             return;
         }
@@ -208,6 +220,45 @@ abstract class Db {
     }
 
     /**
+     * Move the primary key index into the correct place for database drivers.
+     *
+     * @param array &$tableDef The table definition.
+     */
+    protected function fixPrimaryKey(array &$tableDef) {
+        // Massage the primary key index.
+        foreach (val('indexes', $tableDef, []) as $i => $indexDef) {
+            if (val('type', $indexDef) === Db::INDEX_PK) {
+                if (count($indexDef['columns']) === 1) {
+                    $tableDef['columns'][$indexDef['columns'][0]]['primary'] = true;
+                    unset($tableDef['indexes'][$i]);
+                } else {
+                    foreach ($indexDef['columns'] as $column) {
+                        $tableDef['columns']['primary'] = false;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Get the database prefix.
+     *
+     * @return string Returns the current db prefix.
+     */
+    public function getPx() {
+        return $this->px;
+    }
+
+    /**
+     * Set the database prefix.
+     *
+     * @param string $px The new database prefix.
+     */
+    public function setPx($px) {
+        $this->px = $px;
+    }
+
+    /**
      * Compare two index definitions to see if they have the same columns and same type.
      *
      * @param array $a The first index.
@@ -216,16 +267,97 @@ abstract class Db {
      * considered to be respectively less than, equal to, or greater than {@link $b}.
      */
     protected function indexCompare(array $a, array $b) {
-        if ($a > $b) {
+        if ($a['columns'] > $b['columns']) {
             return 1;
-        } elseif ($a < $b) {
+        } elseif ($a['columns'] < $b['columns']) {
             return -1;
         }
 
         return strcmp(val('type', $a, ''), val('type', $b, ''));
     }
 
-    abstract public function get($tablename, array $where, array $options);
+    /**
+     * Get data from the database.
+     *
+     * @param string $tablename The name of the table to get the data from.
+     * @param array $where An array of where conditions.
+     * @param array $options An array of additional options.
+     * @return mixed Returns the result set.
+     */
+    abstract public function get($tablename, array $where, array $options = []);
+
+    /**
+     * Get a single row from the database.
+     *
+     * This is a conveinience method that calls {@link Db::get()} and shifts off the first row.
+     *
+     * @param string $tablename The name of the table to get the data from.
+     * @param array $where An array of where conditions.
+     * @param array $options An array of additional options.
+     * @return array|false Returns the row or false if there is no row.
+     */
+    public function getOne($tablename, array $where, array $options = []) {
+        $options['limit'] = 1;
+        $rows = $this->get($tablename, $where, $options);
+        return array_shift($rows);
+    }
+
+    /**
+     * Insert a row into a table.
+     *
+     * @param string $tablename The name of the table to insert into.
+     * @param array $row The row of data to insert.
+     * @param array $options An array of options for the insert.
+     *
+     * Db::OPTION_IGNORE
+     * : Whether or not to ignore inserts that lead to a duplicate key. *default false*
+     * Db::OPTION_REPLACE
+     * : Whether or not to replace duplicate keys. *default false*
+     * Db::OPTION_UPSERT
+     * : Whether or not to update the existing data when duplicate keys exist.
+     *
+     * @return mixed Should return the id of the inserted record.
+     * @see Db::load()
+     */
+    abstract public function insert($tablename, array $row, array $options = []);
+
+    /**
+     * Load many rows into a table.
+     *
+     * @param string $tablename The name of the table to insert into.
+     * @param \Traversable|array $rows A dataset to insert.
+     * Note that all rows must contain the same columns.
+     * The first row will be looked at for the structure of the insert and the rest of the rows will use this structure.
+     * @param array $options An array of options for the inserts. See {@link Db::insert()} for details.
+     * @return mixed
+     * @see Db::insert()
+     */
+    abstract public function load($tablename, $rows, array $options = []);
+
+
+    /**
+     * Update a row or rows in a table.
+     *
+     * @param string $tablename The name of the table to update.
+     * @param array $set The values to set.
+     * @param array $where The where filter for the update.
+     * @param array $options An array of options for the update.
+     * @return mixed
+     */
+    abstract public function update($tablename, array $set, array $where, array $options = []);
+
+    /**
+     * Delete rows from a table.
+     *
+     * @param string $tablename The name of the table to delete from.
+     * @param array $where The where filter of the delete.
+     * @param array $options An array of options.
+     *
+     * Db:OPTION_TRUNCATE
+     * : Truncate the table instead of deleting rows. In this case {@link $where} must be blank.
+     * @return mixed
+     */
+    abstract public function delete($tablename, array $where, array $options = []);
 
     /**
      * Build a standardized index name from an index definition.

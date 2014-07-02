@@ -1,5 +1,11 @@
 <?php
-namespace Garden;
+/**
+ * @author Todd Burry <todd@vanillaforums.com>
+ * @copyright 2009-2014 Vanilla Forums Inc.
+ * @license MIT
+ */
+
+namespace Garden\Db;
 
 /**
  * A helper class for creating database tables.
@@ -8,12 +14,12 @@ class DbDef implements \JsonSerializable {
     /// Properties ///
 
     /**
-     * @var Db
+     * @var Db The database connection to send definitions to.
      */
     protected $db;
 
     /**
-     * @var array
+     * @var array The columns that need to be set in the table.
      */
     protected $columns;
 
@@ -38,18 +44,6 @@ class DbDef implements \JsonSerializable {
     public function __construct($db) {
         $this->db = $db;
         $this->reset();
-    }
-
-    /**
-     * @param Db $db
-     * @return Db|DbDef
-     */
-    public function db(Db $db = null) {
-        if ($db !== null) {
-            $this->db = $db;
-            return $this;
-        }
-        return $this->db;
     }
 
     /**
@@ -156,7 +150,8 @@ class DbDef implements \JsonSerializable {
      * @return DbDef $this Returns $this for fluent calls.
      */
     public function exec($reset = true) {
-        $this->db->defineTable(
+        $this->db->setTableDef(
+            $this->table,
             $this->jsonSerialize()
         );
 
@@ -239,5 +234,25 @@ class DbDef implements \JsonSerializable {
             'columns' => $this->columns,
             'indexes' => $this->indexes
         ];
+    }
+
+    /**
+     * Get the db connection to send definitions to.
+     *
+     * @return Db Returns the db connection.
+     * @see DbDef::setDb()
+     */
+    public function getDb() {
+        return $this->db;
+    }
+
+    /**
+     * Set the db connection to send definitions to.
+     *
+     * @param Db $db The new database connection.
+     * @see DbDef::getDef()
+     */
+    public function setDb($db) {
+        $this->db = $db;
     }
 }
