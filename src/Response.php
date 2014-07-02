@@ -575,9 +575,9 @@ class Response implements JsonSerializable {
             }
             foreach ((array)$value as $hvalue) {
                 if ($name === 'Content-Type') {
-                    header("$name: $value; charset=utf8", true);
+                    header("$name: $hvalue; charset=utf8", true);
                 } else {
-                    header("$name: $value", false);
+                    header("$name: $hvalue", false);
                 }
             }
         }
