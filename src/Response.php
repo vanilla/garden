@@ -545,48 +545,40 @@ class Response implements JsonSerializable {
     public function flushHeaders($global = true) {
         if ($global) {
             $cookies = array_replace(static::globalCookies(), $this->cookies);
+            $headers = array_replace(static::globalHeaders(), $this->headers);
         } else {
             $cookies = $this->cookies;
+            $headers = $this->headers;
         }
 
         // Set the cookies first.
         foreach ($cookies as $name => $value) {
-            // Set the defaults.
-            if ($value[2] === null) {
-                $value[2] = $this->defaultCookiePath;
-            }
-            if ($value[3] === null) {
-                $value[3] = $this->defaultCookieDomain;
-            }
-
-            setcookie($name, $value[0], $value[1], $value[2], $value[3], $value[4], $value[5]);
+            setcookie(
+                $name,
+                $value[0],
+                $value[1],
+                $value[2] !== null ? $value[2] : $this->defaultCookiePath,
+                $value[3] !== null ? $value[3] : $this->defaultCookieDomain,
+                $value[4],
+                $value[5]
+            );
         }
 
         // Set the response code.
         header(static::statusMessage($this->status, true), true, $this->status);
 
-        if ($global) {
-            $headers = array_replace(static::globalHeaders(), $this->headers);
-        } else {
-            $headers = $this->headers;
-        }
 
         // Flush the rest of the headers.
         foreach ($headers as $name => $value) {
             if (!$value) {
                 continue;
             }
-
-            if ($name === 'Content-Type') {
-                $value = is_array($value) ? array_shift($value) : $value;
-
-                header("$name: $value; charset=utf8", true);
-            } elseif (is_array($value)) {
-                foreach ($value as $line) {
-                    header("$name: $line", false);
+            foreach ((array)$value as $hvalue) {
+                if ($name === 'Content-Type') {
+                    header("$name: $value; charset=utf8", true);
+                } else {
+                    header("$name: $value", false);
                 }
-            } else {
-                header("$name: $value", false);
             }
         }
     }

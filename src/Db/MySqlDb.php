@@ -95,7 +95,7 @@ class MySqlDb extends Db {
         $result = $this->pdo()->query($sql);
 
         if (!$result) {
-            list($code, $dbCode, $message) = $this->pdo->errorInfo();
+            list(,, $message) = $this->pdo->errorInfo();
 //            die($message);
 //                fwrite(STDERR, $sql);
             trigger_error($message, E_USER_ERROR);
@@ -552,7 +552,7 @@ class MySqlDb extends Db {
      */
     protected function getTablenames() {
         // Get the table names.
-        $tables = $this->get(
+        $tables = (array)$this->get(
             'information_schema.TABLES',
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
