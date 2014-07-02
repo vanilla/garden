@@ -180,119 +180,106 @@ class Request implements JsonSerializable {
     public static function globalEnvironment($key = null) {
         // Check to parse the environment.
         if ($key === true || !isset(self::$globalEnv)) {
-            $env = static::defaultEnvironment();
-
-            // REQUEST_METHOD.
-            $env['REQUEST_METHOD'] = strtoupper(isset($_SERVER['REQUEST_METHOD']) ? val('REQUEST_METHOD', $_SERVER) : 'CONSOLE');
-
-            // SCRIPT_NAME: This is the root directory of the application.
-            $script_name = $_SERVER['SCRIPT_NAME'];
-            if ($script_name && substr($script_name, -strlen('index.php')) == 0) {
-                $script_name = substr($script_name, 0, -strlen('index.php'));
-            } else {
-                $script_name = '';
-            }
-            $env['SCRIPT_NAME'] = rtrim($script_name, '/');
-
-            // PATH_INFO.
-            $path = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '';
-
-            // Strip the extension from the path.
-            if (substr($path, -1) !== '/' && ($pos = strrpos($path, '.')) !== false) {
-                $ext = substr($path, $pos);
-                $path = substr($path, 0, $pos);
-                $env['EXT'] = $ext;
-            }
-
-            $env['PATH_INFO'] = '/' . ltrim($path, '/');
-
-            // QUERY.
-            $get = $_GET;
-            $env['QUERY'] = $get;
-
-            // SERVER_NAME.
-            $env['SERVER_NAME'] = array_select(
-                ['HTTP_X_FORWARDED_HOST', 'HTTP_HOST', 'SERVER_NAME'],
-                $_SERVER
-            );
-
-            // HTTP_* headers.
-            $env = array_replace($env, static::extractHeaders($_SERVER));
-
-            // URL_SCHEME.
-            $url_scheme = 'http';
-            // Web server-originated SSL.
-            if (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) == 'on') {
-                $url_scheme = 'https';
-            }
-            // Load balancer-originated (and terminated) SSL.
-            if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https') {
-                $url_scheme = 'https';
-            }
-            // Varnish modifies the scheme.
-            $org_protocol = val('HTTP_X_ORIGINALLY_FORWARDED_PROTO', $_SERVER, null);
-            if (!is_null($org_protocol)) {
-                $url_scheme = $org_protocol;
-            }
-            $env['URL_SCHEME'] = $url_scheme;
-
-            // SERVER_PORT.
-            if (isset($_SERVER['SERVER_PORT'])) {
-                $server_port = (int) $_SERVER['SERVER_PORT'];
-            } elseif ($url_scheme === 'https') {
-                $server_port = 443;
-            } else {
-                $server_port = 80;
-            }
-            $env['SERVER_PORT'] = $server_port;
-
-            // INPUT: The entire input.
-            // Input stream (readable one time only; not available for multipart/form-data requests)
-            switch (val('CONTENT_TYPE', $env)) {
-                case 'application/json':
-                    $input_raw = @file_get_contents('php://input');
-                    $input = @json_decode($input_raw, true);
-                    break;
-            }
-            if (isset($input)) {
-                $env['INPUT'] = $input;
-            } elseif (isset($_POST)) {
-                $env['INPUT'] = $_POST;
-            }
-
-            if (isset($input_raw)) {
-                $env['INPUT_RAW'] = $input_raw;
-            }
-
-            // IP Address.
-            // Load balancers set a different ip address.
-            $ip = array_select(
-                ['HTTP_X_ORIGINALLY_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'],
-                $_SERVER,
-                '127.0.0.1'
-            );
-            if (strpos($ip, ',') !== false) {
-                $ip = substr($ip, 0, strpos($ip, ','));
-            }
-
-            // Make sure we have a valid ip.
-            if (preg_match('`(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})`', $ip, $m)) {
-                $ip = $m[1];
-            } elseif ($ip === '::1') {
-                $ip = '127.0.0.1';
-            } else {
-                $ip = '0.0.0.0'; // unknown ip
-            }
-
-            $env['REMOTE_ADDR'] = $ip;
-
-            self::$globalEnv = $env;
+            self::$globalEnv = static::parseServerVariables();
         }
 
         if ($key) {
             return val($key, self::$globalEnv);
         }
         return self::$globalEnv;
+    }
+
+    /**
+     * Parse the various server variables to build the global environment.
+     *
+     * @return array Returns an array suitable to be used as the {@see Request::$globalEnv}.
+     * @see Request::globalEnvironment().
+     */
+    private static function parseServerVariables() {
+        $env = static::defaultEnvironment();
+
+        // REQUEST_METHOD.
+        $env['REQUEST_METHOD'] = strtoupper(isset($_SERVER['REQUEST_METHOD']) ? val('REQUEST_METHOD', $_SERVER) : 'CONSOLE');
+
+        // SCRIPT_NAME: This is the root directory of the application.
+        $script_name = $_SERVER['SCRIPT_NAME'];
+        if ($script_name && substr($script_name, -strlen('index.php')) == 0) {
+            $script_name = substr($script_name, 0, -strlen('index.php'));
+        } else {
+            $script_name = '';
+        }
+        $env['SCRIPT_NAME'] = rtrim($script_name, '/');
+
+        // PATH_INFO.
+        $path = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '';
+
+        // Strip the extension from the path.
+        list($path, $ext) = static::splitPathExt($path);
+        $env['PATH_INFO'] = '/' . ltrim($path, '/');
+        $env['EXT'] = $ext;
+
+        // QUERY.
+        $get = $_GET;
+        $env['QUERY'] = $get;
+
+        // SERVER_NAME.
+        $env['SERVER_NAME'] = array_select(
+            ['HTTP_X_FORWARDED_HOST', 'HTTP_HOST', 'SERVER_NAME'],
+            $_SERVER
+        );
+
+        // HTTP_* headers.
+        $env = array_replace($env, static::extractHeaders($_SERVER));
+
+        // URL_SCHEME.
+        $url_scheme = 'http';
+        // Web server-originated SSL.
+        if (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) == 'on') {
+            $url_scheme = 'https';
+        }
+        $url_scheme = array_select([
+            'HTTP_X_ORIGINALLY_FORWARDED_PROTO', // varnish modifies the scheme
+            'HTTP_X_FORWARDED_PROTO' // load balancer-originated (and terminated) ssl
+        ], $_SERVER, $url_scheme);
+        $env['URL_SCHEME'] = $url_scheme;
+
+        // SERVER_PORT.
+        if (isset($_SERVER['SERVER_PORT'])) {
+            $server_port = (int) $_SERVER['SERVER_PORT'];
+        } elseif ($url_scheme === 'https') {
+            $server_port = 443;
+        } else {
+            $server_port = 80;
+        }
+        $env['SERVER_PORT'] = $server_port;
+
+        // INPUT: The entire input.
+        // Input stream (readable one time only; not available for multipart/form-data requests)
+        switch (val('CONTENT_TYPE', $env)) {
+            case 'application/json':
+                $input_raw = @file_get_contents('php://input');
+                $input = @json_decode($input_raw, true);
+                break;
+        }
+        if (isset($input)) {
+            $env['INPUT'] = $input;
+        } elseif (isset($_POST)) {
+            $env['INPUT'] = $_POST;
+        }
+
+        if (isset($input_raw)) {
+            $env['INPUT_RAW'] = $input_raw;
+        }
+
+        // IP Address.
+        // Load balancers set a different ip address.
+        $ip = array_select(
+            ['HTTP_X_ORIGINALLY_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'],
+            $_SERVER,
+            '127.0.0.1'
+        );
+        $env['REMOTE_ADDR'] = force_ipv4($ip);
+        return $env;
     }
 
     /**
@@ -989,6 +976,22 @@ class Request implements JsonSerializable {
         }
 
         return $prefix.'/'.ltrim($path, '/');
+    }
+
+    /**
+     * Split the file extension off a path.
+     *
+     * @param string $path The path to split.
+     * @return array Returns an array in the form `['path', 'ext']`.
+     */
+    protected static function splitPathExt($path) {
+        if (substr($path, -1) !== '/' && ($pos = strrpos($path, '.')) !== false) {
+            $ext = substr($path, $pos);
+            $path = substr($path, 0, $pos);
+            return [$path, $ext];
+        } else {
+            return [$path, ''];
+        }
     }
 
     /**
