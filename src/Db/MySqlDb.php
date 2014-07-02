@@ -648,6 +648,7 @@ class MySqlDb extends Db {
         $count = 0;
         $first = true;
         $spec = [];
+        $stmt = null;
 
         // Loop over the rows and insert them with the statement.
         foreach ($rows as $row) {

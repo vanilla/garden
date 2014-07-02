@@ -209,7 +209,7 @@ class SqliteDb extends MySqlDb {
             }
 
             // Query the columns in the index.
-            $columns = $this->query('pragma index_info('.$this->quoteVal($indexName).')');
+            $columns = (array)$this->query('pragma index_info('.$this->quoteVal($indexName).')');
 
             $index = [
                 'name' => $indexName,
@@ -256,7 +256,7 @@ class SqliteDb extends MySqlDb {
      */
     protected function getTablenames() {
         // Get the table names.
-        $tables = $this->get(
+        $tables = (array)$this->get(
             'sqlite_master',
             [
                 'type' => 'table',
