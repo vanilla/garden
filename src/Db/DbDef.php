@@ -87,7 +87,7 @@ class DbDef implements \JsonSerializable {
             } else {
                 list($indexType, $suffix) = explode('.', $typeStr);
             }
-            $this->index($indexType, $name, $suffix);
+            $this->index($name, $indexType, $suffix);
         }
 
         return $this;
@@ -138,7 +138,7 @@ class DbDef implements \JsonSerializable {
         $this->columns[$name] = $column;
 
         // Add the pk index.
-        $this->index(Db::INDEX_PK, $name);
+        $this->index($name, Db::INDEX_PK);
 
         return $this;
     }
@@ -179,12 +179,12 @@ class DbDef implements \JsonSerializable {
     /**
      * Add or update an index.
      *
-     * @param string $type One of the `Db::INDEX_*` constants.
      * @param string|array $columns An array of columns or a single column name.
+     * @param string $type One of the `Db::INDEX_*` constants.
      * @param string $suffix An index suffix to group columns together in an index.
      * @return DbDef Returns $this for fluent calls.
      */
-    public function index($type, $columns, $suffix = '') {
+    public function index($columns, $type, $suffix = '') {
         $type = strtolower($type);
         $columns = (array)$columns;
         $suffix = strtolower($suffix);

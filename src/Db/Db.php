@@ -194,7 +194,8 @@ abstract class Db {
         $alterDef['alter']['columns'] = array_uintersect_assoc($newColumns, $curColumns, function ($new, $curr) {
             // Return 0 if the values are different, not the same.
             if (val('type', $curr) !== val('type', $new) ||
-                val('required', $curr) !== val('required', $new)) {
+                val('required', $curr) !== val('required', $new) ||
+                val('default', $curr) !== val('required', $new)) {
                 return 0;
             }
             return 1;
@@ -211,6 +212,8 @@ abstract class Db {
         if ($drop) {
             $alterDef['drop']['indexes'] = array_udiff($curIndexes, $newIndexes, [$this, 'indexCompare']);
         }
+
+        $alterDef['def'] = $tableDef;
 
         // Update the cached schema. The driver-specific call can also update it.
         $this->tables[$tableName] = $tableDef;
@@ -358,6 +361,18 @@ abstract class Db {
      * @return mixed
      */
     abstract public function delete($tablename, array $where, array $options = []);
+
+    /**
+     * Reset the internal table definition cache.
+     *
+     * @return Db Returns $this for fluent calls.
+     */
+    public function reset() {
+        $this->tables = [];
+        $this->allTablesFetched = 0;
+        $this->rowCount = 0;
+        return $this;
+    }
 
     /**
      * Build a standardized index name from an index definition.

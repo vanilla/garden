@@ -177,12 +177,16 @@ class MySqlDb extends Db {
                 $column['primary'] = true;
             }
 
+            if ($cdef['COLUMN_DEFAULT'] !== null) {
+                $column['default'] = $this->forceType($cdef['COLUMN_DEFAULT'], $column['type']);
+            }
+
             $tablename = ltrim_substr($cdef['TABLE_NAME'], $this->px);
             $tables[$tablename]['columns'][$cdef['COLUMN_NAME']] = $column;
         }
         $this->tables = array_replace($this->tables, $tables);
         if ($tablename) {
-            return val($tablename, $this->tables, null);
+            return $this->tables[$tablename]['columns'];
         }
         return null;
     }
@@ -833,6 +837,64 @@ class MySqlDb extends Db {
      * {@inheritdoc}
      */
     protected function alterTable($tablename, array $alterdef, array $options = []) {
-        // TODO: Implement alterTable() method.
+        $columnOrders = array_flip(array_keys($alterdef['def']['columns']));
+
+        $parts = [];
+
+        // Add the columns and indexes.
+        foreach ($alterdef['add']['columns'] as $cname => $cdef) {
+            // Figure out the order of the column.
+            $ord = $columnOrders[$cname];
+            if ($ord == 0) {
+                $pos = ' first';
+            } elseif ($pos = array_search($ord - 1, $columnOrders)) {
+                $pos = ' after '.$pos;
+            }
+
+            $parts[] = 'add '.$this->columnDefString($cname, $cdef).$pos;
+        }
+        foreach ($alterdef['add']['indexes'] as $ixdef) {
+            $parts[] = 'add '.$this->indexDefString($tablename, $ixdef);
+        }
+
+        // Alter the columns.
+        foreach ($alterdef['alter']['columns'] as $cname => $cdef) {
+            $parts[] = 'modify '.$this->columnDefString($cname, $cdef);
+        }
+
+        if (empty($parts)) {
+            return false;
+        }
+
+        $sql = 'alter '.
+            (val(Db::OPTION_IGNORE, $options) ? 'ignore ' : '').
+            'table '.$this->backtick($this->px.$tablename)."\n  ".
+            implode(",\n  ", $parts);
+
+        $result = $this->query($sql);
+        return $result;
+    }
+
+    /**
+     * Force a value into the appropriate php type based on its Sqlite type.
+     *
+     * @param mixed $value The value to force.
+     * @param string $type The sqlite type name.
+     * @return mixed Returns $value cast to the appropriate type.
+     */
+    protected function forceType($value, $type) {
+        $type = strtolower($type);
+
+        if ($type === 'null') {
+            return null;
+        } elseif (in_array($type, ['int', 'integer', 'tinyint', 'smallint',
+            'mediumint', 'bigint', 'unsigned big int', 'int2', 'int8', 'boolean'])) {
+            return force_int($value);
+        } elseif (in_array($type, ['real', 'double', 'double precision', 'float',
+            'numeric', 'decimal(10,5)'])) {
+            return floatval($value);
+        } else {
+            return (string)$value;
+        }
     }
 }
