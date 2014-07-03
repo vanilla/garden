@@ -195,7 +195,7 @@ class Request implements JsonSerializable {
      * @return array Returns an array suitable to be used as the {@see Request::$globalEnv}.
      * @see Request::globalEnvironment().
      */
-    private static function parseServerVariables() {
+    protected static function parseServerVariables() {
         $env = static::defaultEnvironment();
 
         // REQUEST_METHOD.
