@@ -224,7 +224,11 @@ class DbDef implements \JsonSerializable {
                 'columns' => $columns,
                 'suffix' => $suffix
             ];
-            $this->indexes[] = $indexDef;
+            if ($type === Db::INDEX_PK) {
+                $this->indexes[Db::INDEX_PK] = $indexDef;
+            } else {
+                $this->indexes[] = $indexDef;
+            }
         }
 
         return $this;

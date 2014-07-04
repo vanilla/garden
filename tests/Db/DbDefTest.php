@@ -77,14 +77,15 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
     public function testAlterTableColumns() {
         $db = self::$db;
         $def = new DbDef($db);
+        $tbl = 'tst00';
 
-        $def->table('moop00')
+        $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index('col1', Db::INDEX_IX)
             ->exec();
 
-        $expected = $def->table('moop00')
+        $expected = $def->table($tbl)
             ->column('cola', 'int')
             ->column('colb', 'int')
             ->column('col2', 'int')
@@ -94,23 +95,26 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
 
         $def2 = $db
             ->reset()
-            ->getTableDef('moop00');
+            ->getTableDef($tbl);
 
         $this->assertDefEquals($expected, $def2);
     }
 
+    /**
+     * Test altering a table with the {@link Db::OPTION_DROP} option.
+     */
     public function testAlterTableWithDrop() {
         $db = self::$db;
         $def = new DbDef($db);
+        $tbl = 'tst01';
 
-        $def->table('moop01')
+        $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
-            ->index('col1', Db::INDEX_IX);
+            ->index('col1', Db::INDEX_IX)
+            ->exec();
 
-        $def->exec();
-
-        $expected = $def->table('moop01')
+        $expected = $def->table($tbl)
             ->column('cola', 'int')
             ->column('colb', 'int')
             ->column('col2', 'int')
@@ -119,11 +123,53 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
             ->exec(false)
             ->jsonSerialize();
 
-        $def2 = $db
+        $actual = $db
             ->reset()
-            ->getTableDef('moop01');
+            ->getTableDef($tbl);
 
-        $this->assertDefEquals($expected, $def2, false);
+        $this->assertDefEquals($expected, $actual, false);
+    }
+
+    /**
+     * Test altering the primary key.
+     */
+    public function testAlterPrimaryKey() {
+        $db = self::$db;
+        $def = new DbDef($db);
+        $tbl = 'tst02';
+
+        $def->table($tbl)
+            ->column('col1', 'int')
+            ->column('col2', 'int', 0)
+            ->index('col1', Db::INDEX_PK)
+            ->exec();
+
+        $def->table($tbl)
+            ->column('col1', 'int')
+            ->column('col2', 'int', 0)
+            ->index(['col1', 'col2'], Db::INDEX_PK)
+            ->exec();
+        $expected = $db->getTableDef($tbl);
+
+        $actual = $db
+            ->reset()
+            ->getTableDef($tbl);
+
+        $this->assertDefEquals($expected, $actual);
+
+        // A more real world example is re-ordering the primary key.
+        $def->table($tbl)
+            ->column('col1', 'int')
+            ->column('col2', 'int', 0)
+            ->index(['col2', 'col1'], Db::INDEX_PK)
+            ->exec();
+        $expected2 = $db->getTableDef($tbl);
+
+        $actual2 = $db
+            ->reset()
+            ->getTableDef($tbl);
+
+        $this->assertDefEquals($expected2, $actual2);
     }
 
     /**

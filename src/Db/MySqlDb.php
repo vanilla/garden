@@ -517,7 +517,13 @@ class MySqlDb extends Db {
 
         // Add the indexes to the tables.
         foreach ($indexes as $itablename => $tableIndexes) {
-            $this->tables[$itablename]['indexes'] = array_values($tableIndexes);
+            foreach ($tableIndexes as $ixDef) {
+                if (val('type', $ixDef, Db::INDEX_IX) === Db::INDEX_PK) {
+                    $this->tables[$itablename]['indexes'][Db::INDEX_PK] = $ixDef;
+                } else {
+                    $this->tables[$itablename]['indexes'][] = $ixDef;
+                }
+            }
         }
         if ($tablename && isset($this->tables[$tablename]['indexes'])) {
             return $this->tables[$tablename]['indexes'];

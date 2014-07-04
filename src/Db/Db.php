@@ -208,12 +208,18 @@ abstract class Db {
 
         $alterDef['add']['indexes'] = array_udiff($newIndexes, $curIndexes, [$this, 'indexCompare']);
 
+        $dropIndexes = array_udiff($curIndexes, $newIndexes, [$this, 'indexCompare']);
         if ($drop) {
             $alterDef['drop']['columns'] = array_diff_key($curColumns, $newColumns);
-            $alterDef['drop']['indexes'] = array_udiff($curIndexes, $newIndexes, [$this, 'indexCompare']);
+            $alterDef['drop']['indexes'] = $dropIndexes;
         } else {
             $alterDef['drop']['columns'] = [];
             $alterDef['drop']['indexes'] = [];
+
+            // If the primary key has changed then the old one needs to be dropped.
+            if (isset($dropIndexes[Db::INDEX_PK])) {
+                $alterDef['drop']['indexes'][Db::INDEX_PK] = $dropIndexes[Db::INDEX_PK];
+            }
         }
 
         $alterDef['def'] = $tableDef;
@@ -253,7 +259,7 @@ abstract class Db {
                 $primaryFound = true;
 
                 if (empty($primaryColumns)) {
-                    foreach ($indexDef['columns'] as $cname => $_) {
+                    foreach ($indexDef['columns'] as $cname) {
                         $tableDef['columns'][$cname]['primary'] = true;
                     }
                 } elseif (array_diff($primaryColumns, $indexDef['columns'])) {
@@ -268,7 +274,7 @@ abstract class Db {
         }
 
         if (!$primaryFound && !empty($primaryColumns)) {
-            $tableDef['indexes'][] = [
+            $tableDef['indexes'][db::INDEX_PK] = [
                 'columns' => $primaryColumns,
                 'type' => Db::INDEX_PK
             ];
