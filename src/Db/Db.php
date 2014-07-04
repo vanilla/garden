@@ -226,20 +226,39 @@ abstract class Db {
      * Move the primary key index into the correct place for database drivers.
      *
      * @param array &$tableDef The table definition.
+     * @throws \Exception Throws an exception when there is a mismatch between the primary index and the primary key
+     * defined on the columns themselves.
      */
     protected function fixPrimaryKey(array &$tableDef) {
+        // Loop through the columns and add get the primary key index.
+        $primaryColumns = [];
+        foreach ($tableDef['columns'] as $cname => $cdef) {
+            if (val('primary', $cdef)) {
+                $primaryColumns[] = $cname;
+            }
+        }
+
         // Massage the primary key index.
+        $primaryFound = false;
         foreach (val('indexes', $tableDef, []) as $i => $indexDef) {
             if (val('type', $indexDef) === Db::INDEX_PK) {
-                if (count($indexDef['columns']) === 1) {
-                    $tableDef['columns'][$indexDef['columns'][0]]['primary'] = true;
-                    unset($tableDef['indexes'][$i]);
-                } else {
-                    foreach ($indexDef['columns'] as $column) {
-                        $tableDef['columns']['primary'] = false;
+                $primaryFound = true;
+
+                if (empty($primaryColumns)) {
+                    foreach ($indexDef['columns'] as $cname => $_) {
+                        $tableDef['columns'][$cname]['primary'] = true;
                     }
+                } elseif (array_diff($primaryColumns, $indexDef['columns'])) {
+                    throw new \Exception("There is a mismatch in the primary key index and primary key columns.", 500);
                 }
             }
+        }
+
+        if (!$primaryFound && !empty($primaryColumns)) {
+            $tableDef['indexes'][] = [
+                'columns' => $primaryColumns,
+                'type' => Db::INDEX_PK
+            ];
         }
     }
 

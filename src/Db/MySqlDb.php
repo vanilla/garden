@@ -799,12 +799,8 @@ class MySqlDb extends Db {
 
         if (val('autoincrement', $def)) {
             $result .= ' auto_increment';
-            $def['primary'] = true;
         }
 
-        if (val('primary', $def)) {
-            $result .= ' primary key';
-        }
         return $result;
     }
 

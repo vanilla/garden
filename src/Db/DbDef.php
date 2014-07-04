@@ -134,6 +134,7 @@ class DbDef implements \JsonSerializable {
     public function primaryKey($name, $type = 'int') {
         $column = $this->columnDef($type, false);
         $column['autoincrement'] = true;
+        $column['primary'] = true;
 
         $this->columns[$name] = $column;
 

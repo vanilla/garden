@@ -93,17 +93,21 @@ class SqliteDb extends MySqlDb {
      * {@inheritdoc}
      */
     protected function createTable($tablename, array $tabledef, array $options = []) {
-        // The table doesn't exist so this is a create table.
         $parts = array();
+
+        $autoinc = false;
         foreach ($tabledef['columns'] as $name => $def) {
             $parts[] = $this->columnDefString($name, $def);
+            $autoinc |= val('autoincrement', $def, false);
         }
 
         // Add just primary keys and unique indexes here.
         foreach (val('indexes', $tabledef, []) as $index) {
             switch (val('type', $index, Db::INDEX_IX)) {
                 case Db::INDEX_PK:
-                    $parts[] = 'primary key '.$this->bracketList($index['columns'], '`');
+                    if (!$autoinc) {
+                        $parts[] = 'primary key '.$this->bracketList($index['columns'], '`');
+                    }
                     break;
                 case Db::INDEX_UNIQUE:
                     $parts[] = 'unique '.$this->bracketList($index['columns'], '`');

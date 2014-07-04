@@ -57,17 +57,18 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
      */
     public function testCreateTable() {
         $def = static::createDbDef();
+        $db = $def->getDb();
 
-        $def->table('user')
+        $def1 = $def->table('user')
             ->primaryKey('userID')
             ->column('name', 'varchar(50)')
             ->index('name', Db::INDEX_IX)
-            ->exec();
+            ->exec(false)
+            ->jsonSerialize();
 
-        $defArray = $def->jsonSerialize();
-        $defArrayDb = $def->getDb()->getTableDef('user');
+        $def2 = $db->getTableDef('user');
 
-        $def->getDb()->insert('user', ['userID' => 1, 'name' => 'todd']);
+        $this->assertEquals($def1, $def2);
     }
 
     /**
