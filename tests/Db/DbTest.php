@@ -362,4 +362,41 @@ abstract class DbTest extends \PHPUnit_Framework_TestCase {
 
         return $user;
     }
+
+    /**
+     * Assert that two table definitions are equal.
+     *
+     * @param array $expected The expected table definition.
+     * @param array $actual The actual table definition.
+     * @param bool $subset Whether or not expected can be a subset of actual.
+     */
+    public function assertDefEquals($expected, $actual, $subset = true) {
+        $colsExpected = $expected['columns'];
+        $colsActual = $actual['columns'];
+
+        if ($subset) {
+            $colsActual = array_intersect_key($colsActual, $colsExpected);
+        }
+        $this->assertEquals($colsExpected, $colsActual, "Columns are not the same.");
+
+        $ixExpected = $expected['indexes'];
+        $ixActual = $actual['indexes'];
+
+        $isExpected = [];
+        foreach ($ixExpected as $ix) {
+            $isExpected[] = val('type', $ix, Db::INDEX_IX).'('.implode(', ', $ix['columns']).')';
+        }
+        asort($isExpected);
+
+        $isActual = [];
+        foreach ($ixActual as $ix) {
+            $isActual[] = val('type', $ix, Db::INDEX_IX).'('.implode(', ', $ix['columns']).')';
+        }
+        asort($isExpected);
+
+        if ($subset) {
+            $isActual = array_intersect($isActual, $isExpected);
+        }
+        $this->assertEquals($isExpected, $isActual, "Indexes are not the same.");
+    }
 }

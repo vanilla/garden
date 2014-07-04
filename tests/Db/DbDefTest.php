@@ -68,7 +68,7 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
 
         $def2 = $db->getTableDef('user');
 
-        $this->assertEquals($def1, $def2);
+        $this->assertDefEquals($def1, $def2);
     }
 
     /**
@@ -78,14 +78,13 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
         $db = self::$db;
         $def = new DbDef($db);
 
-        $def->table('moop')
+        $def->table('moop00')
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index('col1', Db::INDEX_IX)
             ->exec();
-        $def1 = $db->getTableDef('moop');
 
-        $expected = $def->table('moop')
+        $expected = $def->table('moop00')
             ->column('cola', 'int')
             ->column('colb', 'int')
             ->column('col2', 'int')
@@ -95,10 +94,36 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
 
         $def2 = $db
             ->reset()
-            ->getTableDef('moop');
-
+            ->getTableDef('moop00');
 
         $this->assertDefEquals($expected, $def2);
+    }
+
+    public function testAlterTableWithDrop() {
+        $db = self::$db;
+        $def = new DbDef($db);
+
+        $def->table('moop01')
+            ->column('col1', 'int')
+            ->column('col2', 'int', 0)
+            ->index('col1', Db::INDEX_IX);
+
+        $def->exec();
+
+        $expected = $def->table('moop01')
+            ->column('cola', 'int')
+            ->column('colb', 'int')
+            ->column('col2', 'int')
+            ->index('col2', Db::INDEX_IX)
+            ->option(Db::OPTION_DROP, true)
+            ->exec(false)
+            ->jsonSerialize();
+
+        $def2 = $db
+            ->reset()
+            ->getTableDef('moop01');
+
+        $this->assertDefEquals($expected, $def2, false);
     }
 
     /**
