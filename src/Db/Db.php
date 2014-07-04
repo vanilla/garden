@@ -25,6 +25,7 @@ abstract class Db {
     const OPTION_IGNORE = 'ignore';
     const OPTION_UPSERT = 'upsert';
     const OPTION_TRUNCATE = 'truncate';
+    const OPTION_DROP = 'drop';
 
     const OP_EQ = '=';
     const OP_GT = '>';
@@ -168,19 +169,19 @@ abstract class Db {
     /**
      * Set a table definition to the database.
      *
-     * @param string $tableName The name of the table.
+     * @param string $tablename The name of the table.
      * @param array $tableDef The table definition.
      * @param array $options An array of additional options when adding the table.
      */
-    public function setTableDef($tableName, array $tableDef, array $options = []) {
-        $drop = val('drop', $options);
-        $curTable = $this->getTableDef($tableName);
+    public function setTableDef($tablename, array $tableDef, array $options = []) {
+        $drop = val(Db::OPTION_DROP, $options, false);
+        $curTable = $this->getTableDef($tablename);
 
-        $this->fixPrimaryKey($tableDef);
+        $this->fixIndexes($tablename, $tableDef, $curTable);
 
         if (!$curTable) {
-            $this->createTable($tableName, $tableDef, $options);
-            $this->tables[$tableName] = $tableDef;
+            $this->createTable($tablename, $tableDef, $options);
+            $this->tables[$tablename] = $tableDef;
             return;
         }
         // This is the alter statement.
@@ -200,36 +201,40 @@ abstract class Db {
             }
             return 1;
         });
-        if ($drop) {
-            $alterDef['drop']['columns'] = array_diff_key($curColumns, $newColumns);
-        }
 
         // Figure out the indexes that have changed.
         $curIndexes = (array)val('indexes', $curTable, []);
         $newIndexes = (array)val('indexes', $tableDef, []);
 
         $alterDef['add']['indexes'] = array_udiff($newIndexes, $curIndexes, [$this, 'indexCompare']);
+
         if ($drop) {
+            $alterDef['drop']['columns'] = array_diff_key($curColumns, $newColumns);
             $alterDef['drop']['indexes'] = array_udiff($curIndexes, $newIndexes, [$this, 'indexCompare']);
+        } else {
+            $alterDef['drop']['columns'] = [];
+            $alterDef['drop']['indexes'] = [];
         }
 
         $alterDef['def'] = $tableDef;
 
         // Update the cached schema. The driver-specific call can also update it.
-        $this->tables[$tableName] = $tableDef;
+        $this->tables[$tablename] = $tableDef;
 
         // Alter the table.
-        $this->alterTable($tableName, $alterDef, $options);
+        $this->alterTable($tablename, $alterDef, $options);
     }
 
     /**
      * Move the primary key index into the correct place for database drivers.
      *
+     * @param string $tablename The name of the table.
      * @param array &$tableDef The table definition.
+     * @param array|null $curTableDef The current database table def used to resolve conflicts in some names.
      * @throws \Exception Throws an exception when there is a mismatch between the primary index and the primary key
      * defined on the columns themselves.
      */
-    protected function fixPrimaryKey(array &$tableDef) {
+    protected function fixIndexes($tablename, array &$tableDef, $curTableDef = null) {
         // Loop through the columns and add get the primary key index.
         $primaryColumns = [];
         foreach ($tableDef['columns'] as $cname => $cdef) {
@@ -240,7 +245,10 @@ abstract class Db {
 
         // Massage the primary key index.
         $primaryFound = false;
-        foreach (val('indexes', $tableDef, []) as $i => $indexDef) {
+        array_touch('indexes', $tableDef, []);
+        foreach ($tableDef['indexes'] as &$indexDef) {
+            array_touch('name', $indexDef, $this->buildIndexName($tablename, $indexDef));
+
             if (val('type', $indexDef) === Db::INDEX_PK) {
                 $primaryFound = true;
 
@@ -250,6 +258,11 @@ abstract class Db {
                     }
                 } elseif (array_diff($primaryColumns, $indexDef['columns'])) {
                     throw new \Exception("There is a mismatch in the primary key index and primary key columns.", 500);
+                }
+            } elseif (isset($curTableDef['indexes'])) {
+                $curIndexDef = array_usearch($indexDef, $curTableDef['indexes'], [$this, 'indexCompare']);
+                if ($curIndexDef && isset($curIndexDef['name'])) {
+                    $indexDef['name'] = $curIndexDef['name'];
                 }
             }
         }
@@ -288,7 +301,7 @@ abstract class Db {
      * @return int Returns an integer less than, equal to, or greater than zero if {@link $a} is
      * considered to be respectively less than, equal to, or greater than {@link $b}.
      */
-    protected function indexCompare(array $a, array $b) {
+    public function indexCompare(array $a, array $b) {
         if ($a['columns'] > $b['columns']) {
             return 1;
         } elseif ($a['columns'] < $b['columns']) {

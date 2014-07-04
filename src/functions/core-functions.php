@@ -245,6 +245,24 @@ function array_save($data, $path, $php_var = 'config') {
 }
 
 /**
+ * Search an array for a value with a user-defined comparison function.
+ *
+ * @param mixed $needle The value to search for.
+ * @param array $haystack The array to search.
+ * @param callable $cmp The comparison function to use in the search.
+ * @return mixed|false Returns the found value or false if the value is not found.
+ */
+function array_usearch($needle, array $haystack, callable $cmp) {
+    $found = array_uintersect($haystack, [$needle], $cmp);
+
+    if (empty($found)) {
+        return false;
+    } else {
+        return array_pop($found);
+    }
+}
+
+/**
  * Select the first non-empty value from an array.
  *
  * @param array $keys An array of keys to try.

@@ -24,6 +24,11 @@ class DbDef implements \JsonSerializable {
     protected $columns;
 
     /**
+     * @var array Options to send to the table definitaion call.
+     */
+    protected $options;
+
+    /**
      *
      * @var string The name of the currently working table.
      */
@@ -55,6 +60,7 @@ class DbDef implements \JsonSerializable {
         $this->table = null;
         $this->columns = [];
         $this->indexes = [];
+        $this->options = [];
 
         return $this;
     }
@@ -153,7 +159,8 @@ class DbDef implements \JsonSerializable {
     public function exec($reset = true) {
         $this->db->setTableDef(
             $this->table,
-            $this->jsonSerialize()
+            $this->jsonSerialize(),
+            $this->options
         );
 
         if ($reset) {
@@ -212,13 +219,26 @@ class DbDef implements \JsonSerializable {
         if ($currentIndex) {
             $currentIndex['columns'] = array_unique(array_merge($currentIndex['columns'], $columns));
         } else {
-            $this->indexes[] = [
+            $indexDef = [
                 'type' => $type,
                 'columns' => $columns,
                 'suffix' => $suffix
             ];
+            $this->indexes[] = $indexDef;
         }
 
+        return $this;
+    }
+
+    /**
+     * Set an option that will be passed on to the final {@link Db::setTableDef()} call.
+     *
+     * @param string $key The option key.
+     * @param mixed $value The option value.
+     * @return DbDef Returns $this for fluent calls.
+     */
+    public function option($key, $value) {
+        $this->options[$key] = $value;
         return $this;
     }
 

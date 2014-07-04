@@ -136,7 +136,14 @@ class MySqlDb extends Db {
 
         $table = val($tablename, $this->tables, []);
         if (!isset($table['columns'])) {
-            $table['columns'] = $this->getColumns($tablename);
+            $columns = $this->getColumns($tablename);
+            if ($columns === null) {
+                // A table with no columns does not exist.
+                $this->tables[$tablename] = null;
+                return null;
+            }
+
+            $table['columns'] = $columns;
         }
         if (!isset($table['indexes'])) {
             $table['indexes'] = $this->getIndexes($tablename);
@@ -185,7 +192,7 @@ class MySqlDb extends Db {
             $tables[$tablename]['columns'][$cdef['COLUMN_NAME']] = $column;
         }
         $this->tables = array_replace($this->tables, $tables);
-        if ($tablename) {
+        if ($tablename && isset($this->tables[$tablename]['columns'])) {
             return $this->tables[$tablename]['columns'];
         }
         return null;
@@ -512,7 +519,7 @@ class MySqlDb extends Db {
         foreach ($indexes as $itablename => $tableIndexes) {
             $this->tables[$itablename]['indexes'] = array_values($tableIndexes);
         }
-        if ($tablename) {
+        if ($tablename && isset($this->tables[$tablename]['indexes'])) {
             return $this->tables[$tablename]['indexes'];
         }
         return null;
@@ -856,6 +863,14 @@ class MySqlDb extends Db {
         // Alter the columns.
         foreach ($alterdef['alter']['columns'] as $cname => $cdef) {
             $parts[] = 'modify '.$this->columnDefString($cname, $cdef);
+        }
+
+        // Drop the columns and indexes.
+        foreach ($alterdef['drop']['columns'] as $cname => $_) {
+            $parts[] = 'drop '.$this->backtick($cname);
+        }
+        foreach ($alterdef['drop']['indexes'] as $ixdef) {
+            $parts[] = 'drop index '.$this->backtick($ixdef['name']);
         }
 
         if (empty($parts)) {
