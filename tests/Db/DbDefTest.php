@@ -68,7 +68,7 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
 
         $def2 = $db->getTableDef('user');
 
-        $this->assertDefEquals($def1, $def2);
+        $this->assertDefEquals('user', $def1, $def2);
     }
 
     /**
@@ -80,24 +80,23 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
         $tbl = 'tst00';
 
         $def->table($tbl)
-            ->column('col1', 'int')
+            ->column('col1', 'int', false)
             ->column('col2', 'int', 0)
             ->index('col1', Db::INDEX_IX)
             ->exec();
 
         $expected = $def->table($tbl)
-            ->column('cola', 'int')
-            ->column('colb', 'int')
-            ->column('col2', 'int')
+            ->column('cola', 'int', false)
+            ->column('colb', 'int', false)
+            ->column('col2', 'int', false)
             ->index('col1', Db::INDEX_IX)
             ->exec(false)
             ->jsonSerialize();
 
-        $def2 = $db
-            ->reset()
-            ->getTableDef($tbl);
+        $db->reset();
+        $actual = $db->getTableDef($tbl);
 
-        $this->assertDefEquals($expected, $def2);
+        $this->assertDefEquals($tbl, $expected, $actual);
     }
 
     /**
@@ -111,8 +110,8 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
-            ->index('col1', Db::INDEX_IX)
-            ->exec();
+            ->index('col1', Db::INDEX_IX);
+        $def->exec();
 
         $expected = $def->table($tbl)
             ->column('cola', 'int')
@@ -127,7 +126,7 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
             ->reset()
             ->getTableDef($tbl);
 
-        $this->assertDefEquals($expected, $actual, false);
+        $this->assertDefEquals($tbl, $expected, $actual, false);
     }
 
     /**
@@ -141,52 +140,52 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
-            ->index('col1', Db::INDEX_PK)
-            ->exec();
+            ->index('col1', Db::INDEX_PK);
+        $def->exec();
 
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
-            ->index(['col1', 'col2'], Db::INDEX_PK)
-            ->exec();
+            ->index(['col1', 'col2'], Db::INDEX_PK);
+        $def->exec();
         $expected = $db->getTableDef($tbl);
 
-        $actual = $db
-            ->reset()
-            ->getTableDef($tbl);
+        $db->reset();
+        $actual =  $db->getTableDef($tbl);
 
-        $this->assertDefEquals($expected, $actual);
+        $this->assertDefEquals($tbl, $expected, $actual);
 
         // A more real world example is re-ordering the primary key.
-        $def->table($tbl)
-            ->column('col1', 'int')
-            ->column('col2', 'int', 0)
-            ->index(['col2', 'col1'], Db::INDEX_PK)
-            ->exec();
-        $expected2 = $db->getTableDef($tbl);
-
-        $actual2 = $db
-            ->reset()
-            ->getTableDef($tbl);
-
-        $this->assertDefEquals($expected2, $actual2);
+//        $def->table($tbl)
+//            ->column('col1', 'int')
+//            ->column('col2', 'int', 0)
+//            ->index(['col2', 'col1'], Db::INDEX_PK);
+//        $def->exec();
+//        $expected2 = $db->getTableDef($tbl);
+//
+//        $actual2 = $db
+//            ->reset()
+//            ->getTableDef($tbl);
+//
+//        $this->assertDefEquals($tbl, $expected2, $actual2);
     }
 
     /**
      * Assert that two table definitions are equal.
      *
+     * @param string $tablename The name of the table.
      * @param array $expected The expected table definition.
      * @param array $actual The actual table definition.
      * @param bool $subset Whether or not expected can be a subset of actual.
      */
-    public function assertDefEquals($expected, $actual, $subset = true) {
+    public function assertDefEquals($tablename, $expected, $actual, $subset = true) {
         $colsExpected = $expected['columns'];
         $colsActual = $actual['columns'];
 
         if ($subset) {
             $colsActual = array_intersect_key($colsActual, $colsExpected);
         }
-        $this->assertEquals($colsExpected, $colsActual, "Columns are not the same.");
+        $this->assertEquals($colsExpected, $colsActual, "$tablename columns are not the same.");
 
         $ixExpected = $expected['indexes'];
         $ixActual = $actual['indexes'];
@@ -201,11 +200,11 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
         foreach ($ixActual as $ix) {
             $isActual[] = val('type', $ix, Db::INDEX_IX).'('.implode(', ', $ix['columns']).')';
         }
-        asort($isExpected);
+        asort($isActual);
 
         if ($subset) {
             $isActual = array_intersect($isActual, $isExpected);
         }
-        $this->assertEquals($isExpected, $isActual, "Indexes are not the same.");
+        $this->assertEquals($isExpected, $isActual, "$tablename indexes are not the same.");
     }
 }

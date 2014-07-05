@@ -7,28 +7,29 @@
 
 namespace Garden\Tests\Db;
 
-use Garden\Db\Db;
+use Garden\Db\SqliteDb;
 
 /**
- * Exectute the {@link DbTest} tests against the {@link SqliteDb}.
+ * Run the {@link DbDefTest} against {@link SqliteDb}.
  */
-class SqliteDbTest extends DbTest {
+class SqliteDbDefTest extends DbDefTest {
     /**
-     * Get the database connection for the test.
+     * Create the {@link SqliteDb}.
      *
-     * @return Db Returns the db object.
+     * @return \Garden\Db\SqliteDb Returns the new database connection.
      */
     protected static function createDb() {
         if (getenv('TRAVIS')) {
             $path = ':memory:';
         } else {
-            $path = PATH_CACHE.'/dbtest.sqlite';
+            $path = PATH_CACHE.'/dbdeftest.sqlite';
         }
 
-        $db = Db::create([
-            'driver' => 'SqliteDb',
+        $db = new SqliteDb([
             'path' => $path,
         ]);
+
+        $db->setPx('tst_');
 
         return $db;
     }

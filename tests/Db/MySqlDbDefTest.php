@@ -9,14 +9,19 @@ namespace Garden\Tests\Db;
 
 use Garden\Db\MySqlDb;
 
+/**
+ * Run the {@link DbDefTest} against {@link MySqlDb}.
+ */
 class MySqlDbDefTest extends DbDefTest {
     /**
+     * Create the {@link MySqlDb}.
+     *
      * @return \Garden\Db\MySqlDb Returns the new database connection.
      */
     protected static function createDb() {
         $db = new MySqlDb([
             'host' => '127.0.0.1',
-            'username' => 'root',
+            'username' => 'travis',
             'dbname' => 'phpunit_garden',
         ]);
 

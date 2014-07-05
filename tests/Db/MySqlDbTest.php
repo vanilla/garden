@@ -24,7 +24,7 @@ class MySqlDbTest extends DbTest {
         $db = Db::create([
             'driver' => 'MySqlDb',
             'host' => '127.0.0.1',
-            'username' => 'root',
+            'username' => 'travis',
             'dbname' => 'phpunit_garden',
         ]);
 
