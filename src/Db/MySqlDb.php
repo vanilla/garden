@@ -166,7 +166,7 @@ class MySqlDb extends Db {
             'information_schema.COLUMNS',
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
-                'TABLE_NAME' => $ltablename ? $this->px.$ltablename : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
+                'TABLE_NAME' => $tablename ? $this->px.$tablename : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
             ],
             [
                 'escapeTable' => false,
