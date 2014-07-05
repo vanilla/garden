@@ -192,17 +192,26 @@ class SqliteDb extends MySqlDb {
      * {@inheritdoc}
      */
     protected function createTable($tablename, array $tabledef, array $options = []) {
-        $parts = array();
+        $parts = [];
 
+        // Make sure the primary key columns are defined first and in order.
         $autoinc = false;
-        foreach ($tabledef['columns'] as $name => $def) {
-            $parts[] = $this->columnDefString($name, $def);
-            $autoinc |= val('autoincrement', $def, false);
+        if (isset($tabledef['indexes']['primary'])) {
+            $pkIndex = $tabledef['indexes']['primary'];
+            foreach ($pkIndex['columns'] as $column) {
+                $cdef = $tabledef['columns'][$column];
+                $parts[] = $this->columnDefString($column, $cdef);
+                $autoinc |= val('autoincrement', $cdef, false);
+                unset($tabledef['columns'][$column]);
+            }
         }
 
-        // Add the prinary key.
-        if (isset($tabledef['indexes']['primary']) && !$autoinc) {
-            $pkIndex = $tabledef['indexes']['primary'];
+        foreach ($tabledef['columns'] as $name => $cdef) {
+            $parts[] = $this->columnDefString($name, $cdef);
+        }
+
+        // Add the prinary key index.
+        if (isset($pkIndex) && !$autoinc) {
             $parts[] = 'primary key '.$this->bracketList($pkIndex['columns'], '`');
         }
 
