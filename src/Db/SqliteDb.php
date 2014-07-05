@@ -16,6 +16,100 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
+    protected function alterTable($tablename, array $alterdef, array $options = []) {
+        $this->alterTableMigrate($tablename, $alterdef, $options);
+    }
+
+    /**
+     * Alter a table by creating a new table and copying the old table's data to it.
+     *
+     * @param string $tablename The table to alter.
+     * @param array $alterDef The new definition.
+     * @param array $options An array of options for the migration.
+     */
+    protected function alterTableMigrate($tablename, array $alterDef, array $options = []) {
+        $currentDef = $this->getTableDef($tablename);
+
+        // Merge the table definitions if we aren't dropping stuff.
+        if (!val(Db::OPTION_DROP, $options)) {
+            $tableDef = $this->mergeTableDefs($currentDef, $alterDef);
+        } else {
+            $tableDef = $alterDef['def'];
+        }
+
+        // Drop all of the indexes on the current table.
+        foreach (val('indexes', $currentDef, []) as $indexDef) {
+            if (val('type', $indexDef, Db::INDEX_IX) === Db::INDEX_IX) {
+                $this->dropIndex($indexDef['name']);
+            }
+        }
+
+        $tmpTablename = $tablename.'_'.time();
+
+        // Rename the current table.
+        $this->renameTable($tablename, $tmpTablename);
+
+        // Create the new table.
+        $this->createTable($tablename, $tableDef, $options);
+
+        // Figure out the columns that we can insert.
+        $columns = array_keys(array_intersect_key($tableDef['columns'], $currentDef['columns']));
+
+        // Build the insert/select statement.
+        $sql = 'insert into '.$this->backtick($this->px.$tablename)."\n".
+            $this->bracketList($columns, '`')."\n".
+            $this->buildSelect($tmpTablename, [], ['columns' => $columns]);
+
+        $this->query($sql, Db::QUERY_WRITE);
+
+        // Drop the temp table.
+        $this->dropTable($tmpTablename);
+    }
+
+    /**
+     * Rename a table.
+     *
+     * @param string $oldname The old name of the table.
+     * @param string $newname The new name of the table.
+     */
+    protected function renameTable($oldname, $newname) {
+        $renameSql = 'alter table '.
+            $this->backtick($this->px.$oldname).
+            ' rename to '.
+            $this->backtick($this->px.$newname);
+        $this->query($renameSql, Db::QUERY_WRITE);
+    }
+
+    /**
+     * Merge a table def with its alter def so that no columns/indexes are lost in an alter.
+     *
+     * @param array $tableDef The table def.
+     * @param array $alterDef The alter def.
+     * @return array The new table def.
+     */
+    protected function mergeTableDefs(array $tableDef, array $alterDef) {
+        $result = $tableDef;
+
+        $result['columns'] = array_merge($result['columns'], $alterDef['def']['columns']);
+        $result['indexes'] = array_merge($result['indexes'], $alterDef['add']['indexes']);
+
+        return $result;
+    }
+
+    /**
+     * Drop an index.
+     *
+     * @param string $indexName The name of the index to drop.
+     */
+    protected function dropIndex($indexName) {
+        $sql = 'drop index if exists '.
+            $this->backtick($indexName);
+        $this->query($sql, Db::QUERY_DEFINE);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     protected function buildInsert($tablename, array $row, $quotevals = true, $options = []) {
         if (val(Db::OPTION_UPSERT, $options)) {
             throw new \Exception("Upsert is not supported.");
@@ -80,13 +174,11 @@ class SqliteDb extends MySqlDb {
 
         $result = $this->backtick($name).' '.$this->columnTypeString($def['type']);
 
-        if (val('primary', $def)) {
-            $result .= ' primary key';
-
-            if (val('autoincrement', $def)) {
-                $result .= ' autoincrement';
+        if (val('primary', $def) && val('autoincrement', $def)) {
+//            if (val('autoincrement', $def)) {
+                $result .= ' primary key autoincrement';
                 $def['primary'] = true;
-            }
+//            }
         } elseif (isset($def['default'])) {
             $result .= ' default '.$this->quoteVal($def['default']);
         } elseif (val('required', $def)) {
@@ -108,18 +200,10 @@ class SqliteDb extends MySqlDb {
             $autoinc |= val('autoincrement', $def, false);
         }
 
-        // Add just primary keys and unique indexes here.
-        foreach (val('indexes', $tabledef, []) as $index) {
-            switch (val('type', $index, Db::INDEX_IX)) {
-                case Db::INDEX_PK:
-                    if (!$autoinc) {
-                        $parts[] = 'primary key '.$this->bracketList($index['columns'], '`');
-                    }
-                    break;
-                case Db::INDEX_UNIQUE:
-                    $parts[] = 'unique '.$this->bracketList($index['columns'], '`');
-                    break;
-            }
+        // Add the prinary key.
+        if (isset($tabledef['indexes']['primary']) && !$autoinc) {
+            $pkIndex = $tabledef['indexes']['primary'];
+            $parts[] = 'primary key '.$this->bracketList($pkIndex['columns'], '`');
         }
 
         $fullTablename = $this->backtick($this->px.$tablename);
@@ -127,9 +211,32 @@ class SqliteDb extends MySqlDb {
             implode(",\n  ", $parts).
             "\n)";
 
-        if (val('collate', $options)) {
-            $sql .= "\n collate {$options['collate']}";
+        $this->query($sql, Db::QUERY_DEFINE);
+
+        // Add the rest of the indexes.
+        foreach (val('indexes', $tabledef, []) as $index) {
+            if (val('type', $index, Db::INDEX_IX) !== Db::INDEX_PK) {
+                $this->createIndex($tablename, $index, $options);
+            }
         }
+    }
+
+    /**
+     * Create an index.
+     *
+     * @param string $tablename The name of the table to create the index on.
+     * @param array $indexDef The index definition.
+     * @param array $options Additional options for the index creation.
+     */
+    public function createIndex($tablename, array $indexDef, $options = []) {
+        $sql = 'create '.
+            (val('type', $indexDef) === Db::INDEX_UNIQUE ? 'unique ' : '').
+            'index '.
+            (val(Db::OPTION_IGNORE, $options) ? 'if not exists ' : '').
+            $this->buildIndexName($tablename, $indexDef).
+            ' on '.
+            $this->backtick($this->px.$tablename).
+            $this->bracketList($indexDef['columns'], '`');
 
         $this->query($sql, Db::QUERY_DEFINE);
     }
@@ -172,25 +279,39 @@ class SqliteDb extends MySqlDb {
         }
 
         $cdefs = $this->query('pragma table_info('.$this->quoteVal($this->px.$tablename).')');
+        if (empty($cdefs)) {
+            return null;
+        }
+
         $columns = [];
+        $pk = [];
         foreach ($cdefs as $cdef) {
             $column = [
                 'type' => $this->columnTypeString($cdef['type']),
                 'required' => force_bool($cdef['notnull']),
             ];
-            if ($cdef['pk'] && strcasecmp($cdef['type'], 'integer')) {
-                $column['autoincrement'] = true;
-            }
-            if ($cdef['pk'] === 'PRI') {
-                $column['primary'] = true;
+            if ($cdef['pk']) {
+                $pk[] = $cdef['name'];
+                if (strcasecmp($cdef['type'], 'integer') === 0) {
+                    $column['autoincrement'] = true;
+                } else {
+                    $column['primary'] = true;
+                }
             }
             if ($cdef['dflt_value'] !== null) {
                 $column['default'] = $cdef['dflt_value'];
             }
             $columns[$cdef['name']] = $column;
         }
-        $this->tables[$tablename] = ['columns' => $columns];
-        return val($tablename, $this->tables, null);
+        $tdef = ['columns' => $columns];
+        if (!empty($pk)) {
+            $tdef['indexes'][Db::INDEX_PK] = [
+                'columns' => $pk,
+                'type' => Db::INDEX_PK
+            ];
+        }
+        $this->tables[$tablename] = $tdef;
+        return $columns;
     }
 
     /**
@@ -207,8 +328,14 @@ class SqliteDb extends MySqlDb {
             }
         }
 
+        $pk = valr(['indexes', Db::INDEX_PK], $this->tables[$tablename]);
+
         // Reset the index list for the table.
         $this->tables[$tablename]['indexes'] = [];
+
+        if ($pk) {
+            $this->tables[$tablename]['indexes'][Db::INDEX_PK] = $pk;
+        }
 
         $indexInfos = $this->query('pragma index_list('.$this->quoteVal($this->px.$tablename).')');
         foreach ($indexInfos as $row) {
@@ -227,7 +354,7 @@ class SqliteDb extends MySqlDb {
                 'columns' => array_column($columns, 'name'),
                 'type' => $type
             ];
-            $this->tables[$tablename]['indexes'] = $index;
+            $this->tables[$tablename]['indexes'][] = $index;
         }
 
         return $this->tables[$tablename]['indexes'];
@@ -271,7 +398,7 @@ class SqliteDb extends MySqlDb {
             'sqlite_master',
             [
                 'type' => 'table',
-                'name' => [Db::OP_LIKE => $this->px.'%']
+                'name' => [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
             ],
             [
                 'columns' => ['name'],
@@ -286,8 +413,6 @@ class SqliteDb extends MySqlDb {
 
         return $tables;
     }
-
-
 
     /**
      * {@inheritdoc}
