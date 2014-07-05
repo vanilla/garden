@@ -135,7 +135,7 @@ class MySqlDb extends Db {
         }
 
         $ltablename = strtolower($tablename);
-        $table = val($ltablename, $this->tables, ['name' => $tablename]);
+        $table = val($ltablename, $this->tables, []);
         if (!isset($table['columns'])) {
             $columns = $this->getColumns($tablename);
             if ($columns === null) {
@@ -149,6 +149,7 @@ class MySqlDb extends Db {
         if (!isset($table['indexes'])) {
             $table['indexes'] = $this->getIndexes($tablename);
         }
+        $table['name'] = $tablename;
         $this->tables[$ltablename] = $table;
         return $table;
     }
@@ -190,8 +191,8 @@ class MySqlDb extends Db {
                 $column['default'] = $this->forceType($cdef['COLUMN_DEFAULT'], $column['type']);
             }
 
-            $ltablename = strtolower(ltrim_substr($cdef['TABLE_NAME'], $this->px));
-            $tables[$ltablename]['columns'][$cdef['COLUMN_NAME']] = $column;
+            $ctablename = strtolower(ltrim_substr($cdef['TABLE_NAME'], $this->px));
+            $tables[$ctablename]['columns'][$cdef['COLUMN_NAME']] = $column;
         }
         $this->tables = array_replace($this->tables, $tables);
         if ($ltablename && isset($this->tables[$ltablename]['columns'])) {
