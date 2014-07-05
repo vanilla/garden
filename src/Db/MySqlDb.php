@@ -397,7 +397,15 @@ class MySqlDb extends Db {
         $dsn = 'mysql:'.implode_assoc(';', '=', $dsnParts);
 
         if (!isset($this->pdo)) {
-            $this->pdo = new PDO($dsn, val('username', $this->config, ''), val('password', $this->config, ''));
+            $this->pdo = new PDO(
+                $dsn,
+                val('username', $this->config, ''),
+                val('password', $this->config, ''),
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                ]
+            );
             $this->pdo->query('set names utf8'); // send this statement outside our query function.
         }
         return $this->pdo;
