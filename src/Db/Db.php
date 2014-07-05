@@ -130,22 +130,24 @@ abstract class Db {
     /**
      * Get a table definition.
      *
-     * @param string $tableName The name of the table.
+     * @param string $tablename The name of the table.
      * @return array|null Returns the table definition or null if the table does not exist.
      */
-    public function getTableDef($tableName) {
+    public function getTableDef($tablename) {
+        $ltablename = strtolower($tablename);
+
         // Check to see if the table isn't in the cache first.
         if ($this->allTablesFetched & Db::FETCH_TABLENAMES &&
-            !isset($this->tables[$tableName])) {
+            !isset($this->tables[$ltablename])) {
             return null;
         }
 
         if (
-            isset($this->tables[$tableName]) &&
-            is_array($this->tables[$tableName]) &&
-            isset($this->tables[$tableName]['columns'], $this->tables[$tableName]['indexes'])
+            isset($this->tables[$ltablename]) &&
+            is_array($this->tables[$ltablename]) &&
+            isset($this->tables[$ltablename]['columns'], $this->tables[$ltablename]['indexes'])
         ) {
-            return $this->tables[$tableName];
+            return $this->tables[$ltablename];
         }
         return [];
     }
@@ -174,6 +176,8 @@ abstract class Db {
      * @param array $options An array of additional options when adding the table.
      */
     public function setTableDef($tablename, array $tableDef, array $options = []) {
+        $ltablename = strtolower($tablename);
+        $tableDef['name'] = $tablename;
         $drop = val(Db::OPTION_DROP, $options, false);
         $curTable = $this->getTableDef($tablename);
 
@@ -181,7 +185,7 @@ abstract class Db {
 
         if (!$curTable) {
             $this->createTable($tablename, $tableDef, $options);
-            $this->tables[$tablename] = $tableDef;
+            $this->tables[$ltablename] = $tableDef;
             return;
         }
         // This is the alter statement.
@@ -235,7 +239,8 @@ abstract class Db {
         $this->alterTable($tablename, $alterDef, $options);
 
         // Update the cached schema.
-        $this->tables[$tablename] = $tableDef;
+        $tableDef['name'] = $tablename;
+        $this->tables[$ltablename] = $tableDef;
     }
 
     /**

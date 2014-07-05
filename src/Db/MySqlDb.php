@@ -41,7 +41,7 @@ class MySqlDb extends Db {
             (val(Db::OPTION_IGNORE, $options) ? 'if exists ' : '').
             $this->backtick($this->px.$tablename);
         $this->query($sql, Db::QUERY_DEFINE);
-        unset($this->tables[$tablename]);
+        unset($this->tables[strtolower($tablename)]);
     }
 
     /**
@@ -134,12 +134,13 @@ class MySqlDb extends Db {
             return $table;
         }
 
-        $table = val($tablename, $this->tables, []);
+        $ltablename = strtolower($tablename);
+        $table = val($ltablename, $this->tables, ['name' => $tablename]);
         if (!isset($table['columns'])) {
             $columns = $this->getColumns($tablename);
             if ($columns === null) {
                 // A table with no columns does not exist.
-                $this->tables[$tablename] = null;
+                $this->tables[$ltablename] = ['name' => $tablename];
                 return null;
             }
 
@@ -148,7 +149,7 @@ class MySqlDb extends Db {
         if (!isset($table['indexes'])) {
             $table['indexes'] = $this->getIndexes($tablename);
         }
-        $this->tables[$tablename] = $table;
+        $this->tables[$ltablename] = $table;
         return $table;
     }
 
@@ -159,11 +160,12 @@ class MySqlDb extends Db {
      * @return array|null Returns an array of columns if {@link $tablename} is specified, or null otherwise.
      */
     protected function getColumns($tablename = '') {
+        $ltablename = strtolower($tablename);
         $columns = $this->get(
             'information_schema.COLUMNS',
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
-                'TABLE_NAME' => $tablename ? $this->px.$tablename : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
+                'TABLE_NAME' => $ltablename ? $this->px.$ltablename : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
             ],
             [
                 'escapeTable' => false,
@@ -188,12 +190,12 @@ class MySqlDb extends Db {
                 $column['default'] = $this->forceType($cdef['COLUMN_DEFAULT'], $column['type']);
             }
 
-            $tablename = ltrim_substr($cdef['TABLE_NAME'], $this->px);
-            $tables[$tablename]['columns'][$cdef['COLUMN_NAME']] = $column;
+            $ltablename = strtolower(ltrim_substr($cdef['TABLE_NAME'], $this->px));
+            $tables[$ltablename]['columns'][$cdef['COLUMN_NAME']] = $column;
         }
         $this->tables = array_replace($this->tables, $tables);
-        if ($tablename && isset($this->tables[$tablename]['columns'])) {
-            return $this->tables[$tablename]['columns'];
+        if ($ltablename && isset($this->tables[$ltablename]['columns'])) {
+            return $this->tables[$ltablename]['columns'];
         }
         return null;
     }
@@ -509,6 +511,7 @@ class MySqlDb extends Db {
      * @return array|null
      */
     protected function getIndexes($tablename = '') {
+        $ltablename = strtolower($tablename);
         $indexRows = $this->get(
             'information_schema.STATISTICS',
             [
@@ -523,7 +526,7 @@ class MySqlDb extends Db {
 
         $indexes = [];
         foreach ($indexRows as $row) {
-            $itablename = ltrim_substr($row['TABLE_NAME'], $this->px);
+            $itablename = strtolower(ltrim_substr($row['TABLE_NAME'], $this->px));
             $indexname = $row['INDEX_NAME'];
 
             if ($indexname === 'PRIMARY') {
@@ -547,8 +550,8 @@ class MySqlDb extends Db {
                 }
             }
         }
-        if ($tablename && isset($this->tables[$tablename]['indexes'])) {
-            return $this->tables[$tablename]['indexes'];
+        if ($ltablename) {
+            return valr([$ltablename, 'indexes'], $this->tables, []);
         }
         return null;
     }
@@ -567,7 +570,10 @@ class MySqlDb extends Db {
             $tablenames = array_keys($this->tables);
         } else {
             $tablenames = $this->getTablenames();
-            $this->tables = array_fill_keys($tablenames, null);
+            $this->tables = [];
+            foreach ($tablenames as $tablename) {
+                $this->tables[strtolower($tablename)] = ['name' => $tablename];
+            }
             $this->allTablesFetched = Db::FETCH_TABLENAMES;
         }
 
