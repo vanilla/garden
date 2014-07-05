@@ -896,7 +896,7 @@ class MySqlDb extends Db {
             'table '.$this->backtick($this->px.$tablename)."\n  ".
             implode(",\n  ", $parts);
 
-        $result = $this->query($sql);
+        $result = $this->query($sql, Db::QUERY_DEFINE);
         return $result;
     }
 
