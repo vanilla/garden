@@ -13,45 +13,7 @@ use Garden\Db\DbDef;
 /**
  * Test various aspects of the {@link DbDef} class and the {@link Db} class as it relates to it.
  */
-abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
-    /**
-     * @var Db The database connection for the tests.
-     */
-    protected static $db;
-
-    /// Methods ///
-
-    /**
-     * Get the database connection for the test.
-     *
-     * @return Db Returns the db object.
-     */
-    protected static function createDb() {
-        return null;
-    }
-
-    /**
-     * Get the database def.
-     *
-     * @return DbDef Returns the db def.
-     */
-    protected static function createDbDef() {
-        return new DbDef(self::$db);
-    }
-
-    /**
-     * Set up the db link for the test cases.
-     */
-    public static function setUpBeforeClass() {
-        // Drop all of the tables in the database.
-        self::$db = static::createDb();
-
-        $tables = self::$db->getAllTables();
-        foreach ($tables as $table) {
-            self::$db->dropTable($table);
-        }
-    }
-
+abstract class DbDefTest extends BaseDbTest {
     /**
      * Test a basic call to {@link Db::createTable()}.
      */
@@ -77,7 +39,7 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
     public function testAlterTableColumns() {
         $db = self::$db;
         $def = new DbDef($db);
-        $tbl = 'tst00';
+        $tbl = 'tstAlterTableColumns';
 
         $def->table($tbl)
             ->column('col1', 'int', false)
@@ -105,7 +67,7 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
     public function testAlterTableWithDrop() {
         $db = self::$db;
         $def = new DbDef($db);
-        $tbl = 'tst01';
+        $tbl = 'tstAlterTableWithDrop';
 
         $def->table($tbl)
             ->column('col1', 'int')
@@ -135,7 +97,7 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
     public function testAlterPrimaryKey() {
         $db = self::$db;
         $def = new DbDef($db);
-        $tbl = 'tst02';
+        $tbl = 'tstAlterPrimaryKey';
 
         $def->table($tbl)
             ->column('col1', 'int')
@@ -154,57 +116,38 @@ abstract class DbDefTest extends \PHPUnit_Framework_TestCase {
         $actual =  $db->getTableDef($tbl);
 
         $this->assertDefEquals($tbl, $expected, $actual);
-
-        // A more real world example is re-ordering the primary key.
-//        $def->table($tbl)
-//            ->column('col1', 'int')
-//            ->column('col2', 'int', 0)
-//            ->index(['col2', 'col1'], Db::INDEX_PK);
-//        $def->exec();
-//        $expected2 = $db->getTableDef($tbl);
-//
-//        $actual2 = $db
-//            ->reset()
-//            ->getTableDef($tbl);
-//
-//        $this->assertDefEquals($tbl, $expected2, $actual2);
     }
 
     /**
-     * Assert that two table definitions are equal.
-     *
-     * @param string $tablename The name of the table.
-     * @param array $expected The expected table definition.
-     * @param array $actual The actual table definition.
-     * @param bool $subset Whether or not expected can be a subset of actual.
+     * A more real world example of altering a primary key is re-ordering the primary key.
      */
-    public function assertDefEquals($tablename, $expected, $actual, $subset = true) {
-        $colsExpected = $expected['columns'];
-        $colsActual = $actual['columns'];
+    public function testReorderPrimaryKey() {
+        $db = self::$db;
+        $def = new DbDef($db);
+        $tbl = 'tstReorderPrimaryKey';
 
-        if ($subset) {
-            $colsActual = array_intersect_key($colsActual, $colsExpected);
-        }
-        $this->assertEquals($colsExpected, $colsActual, "$tablename columns are not the same.");
+        $def->table($tbl)
+            ->column('col1', 'int')
+            ->column('col2', 'int', 0)
+            ->index(['col1', 'col2'], Db::INDEX_PK);
+        $def->exec();
 
-        $ixExpected = $expected['indexes'];
-        $ixActual = $actual['indexes'];
+        $def->table($tbl)
+            ->column('col1', 'int')
+            ->column('col2', 'int', 0)
+            ->index(['col2', 'col1'], Db::INDEX_PK);
+        $def->exec();
+        $expected = $db->getTableDef($tbl);
 
-        $isExpected = [];
-        foreach ($ixExpected as $ix) {
-            $isExpected[] = val('type', $ix, Db::INDEX_IX).'('.implode(', ', $ix['columns']).')';
-        }
-        asort($isExpected);
+        $actual = $db
+            ->reset()
+            ->getTableDef($tbl);
 
-        $isActual = [];
-        foreach ($ixActual as $ix) {
-            $isActual[] = val('type', $ix, Db::INDEX_IX).'('.implode(', ', $ix['columns']).')';
-        }
-        asort($isActual);
+        $this->assertDefEquals($tbl, $expected, $actual);
 
-        if ($subset) {
-            $isActual = array_intersect($isActual, $isExpected);
-        }
-        $this->assertEquals($isExpected, $isActual, "$tablename indexes are not the same.");
+        $db->reset();
+        $actual =  $db->getTableDef($tbl);
+
+        $this->assertDefEquals($tbl, $expected, $actual);
     }
 }
