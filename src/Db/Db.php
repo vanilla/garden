@@ -26,6 +26,7 @@ abstract class Db {
     const OPTION_UPSERT = 'upsert';
     const OPTION_TRUNCATE = 'truncate';
     const OPTION_DROP = 'drop';
+    const OPTION_MODE = 'mode';
 
     const OP_EQ = '=';
     const OP_GT = '>';
@@ -39,12 +40,17 @@ abstract class Db {
     const OP_AND = 'and';
     const OP_OR = 'or';
 
-    const OP_ASC = 'asc';
-    const OP_DESC = 'desc';
+    const ORDER_ASC = 'asc';
+    const ORDER_DESC = 'desc';
 
     const FETCH_TABLENAMES = 0x1;
     const FETCH_COLUMNS = 0x2;
-    const FETCH_INDEXES = 0x3;
+    const FETCH_INDEXES = 0x4;
+
+    const MODE_EXEC = 0x1;
+    const MODE_ECHO = 0x2;
+    const MODE_SQL = 0x4;
+    const MODE_PDO = 0x8;
 
     /// Properties ///
 
@@ -52,6 +58,11 @@ abstract class Db {
      * @var string The database prefix.
      */
     protected $px = 'gdn_';
+
+    /**
+     * @var int The query execution mode.
+     */
+    protected $mode = Db::MODE_EXEC;
 
     /**
      * @var array A cached copy of the table schemas.

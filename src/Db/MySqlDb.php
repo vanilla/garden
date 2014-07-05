@@ -40,8 +40,10 @@ class MySqlDb extends Db {
         $sql = 'drop table '.
             (val(Db::OPTION_IGNORE, $options) ? 'if exists ' : '').
             $this->backtick($this->px.$tablename);
-        $this->query($sql, Db::QUERY_DEFINE);
+        $result = $this->query($sql, Db::QUERY_DEFINE);
         unset($this->tables[strtolower($tablename)]);
+
+        return $result;
     }
 
     /**
@@ -72,55 +74,44 @@ class MySqlDb extends Db {
      *
      * @param array $options Additional options for the query.
      *
-     * Db::GET_UNBUFFERED
-     * : Don't internally buffer the data when selecting from the database.
+     * Db::OPTION_MODE
+     * : Override {@link Db::$mode}.
      *
-     * @return array|PDOStatement|bool The result of the query.
+     * @return array|string|PDOStatement|int Returns the result of the query.
      *
-     * - array: When selecting from the database.
-     * - PDOStatement: When performing an unbuffered query.
-     * - int: When performing an update or an insert this will return the number of rows affected.
-     * - false: When the query was not successful.
+     * array
+     * : Returns an array when reading from the database and the mode is {@link Db::MODE_EXEC}.
+     * string
+     * : Returns the sql query when the mode is {@link Db::MODE_SQL}.
+     * PDOStatement
+     * : Returns a {@link \PDOStatement} when the mode is {@link Db::MODE_PDO}.
+     * int
+     * : Returns the number of rows affected when performing an update or an insert.
      */
-    protected function query($sql, $type = Db::QUERY_READ, $options = array()) {
-//        $start_time = microtime(true);
+    protected function query($sql, $type = Db::QUERY_READ, $options = []) {
+        $mode = val(Db::OPTION_MODE, $options, $this->mode);
 
-//        $this->pdo()->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, !val(Db::GET_UNBUFFERED, $options, false));
-
-//        if ($this->mode === Db::MODE_ECHO && $type != Db::QUERY_READ) {
-//            echo rtrim($sql, ';').";\n\n";
-//            return true;
-//        } else {
-//         $result = $this->mysqli->query($sql, $resultmode);
-        $result = $this->pdo()->query($sql);
-
-        if (!$result) {
-            list(,, $message) = $this->pdo->errorInfo();
-//            die($message);
-//                fwrite(STDERR, $sql);
-            trigger_error($message, E_USER_ERROR);
-//            trigger_error($this->mysqli->error."\n\n".$sql, E_USER_ERROR);
+        if ($mode & Db::MODE_ECHO) {
+            echo trim($sql, "\n;").";\n\n";
         }
-//        }
-
-        if ($type == Db::QUERY_READ) {
-//            if (isset($options[Db::GET_COLUMN])) {
-//                $result->setFetchMode(PDO::FETCH_COLUMN, $options[Db::GET_COLUMN]);
-//            } else {
-            $result->setFetchMode(PDO::FETCH_ASSOC);
-//            }
-
-//            if (!val(Db::GET_UNBUFFERED, $options)) {
-            $result = $result->fetchAll();
-            $this->rowCount = count($result);
-//            }
+        if ($mode & Db::MODE_SQL) {
+            return $sql;
         }
 
-        if (is_object($result) && method_exists($result, 'rowCount')) {
-            $this->rowCount = $result->rowCount();
-        }
+        if ($mode & Db::MODE_EXEC) {
+            $result = $this->pdo()->query($sql);
 
-//        $this->time += microtime(true) - $start_time;
+            if ($type == Db::QUERY_READ) {
+                $result->setFetchMode(PDO::FETCH_ASSOC);
+                $result = $result->fetchAll();
+                $this->rowCount = count($result);
+            } elseif (is_object($result) && method_exists($result, 'rowCount')) {
+                $this->rowCount = $result->rowCount();
+            }
+        } elseif ($mode & Db::MODE_PDO) {
+            /* @var \PDOStatement $result */
+            $result = $this->pdo()->prepare($sql);
+        }
 
         return $result;
     }
@@ -162,39 +153,56 @@ class MySqlDb extends Db {
      */
     protected function getColumns($tablename = '') {
         $ltablename = strtolower($tablename);
-        $columns = $this->get(
+        /* @var \PDOStatement $stmt */
+        $stmt = $this->get(
             'information_schema.COLUMNS',
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
                 'TABLE_NAME' => $tablename ? $this->px.$tablename : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
             ],
             [
+                'columns' => [
+                    'TABLE_NAME',
+                    'COLUMN_TYPE',
+                    'IS_NULLABLE',
+                    'EXTRA',
+                    'COLUMN_KEY',
+                    'COLUMN_DEFAULT',
+                    'COLUMN_NAME'
+                ],
+                Db::OPTION_MODE => Db::MODE_PDO,
                 'escapeTable' => false,
                 'order' => ['TABLE_NAME', 'ORDINAL_POSITION']
             ]
         );
 
-        $tables = [];
-        foreach ($columns as $cdef) {
-            $column = [
-                'type' => $this->columnTypeString($cdef['COLUMN_TYPE']),
-                'required' => !force_bool($cdef['IS_NULLABLE']),
-            ];
-            if ($cdef['EXTRA'] === 'auto_increment') {
-                $column['autoincrement'] = true;
-            }
-            if ($cdef['COLUMN_KEY'] === 'PRI') {
-                $column['primary'] = true;
-            }
+        $stmt->execute();
+        $tablecolumns = $stmt->fetchAll(PDO::FETCH_ASSOC | PDO::FETCH_GROUP);
 
-            if ($cdef['COLUMN_DEFAULT'] !== null) {
-                $column['default'] = $this->forceType($cdef['COLUMN_DEFAULT'], $column['type']);
-            }
+        foreach ($tablecolumns as $ctablename => $cdefs) {
+            $ctablename = strtolower(ltrim_substr($ctablename, $this->px));
+            $columns = [];
 
-            $ctablename = strtolower(ltrim_substr($cdef['TABLE_NAME'], $this->px));
-            $tables[$ctablename]['columns'][$cdef['COLUMN_NAME']] = $column;
+            foreach ($cdefs as $cdef) {
+                $column = [
+                    'type' => $this->columnTypeString($cdef['COLUMN_TYPE']),
+                    'required' => !force_bool($cdef['IS_NULLABLE']),
+                ];
+                if ($cdef['EXTRA'] === 'auto_increment') {
+                    $column['autoincrement'] = true;
+                }
+                if ($cdef['COLUMN_KEY'] === 'PRI') {
+                    $column['primary'] = true;
+                }
+
+                if ($cdef['COLUMN_DEFAULT'] !== null) {
+                    $column['default'] = $this->forceType($cdef['COLUMN_DEFAULT'], $column['type']);
+                }
+
+                $columns[$cdef['COLUMN_NAME']] = $column;
+            }
+            $this->tables[$ctablename]['columns'] = $columns;
         }
-        $this->tables = array_replace($this->tables, $tables);
         if ($ltablename && isset($this->tables[$ltablename]['columns'])) {
             return $this->tables[$ltablename]['columns'];
         }
@@ -206,7 +214,7 @@ class MySqlDb extends Db {
      */
     public function get($tablename, array $where, array $options = []) {
         $sql = $this->buildSelect($tablename, $where, $options);
-        $result = $this->query($sql, Db::QUERY_READ);
+        $result = $this->query($sql, Db::QUERY_READ, $options);
         return $result;
     }
 
@@ -248,12 +256,12 @@ class MySqlDb extends Db {
 
         // Build the order.
         if (isset($options['order'])) {
-            $order = array_quick($options['order'], Db::OP_ASC);
+            $order = array_quick($options['order'], Db::ORDER_ASC);
             $orders = array();
             foreach ($order as $key => $value) {
                 switch ($value) {
-                    case Db::OP_ASC:
-                    case Db::OP_DESC:
+                    case Db::ORDER_ASC:
+                    case Db::ORDER_DESC:
                         $orders[] = $this->backtick($key)." $value";
                         break;
                     default:
@@ -420,10 +428,10 @@ class MySqlDb extends Db {
                 val('password', $this->config, ''),
                 [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8'
                 ]
             );
-            $this->pdo->query('set names utf8'); // send this statement outside our query function.
         }
         return $this->pdo;
     }
