@@ -326,8 +326,10 @@ class MySqlDb extends Db {
                         case Db::OP_GTE:
                         case Db::OP_LT:
                         case Db::OP_LTE:
-                        case Db::OP_LIKE:
                             $result .= "$btcolumn {$map[$vop]} ".$this->quoteVal($rval, $quotevals);
+                            break;
+                        case Db::OP_LIKE:
+                            $result .= $this->buildLike($btcolumn, $rval, $quotevals);
                             break;
                         case Db::OP_IN:
                             // Quote the in values.
@@ -359,6 +361,18 @@ class MySqlDb extends Db {
             }
         }
         return $result;
+    }
+
+    /**
+     * Build a like expression.
+     *
+     * @param string $column The column name.
+     * @param mixed $value The right-hand value.
+     * @param bool $quotevals Whether or not to quote the values.
+     * @return string Returns the like expression.
+     */
+    protected function buildLike($column, $value, $quotevals) {
+        return "$column like ".$this->quoteVal($value, $quotevals);
     }
 
     /**

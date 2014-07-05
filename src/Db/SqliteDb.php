@@ -39,6 +39,13 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
+    protected function buildLike($column, $value, $quotevals) {
+        return "$column like ".$this->quoteVal($value, $quotevals)." escape '\\'";
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     protected function buildUpdate($tablename, array $set, array $where, $quotevals = true, array $options = []) {
         $sql = 'update '.
             (val(Db::OPTION_IGNORE, $options) ? 'or ignore ' : '').
