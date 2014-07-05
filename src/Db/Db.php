@@ -222,13 +222,20 @@ abstract class Db {
             }
         }
 
-        $alterDef['def'] = $tableDef;
+        // Check to see if any alterations at all need to be made.
+        if (empty($alterDef['add']['columns']) && empty($alterDef['add']['indexes']) &&
+            empty($alterDef['drop']['columns']) && empty($alterDef['drop']['indexes']) &&
+            empty($alterDef['alter']['columns'])) {
+            return;
+        }
 
-        // Update the cached schema. The driver-specific call can also update it.
-        $this->tables[$tablename] = $tableDef;
+        $alterDef['def'] = $tableDef;
 
         // Alter the table.
         $this->alterTable($tablename, $alterDef, $options);
+
+        // Update the cached schema.
+        $this->tables[$tablename] = $tableDef;
     }
 
     /**
