@@ -88,7 +88,7 @@ class MySqlDb extends Db {
      * int
      * : Returns the number of rows affected when performing an update or an insert.
      */
-    protected function query($sql, $type = Db::QUERY_READ, $options = []) {
+    public function query($sql, $type = Db::QUERY_READ, $options = []) {
         $mode = val(Db::OPTION_MODE, $options, $this->mode);
 
         if ($mode & Db::MODE_ECHO) {
@@ -98,6 +98,7 @@ class MySqlDb extends Db {
             return $sql;
         }
 
+        $result = null;
         if ($mode & Db::MODE_EXEC) {
             $result = $this->pdo()->query($sql);
 
@@ -107,6 +108,7 @@ class MySqlDb extends Db {
                 $this->rowCount = count($result);
             } elseif (is_object($result) && method_exists($result, 'rowCount')) {
                 $this->rowCount = $result->rowCount();
+                $result = $this->rowCount;
             }
         } elseif ($mode & Db::MODE_PDO) {
             /* @var \PDOStatement $result */
@@ -521,7 +523,7 @@ class MySqlDb extends Db {
      */
     protected function getIndexes($tablename = '') {
         $ltablename = strtolower($tablename);
-        $indexRows = $this->get(
+        $indexRows = (array)$this->get(
             'information_schema.STATISTICS',
             [
                 'TABLE_SCHEMA' => $this->getDbName(),

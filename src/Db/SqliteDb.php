@@ -287,7 +287,7 @@ class SqliteDb extends MySqlDb {
             }
         }
 
-        $cdefs = $this->query('pragma table_info('.$this->quoteVal($this->px.$tablename).')');
+        $cdefs = (array)$this->query('pragma table_info('.$this->quoteVal($this->px.$tablename).')');
         if (empty($cdefs)) {
             return null;
         }
@@ -346,7 +346,7 @@ class SqliteDb extends MySqlDb {
             $this->tables[$tablename]['indexes'][Db::INDEX_PK] = $pk;
         }
 
-        $indexInfos = $this->query('pragma index_list('.$this->quoteVal($this->px.$tablename).')');
+        $indexInfos = (array)$this->query('pragma index_list('.$this->quoteVal($this->px.$tablename).')');
         foreach ($indexInfos as $row) {
             $indexName = $row['name'];
             if ($row['unique']) {
