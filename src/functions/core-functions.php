@@ -954,7 +954,7 @@ function val($key, $array, $default = null) {
  *
  * This function differs from val() in that $key can be an array that will be used to walk a nested array.
  *
- * @param string $keys The key or property name of the value.
+ * @param array|string $keys The keys or property names of the value. This can be an array or dot-seperated string.
  * @param array|object $array The array or object to search.
  * @param mixed $default The value to return if the key does not exist.
  * @return mixed The value from the array or object.
