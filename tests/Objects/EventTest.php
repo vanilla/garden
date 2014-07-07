@@ -23,6 +23,13 @@ class EventTest extends \PHPUnit_Framework_TestCase {
     }
 
     /**
+     * Reset the event object before after test.
+     */
+    public function teardown() {
+        Event::reset();
+    }
+
+    /**
      * Test {@link Event::bind()} and {@link Event::fire()}.
      */
     public function testBindFire() {
