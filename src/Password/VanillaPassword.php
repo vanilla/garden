@@ -33,11 +33,11 @@ class VanillaPassword extends PhpassPassword {
      * {@inheritdoc}
      */
     public function needsRehash($hash) {
-        if (function_exists('password_needs_rehash')) {
+        if ($this->hashMethod === static::HASH_BEST &&  function_exists('password_needs_rehash')) {
             return password_needs_rehash($hash, PASSWORD_DEFAULT);
-        } elseif (CRYPT_BLOWFISH === 1) {
+        } elseif (($this->hashMethod & static::HASH_BLOWFISH) && CRYPT_BLOWFISH === 1) {
             return !(preg_match('`^\$(2[axy]|[56])\$`', $hash) && strlen($hash) === 60);
-        } elseif (CRYPT_EXT_DES === 1) {
+        } elseif (($this->hashMethod & static::HASH_EXTDES) && CRYPT_EXT_DES === 1) {
             return !(preg_match('`^_[./0-9A-Za-z]{8}`', $hash) && strlen($hash) === 20);
         } else {
             return !(preg_match('`^\$([PH])\$`', $hash) && strlen($hash) === 34);
@@ -48,8 +48,11 @@ class VanillaPassword extends PhpassPassword {
      * {@inheritdoc}
      */
     public function verify($password, $hash) {
-        if ($this->hashMethod === static::HASH_BEST && function_exists('password_verify')) {
-            return password_verify((string)$password, (string)$hash);
+        if ($this->hashMethod === static::HASH_BEST &&
+            function_exists('password_verify') &&
+            password_verify((string)$password, (string)$hash)) {
+
+            return true;
         }
 
         if (!$hash) {

@@ -10,6 +10,7 @@ namespace Garden\Tests\Passwords;
 use Garden\Password\DjangoPassword;
 use Garden\Password\IPassword;
 use Garden\Password\PhpassPassword;
+use Garden\Password\PhpPassword;
 use Garden\Password\VanillaPassword;
 
 /**
@@ -105,6 +106,47 @@ class PasswordTest extends \PHPUnit_Framework_TestCase {
         $this->assertTrue($pw->verify($password, $hash));
         $this->assertFalse($pw->verify($wrongPassword, $hash));
         $this->assertFalse($pw->verify(null, $hash));
+    }
+
+    /**
+     * Test some old password scenarios in Vanilla.
+     */
+    public function testVanillaPasswordCompat() {
+        $pw = new VanillaPassword();
+
+        $password = 'password';
+
+        // Test md5.
+        $md5 = md5($password);
+        $this->assertTrue($pw->verify($password, $md5));
+        $this->assertTrue($pw->needsRehash($md5));
+
+        // Test plain text.
+        $this->assertTrue($pw->verify($password, $password));
+        $this->assertTrue($pw->needsRehash($password));
+
+        // Test Phpass.
+        $phpass = new PhpassPassword(PhpassPassword::HASH_PHPASS);
+        $phphash = $phpass->hash($password);
+        $this->assertTrue($pw->verify($password, $phphash));
+        $this->assertTrue($pw->needsRehash($phphash));
+
+        $this->assertFalse($pw->verify($password, '423432'));
+
+        $pw->setHashMethod(PhpassPassword::HASH_BLOWFISH);
+        $hash = $pw->hash($password);
+        $this->assertTrue($pw->verify($password, $hash));
+        $this->assertFalse($pw->needsRehash($hash));
+
+        $pw->setHashMethod(PhpassPassword::HASH_EXTDES);
+        $hash2 = $pw->hash($password);
+        $this->assertTrue($pw->verify($password, $hash2));
+        $this->assertFalse($pw->needsRehash($hash2));
+
+        $pw->setHashMethod(PhpassPassword::HASH_PHPASS);
+        $hash3 = $pw->hash($password);
+        $this->assertTrue($pw->verify($password, $hash3));
+        $this->assertFalse($pw->needsRehash($hash3));
     }
 
     /**
@@ -206,6 +248,10 @@ class PasswordTest extends \PHPUnit_Framework_TestCase {
                 }
             }
         }
+
+        // Add some extra passwords here.
+        $result['PhpPassword bcrypt'] = [new PhpPassword(PASSWORD_BCRYPT)];
+
         return $result;
     }
 }
