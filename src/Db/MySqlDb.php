@@ -523,44 +523,46 @@ class MySqlDb extends Db {
      */
     protected function getIndexes($tablename = '') {
         $ltablename = strtolower($tablename);
-        $indexRows = (array)$this->get(
+        /* @var \PDOStatement */
+        $stmt = $this->get(
             'information_schema.STATISTICS',
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
                 'TABLE_NAME' => $tablename ? $this->px.$tablename : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
             ],
             [
+                'columns' => [
+                    'INDEX_NAME',
+                    'TABLE_NAME',
+                    'NON_UNIQUE',
+                    'COLUMN_NAME'
+                ],
                 'escapeTable' => false,
-                'order' => ['TABLE_NAME', 'INDEX_NAME', 'SEQ_IN_INDEX']
+                'order' => ['TABLE_NAME', 'INDEX_NAME', 'SEQ_IN_INDEX'],
+                Db::OPTION_MODE => Db::MODE_PDO
             ]
         );
 
-        $indexes = [];
-        foreach ($indexRows as $row) {
+        $stmt->execute();
+        $indexDefs = $stmt->fetchAll(PDO::FETCH_ASSOC | PDO::FETCH_GROUP);
+
+        foreach ($indexDefs as $indexName => $indexRows) {
+            $row = reset($indexRows);
             $itablename = strtolower(ltrim_substr($row['TABLE_NAME'], $this->px));
-            $indexname = $row['INDEX_NAME'];
+            $index = [
+                'name' => $indexName,
+                'columns' => array_column($indexRows, 'COLUMN_NAME')
+            ];
 
-            if ($indexname === 'PRIMARY') {
-                $type = Db::INDEX_PK;
+            if ($indexName === 'PRIMARY') {
+                $index['type'] = Db::INDEX_PK;
+                $this->tables[$itablename]['indexes'][Db::INDEX_PK] = $index;
             } else {
-                $type = $row['NON_UNIQUE'] ? Db::INDEX_IX : Db::INDEX_UNIQUE;
-            }
-
-            $indexes[$itablename][$indexname]['name'] = $indexname;
-            $indexes[$itablename][$indexname]['columns'][] = $row['COLUMN_NAME'];
-            $indexes[$itablename][$indexname]['type'] = $type;
-        }
-
-        // Add the indexes to the tables.
-        foreach ($indexes as $itablename => $tableIndexes) {
-            foreach ($tableIndexes as $ixDef) {
-                if (val('type', $ixDef, Db::INDEX_IX) === Db::INDEX_PK) {
-                    $this->tables[$itablename]['indexes'][Db::INDEX_PK] = $ixDef;
-                } else {
-                    $this->tables[$itablename]['indexes'][] = $ixDef;
-                }
+                $index['type'] = $row['NON_UNIQUE'] ? Db::INDEX_IX : Db::INDEX_UNIQUE;
+                $this->tables[$itablename]['indexes'][] = $index;
             }
         }
+
         if ($ltablename) {
             return valr([$ltablename, 'indexes'], $this->tables, []);
         }
