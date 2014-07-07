@@ -304,10 +304,10 @@ class Event {
     /**
      * Get the event name for a callback.
      *
-     * @param callable $callback The callback.
+     * @param string|array $callback The callback or an array in the form of a callback.
      * @return string The name of the callback.
      */
-    protected static function getEventname(callable $callback) {
+    protected static function getEventname($callback) {
         if (is_string($callback)) {
             return strtolower($callback);
         } elseif (is_array($callback)) {
