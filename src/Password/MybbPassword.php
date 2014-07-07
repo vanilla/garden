@@ -7,7 +7,6 @@
 
 namespace Garden\Password;
 
-
 /**
  * Implements the password hashing algorithm of Mybb.
  */

@@ -2,11 +2,10 @@
 /**
  * @author Todd Burry <todd@vanillaforums.com>
  * @copyright 2009-2014 Vanilla Forums Inc.
- * @license Proprietary
+ * @license MIT
  */
 
 namespace Garden\Password;
-
 
 /**
  * Implements the password hash from Simple Machines Forums (SMF).

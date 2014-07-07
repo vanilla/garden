@@ -2,13 +2,14 @@
 /**
  * @author Todd Burry <todd@vanillaforums.com>
  * @copyright 2009-2014 Vanilla Forums Inc.
- * @license Proprietary
+ * @license MIT
  */
 
 namespace Garden\Password;
 
-
-
+/**
+ * An {@link IPassword} that uses the various `password_*` functions.
+ */
 class PhpPassword implements IPassword {
     /**
      * @var int One of the `PASSWORD_*` constants supplied to {@link password_hash()}.

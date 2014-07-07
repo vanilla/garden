@@ -7,10 +7,8 @@
 
 namespace Garden\Password;
 
-
 /**
  * Implements the password hashing algorithm of Xenforo.
- *
  */
 class XenforoPassword implements IPassword {
 
