@@ -60,17 +60,10 @@ class Event {
      * @param array $args The arguments to be passed to the callback, as an indexed array.
      * @return mixed Returns the return value of the callback.
      */
-    public static function callUserFuncArray($callback, $args) {
+    public static function callUserFuncArray($callback, $args = []) {
         // Figure out the event name from the callback.
-        if (is_string($callback)) {
-            $event_name = $callback;
-        } elseif (is_array($callback)) {
-            if (is_string($callback[0])) {
-                $event_name = $callback[0].'_'.$callback[1];
-            } else {
-                $event_name = get_class($callback[0]).'_'.$callback[1];
-            }
-        } else {
+        $event_name = static::getEventname($callback);
+        if (!$event_name) {
             return call_user_func_array($callback, $args);
         }
 
@@ -82,19 +75,19 @@ class Event {
         }
 
         // Fire before events.
-        self::fire($event_name.'_before', $event_args);
+        self::fireArray($event_name.'_before', $event_args);
 
         // Call the function.
         if (static::hasHandler($event_name)) {
             // The callback was overridden so fire it.
-            $result = static::fire($event_name, $event_args);
+            $result = static::fireArray($event_name, $event_args);
         } else {
             // The callback was not overridden so just call the passed callback.
             $result = call_user_func_array($callback, $args);
         }
 
         // Fire after events.
-        self::fire($event_name.'_after', $event_args);
+        self::fireArray($event_name.'_after', $event_args);
 
         return $result;
     }
@@ -106,7 +99,7 @@ class Event {
      * @param callback $callback The callback of the event.
      * @param int $priority The priority of the event.
      */
-    public static function bind($event, $callback, $priority = self::PRIORITY_MEDIUM) {
+    public static function bind($event, $callback, $priority = Event::PRIORITY_MEDIUM) {
         $event = strtolower($event);
         self::$handlers[$event][$priority][] = $callback;
         self::$toSort[$event] = true;
@@ -134,7 +127,7 @@ class Event {
      * @param int $priority The priority of the event.
      * @throws \InvalidArgumentException Throws an exception when binding to a class name with no `instance()` method.
      */
-    public static function bindClass($class, $priority = self::PRIORITY_MEDIUM) {
+    public static function bindClass($class, $priority = Event::PRIORITY_MEDIUM) {
         $method_names = get_class_methods($class);
 
         // Grab an instance of the class so there is something to bind to.
@@ -217,6 +210,32 @@ class Event {
     }
 
     /**
+     * Fire an event with an array of arguments.
+     *
+     * This method is to {@link Event::fire()} as {@link call_user_func_array()} is to {@link call_user_funct()}.
+     * The main purpose though is to allow you to have event handlers that can take references.
+     *
+     * @param string $event The name of the event.
+     * @param array $args The arguments for the event handlers.
+     * @return mixed Returns the result of the last event handler.
+     */
+    public static function fireArray($event, $args) {
+        $handlers = self::getHandlers($event);
+        if (!$handlers) {
+            return null;
+        }
+
+        // Grab the handlers and call them.
+        $result = null;
+        foreach ($handlers as $callbacks) {
+            foreach ($callbacks as $callback) {
+                $result = call_user_func_array($callback, $args);
+            }
+        }
+        return $result;
+    }
+
+    /**
      * Chain several event handlers together.
      *
      * This method will fire the first handler and pass its result as the first argument
@@ -283,6 +302,30 @@ class Event {
     }
 
     /**
+     * Get the event name for a callback.
+     *
+     * @param callable $callback The callback.
+     * @return string The name of the callback.
+     */
+    protected static function getEventname(callable $callback) {
+        if (is_string($callback)) {
+            return strtolower($callback);
+        } elseif (is_array($callback)) {
+            if (is_string($callback[0])) {
+                $classname = $callback[0];
+            } else {
+                $classname = get_class($callback[0]);
+            }
+            $eventclass = trim(strrchr($classname, '\\'), '\\');
+            if (!$eventclass) {
+                $eventclass = $classname;
+            }
+            return strtolower($eventclass.'_'.$callback[1]);
+        }
+        return '';
+    }
+
+    /**
      * Get all of the handlers bound to an event.
      *
      * @param string $name The name of the event.
@@ -330,11 +373,7 @@ class Event {
             return true;
         } else {
             // Check to see if there is an event bound to the method.
-            if (is_string($object)) {
-                $event_name = $object.'_'.$method_name;
-            } else {
-                $event_name = get_class($object).'_'.$method_name;
-            }
+            $event_name = self::getEventname([$object, $method_name]);
             return static::hasHandler($event_name);
         }
     }
