@@ -14,26 +14,32 @@ namespace Garden\Password;
  * Any code copied from the phppass library is copyright the original owner.
  */
 class PhpassPassword implements IPassword {
+    const HASH_PHPASS = 0x00;
+    const HASH_BLOWFISH = 0x01;
+    const HASH_EXTDES = 0x02;
+    const HASH_BEST = 0x03;
+
     protected $itoa64;
     protected $iteration_count_log2;
     protected $portable;
     protected $random_state;
 
+    protected $hashMethod;
+
     /**
      * Initializes an instance of the of the {@link PhpPass} class.
      *
-     * @param bool $portable Whether or not the passwords should be portable to older versions of php.
+     * @param int $hashMethod The hash method to use when hashing passwords.
      * @param int $iteration_count_log2 The number of times to iterate when generating the passwords.
      */
-    public function __construct($portable = true, $iteration_count_log2 = 8) {
+    public function __construct($hashMethod = PhpassPassword::HASH_PHPASS, $iteration_count_log2 = 8) {
         $this->itoa64 = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
         if ($iteration_count_log2 < 4 || $iteration_count_log2 > 31) {
             $iteration_count_log2 = 8;
         }
         $this->iteration_count_log2 = $iteration_count_log2;
-
-        $this->portable = $portable;
+        $this->hashMethod = $hashMethod;
 
         $this->random_state = microtime();
         if (function_exists('getmypid')) {
@@ -48,7 +54,7 @@ class PhpassPassword implements IPassword {
         $id = substr($hash, 0, 3);
         $portable = ($id != '$P$' && $id != '$H$');
 
-        return $portable == $this->portable;
+        return $portable;
     }
 
     /**
@@ -57,7 +63,7 @@ class PhpassPassword implements IPassword {
     public function hash($password) {
         $random = '';
 
-        if (CRYPT_BLOWFISH == 1 && !$this->portable) {
+        if (CRYPT_BLOWFISH == 1 && ($this->hashMethod & self::HASH_BLOWFISH)) {
             $random = $this->getRandomBytes(16);
             $hash =
                 crypt($password, $this->gensaltBlowfish($random));
@@ -66,7 +72,7 @@ class PhpassPassword implements IPassword {
             }
         }
 
-        if (CRYPT_EXT_DES == 1 && !$this->portable) {
+        if (CRYPT_EXT_DES == 1 && ($this->hashMethod & self::HASH_EXTDES)) {
             if (strlen($random) < 3) {
                 $random = $this->getRandomBytes(3);
             }
@@ -304,5 +310,25 @@ class PhpassPassword implements IPassword {
         }
 
         return $calc_hash === $hash;
+    }
+
+    /**
+     * Get the current hash method.
+     *
+     * @return int Returns the current hash method.
+     */
+    public function getHashMethod() {
+        return $this->hashMethod;
+    }
+
+    /**
+     * Set the current hash method.
+     *
+     * @param int $hashMethod The new hash mathod.
+     * @return PhpassPassword Returns $this for fluent calls.
+     */
+    public function setHashMethod($hashMethod) {
+        $this->hashMethod = $hashMethod;
+        return $this;
     }
 }

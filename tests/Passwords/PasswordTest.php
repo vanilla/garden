@@ -69,9 +69,12 @@ class PasswordTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * Test some edge cases of {@link PhpassPassword}.
+     *
+     * @param int $hashMethod One of the PhpassPassword::HASH_* constants.
+     * @dataProvider providePhpassHashMethods
      */
-    public function testPhpassPassword() {
-        $pw = new PhpassPassword(false, 1);
+    public function testPhpassPassword($hashMethod) {
+        $pw = new PhpassPassword($hashMethod, 1);
 
         $password = 'password';
         $wrongPassword = 'letmein';
@@ -88,7 +91,7 @@ class PasswordTest extends \PHPUnit_Framework_TestCase {
      * Test some edge cases of {@link PhpassPassword}.
      */
     public function testVanillaPassword() {
-        $pw = new VanillaPassword(true);
+        $pw = new VanillaPassword();
 
         $password = 'password';
         $wrongPassword = 'letmein';
@@ -102,9 +105,6 @@ class PasswordTest extends \PHPUnit_Framework_TestCase {
         $this->assertTrue($pw->verify($password, $hash));
         $this->assertFalse($pw->verify($wrongPassword, $hash));
         $this->assertFalse($pw->verify(null, $hash));
-        if (CRYPT_BLOWFISH === 1) {
-            $this->assertTrue($pw->needsRehash($hash));
-        }
     }
 
     /**
@@ -164,11 +164,29 @@ class PasswordTest extends \PHPUnit_Framework_TestCase {
     }
 
     /**
+     * Provide the various hash methods for the {@link PhpassPassword} class.
+     *
+     * @return array Returns an array of hash methods.
+     */
+    public function providePhpassHashMethods() {
+        return [
+            'phpass' => [PhpassPassword::HASH_PHPASS],
+            'extdes' => [PhpassPassword::HASH_EXTDES],
+            'blowfish' => [PhpassPassword::HASH_BLOWFISH],
+            'best' => [PhpassPassword::HASH_BEST],
+        ];
+    }
+
+    /**
      * Gets an array of all the password classes.
      *
      * @return array Returns all of the php classes indexed by base class name.
      */
     public function getPasswordClasses() {
+//        return [
+//            'VanillaPassword' => [new VanillaPassword()]
+//        ];
+
         $paths = glob(PATH_SRC.'/Password/*.php');
         $result = [];
 
