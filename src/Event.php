@@ -179,23 +179,46 @@ class Event {
         $result = [];
 
         foreach (self::$handlers as $event_name => $nested) {
-            $handlers = call_user_func_array('array_merge', $nested);
-            $result[$event_name] = array_map('format_callback', $handlers);
+            $handlers = call_user_func_array('array_merge', static::getHandlers($event_name));
+            $result[$event_name] = array_map([__CLASS__, 'formatCallback'], $handlers);
         }
 
         return $result;
+    }
+
+
+    /**
+     * Format a callback function as a string.
+     *
+     * @param callable $callback The callback to format.
+     * @return string Returns a string representation of the callback.
+     * @return string Returns the callback as a string.
+     */
+    protected static function formatCallback(callable $callback) {
+        if (is_string($callback)) {
+            return $callback.'()';
+        } elseif (is_array($callback)) {
+            if (is_object($callback[0])) {
+                return get_class($callback[0]).'->'.$callback[1].'()';
+            } else {
+                return $callback[0].'::'.$callback[1].'()';
+            }
+        } elseif ($callback instanceof Closure) {
+            return 'closure()';
+        }
+        return '';
     }
 
     /**
      * Fire an event.
      *
      * @param string $event The name of the event.
-     * @return int How many times the event was handled.
+     * @return mixed Returns the result of the last event handler.
      */
     public static function fire($event) {
         $handlers = self::getHandlers($event);
         if (!$handlers) {
-            return 0;
+            return null;
         }
 
         // Grab the handlers and call them.
@@ -219,7 +242,7 @@ class Event {
      * @param array $args The arguments for the event handlers.
      * @return mixed Returns the result of the last event handler.
      */
-    public static function fireArray($event, $args) {
+    public static function fireArray($event, $args = []) {
         $handlers = self::getHandlers($event);
         if (!$handlers) {
             return null;

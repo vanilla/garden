@@ -37,4 +37,16 @@ class TestPlugin {
     public function sort_after(&$arr) {
         $arr[] = 1;
     }
+
+    public static function staticMethod($arg) {
+        return $arg.'_static';
+    }
+
+    public static function ltrim($str) {
+        return ltrim($str);
+    }
+
+    public function rtrim($str) {
+        return rtrim($str);
+    }
 }

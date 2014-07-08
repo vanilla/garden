@@ -125,6 +125,14 @@ class EventTest extends \PHPUnit_Framework_TestCase {
         Event::callUserFuncArray('sort', [&$arr]);
         $this->assertEquals([0, 10, 20, 1], $arr);
 
+        // Test with a static function.
+        $str = 'foo';
+        Event::bind('testPlugin_staticMethod_before', function () use (&$str) {
+            $str = 'bar';
+        });
+        $result = Event::callUserFuncArray(['Garden\Tests\Objects\fixtures\TestPlugin', 'staticMethod'], [&$str]);
+        $this->assertEquals('bar_static', $result);
+
         // Now test with a bound class.
         Event::reset();
         Event::bindClass('Garden\Tests\Objects\fixtures\TestPlugin');
@@ -132,5 +140,69 @@ class EventTest extends \PHPUnit_Framework_TestCase {
         $arr = [20, 10];
         Event::callUserFuncArray('sort', [&$arr]);
         $this->assertEquals([0, 10, 20, 1], $arr);
+    }
+
+    /**
+     * Test binding to a static method.
+     */
+    public function testStaticMethodBinding() {
+        Event::bind('static', ['Garden\Tests\Objects\fixtures\TestPlugin', 'staticMethod']);
+
+        $result = Event::fire('static', 'foo');
+        $this->assertEquals('foo_static', $result);
+    }
+
+    /**
+     * Test firing events with no event handlers.
+     */
+    public function testNoEventHandler() {
+        $result = Event::fire('nohandler');
+        $this->assertNull($result);
+
+        $result2 = Event::fireArray('nohandler');
+        $this->assertNull($result2);
+
+        $rand = mt_rand();
+        $result3 = Event::fireFilter('nohandler', $rand);
+        $this->assertEquals($rand, $result3);
+    }
+
+    /**
+     * Test {@link Event::functionExists}.
+     */
+    public function testFunctionExists() {
+        // Make sure a regular function exists.
+        $this->assertTrue(Event::functionExists('TRIM'));
+    }
+
+    /**
+     * Test a closure that can't have a name.
+     */
+    public function testUnnameableEvent() {
+        $result = Event::callUserFuncArray(function () {
+            return 'bar';
+        });
+
+        $this->assertEquals('bar', $result);
+    }
+
+    /**
+     * Test {@link Event::dumpHandlers()}.
+     */
+    public function testDumpHandlers() {
+        $plugin = new TestPlugin();
+
+        Event::bind('trim', 'trim');
+        Event::bind('trim', [$plugin, 'rtrim'], Event::PRIORITY_LOW);
+        Event::bind('trim', [get_class($plugin), 'ltrim'], Event::PRIORITY_HIGH);
+
+        $handlers = Event::dumpHandlers();
+        $expected = ['trim' => [
+                'Garden\Tests\Objects\fixtures\TestPlugin::ltrim()',
+                'trim()',
+                'Garden\Tests\Objects\fixtures\TestPlugin->rtrim()'
+            ]
+        ];
+        $this->assertEquals($expected, $handlers);
     }
 }
