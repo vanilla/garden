@@ -1,7 +1,7 @@
 ![Garden](http://cdn.vanillaforums.com/garden-logo-400.svg)
 ===========================================================
 
-[![Build Status](https://img.shields.io/travis/vanilla/garden.svg?style=flat)](http://img.shields.io/scrutinizer/coverage/g/vanilla/garden.svg?style=flat)](https://scrutinizer-ci.com/g/vanilla/garden/)
+[![Build Status](https://img.shields.io/travis/vanilla/garden.svg?style=flat)](https://travis-ci.org/vanilla/garden) [![Coverage](http://img.shields.io/scrutinizer/coverage/g/vanilla/garden.svg?style=flat)](https://scrutinizer-ci.com/g/vanilla/garden/)
 
 Garden is a mini framework for building pluggable web applications and apis. ***This framework is currently a work in progress and should be considered alpha quality code right now.***
 
