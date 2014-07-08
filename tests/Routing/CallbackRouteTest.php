@@ -8,6 +8,7 @@
 namespace Garden\Tests\Routing;
 
 use Garden\Application;
+use Garden\Exception\Pass;
 use Garden\Request;
 use Garden\Exception\NotFoundException;
 
@@ -116,5 +117,37 @@ class CallbackRouteTest extends \PHPUnit_Framework_TestCase {
         $this->assertEquals([123], $actual);
 
         $actual2 = $this->app->run(new Request('/foo/123', 'POST'));
+    }
+
+    /**
+     * Test throwing the {@link Pass} exception.
+     */
+    public function testPass() {
+        $arr = [];
+
+        $this->app->route('/foo', function () use (&$arr) {
+            $arr[] = 1;
+            throw new Pass();
+        });
+        $this->app->route('/foo', function () use (&$arr) {
+            $arr[] = 2;
+            return $arr;
+        });
+
+        $actual = $this->app->run(new Request('/foo'));
+        $this->assertEquals([1, 2], $actual);
+    }
+
+    /**
+     * Test the {@link Pass} exception when there are no more routes to match.
+     *
+     * @expectedException \Garden\Exception\NotFoundException
+     */
+    public function testPass2() {
+        $this->app->route('/foo', function () {
+            throw new Pass();
+        });
+
+        $this->app->run(new Request('/foo'));
     }
 }
