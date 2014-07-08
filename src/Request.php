@@ -199,15 +199,10 @@ class Request implements JsonSerializable {
         $env = static::defaultEnvironment();
 
         // REQUEST_METHOD.
-        $env['REQUEST_METHOD'] = strtoupper(isset($_SERVER['REQUEST_METHOD']) ? val('REQUEST_METHOD', $_SERVER) : 'CONSOLE');
+        $env['REQUEST_METHOD'] = val('REQUEST_METHOD', $_SERVER) ?: 'CONSOLE';
 
         // SCRIPT_NAME: This is the root directory of the application.
-        $script_name = $_SERVER['SCRIPT_NAME'];
-        if ($script_name && substr($script_name, -strlen('index.php')) == 0) {
-            $script_name = substr($script_name, 0, -strlen('index.php'));
-        } else {
-            $script_name = '';
-        }
+        $script_name = rtrim_substr($_SERVER['SCRIPT_NAME'], 'index.php');
         $env['SCRIPT_NAME'] = rtrim($script_name, '/');
 
         // PATH_INFO.
@@ -244,13 +239,7 @@ class Request implements JsonSerializable {
         $env['URL_SCHEME'] = $url_scheme;
 
         // SERVER_PORT.
-        if (isset($_SERVER['SERVER_PORT'])) {
-            $server_port = (int) $_SERVER['SERVER_PORT'];
-        } elseif ($url_scheme === 'https') {
-            $server_port = 443;
-        } else {
-            $server_port = 80;
-        }
+        $server_port = (int)val('SERVER_PORT', $_SERVER, $url_scheme === 'https' ? 443 :80);
         $env['SERVER_PORT'] = $server_port;
 
         // INPUT: The entire input.
@@ -260,16 +249,13 @@ class Request implements JsonSerializable {
                 $input_raw = @file_get_contents('php://input');
                 $input = @json_decode($input_raw, true);
                 break;
+            default:
+                $input = $_POST;
+                $input_raw = null;
+                break;
         }
-        if (isset($input)) {
-            $env['INPUT'] = $input;
-        } elseif (isset($_POST)) {
-            $env['INPUT'] = $_POST;
-        }
-
-        if (isset($input_raw)) {
-            $env['INPUT_RAW'] = $input_raw;
-        }
+        $env['INPUT'] = $input;
+        $env['INPUT_RAW'] = $input_raw;
 
         // IP Address.
         // Load balancers set a different ip address.
