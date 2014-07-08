@@ -567,18 +567,19 @@ class Response implements JsonSerializable {
         // Set the response code.
         header(static::statusMessage($this->status, true), true, $this->status);
 
+        $headers = array_filter($headers);
+
+        // The content type is a special case.
+        if (isset($headers['Content-Type'])) {
+            $contentType = (array)$headers['Content-Type'];
+            header('Content-Type: '.reset($contentType).'; charset=utf8', true);
+            unset($headers['Content-Type']);
+        }
 
         // Flush the rest of the headers.
         foreach ($headers as $name => $value) {
-            if (!$value) {
-                continue;
-            }
             foreach ((array)$value as $hvalue) {
-                if ($name === 'Content-Type') {
-                    header("$name: $hvalue; charset=utf8", true);
-                } else {
-                    header("$name: $hvalue", false);
-                }
+                header("$name: $hvalue", false);
             }
         }
     }
