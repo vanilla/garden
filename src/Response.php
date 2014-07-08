@@ -543,6 +543,10 @@ class Response implements JsonSerializable {
      * @param bool $global Whether or not to merge the global headers with this response.
      */
     public function flushHeaders($global = true) {
+        if (headers_sent()) {
+            return;
+        }
+
         if ($global) {
             $cookies = array_replace(static::globalCookies(), $this->cookies);
             $headers = array_replace(static::globalHeaders(), $this->headers);
