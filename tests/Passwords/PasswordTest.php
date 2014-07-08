@@ -250,7 +250,9 @@ class PasswordTest extends \PHPUnit_Framework_TestCase {
         }
 
         // Add some extra passwords here.
-        $result['PhpPassword bcrypt'] = [new PhpPassword(PASSWORD_BCRYPT)];
+        if (defined('PASSWORD_BCRYPT')) {
+            $result['PhpPassword bcrypt'] = [new PhpPassword(PASSWORD_BCRYPT)];
+        }
 
         return $result;
     }
