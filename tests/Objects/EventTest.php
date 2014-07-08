@@ -16,6 +16,13 @@ use Garden\Tests\Objects\fixtures\TestPlugin;
  */
 class EventTest extends \PHPUnit_Framework_TestCase {
     /**
+     * Set up the db link for the test cases.
+     */
+    public static function setUpBeforeClass() {
+        require_once PATH_SRC.'/functions/formatting-functions.php';
+    }
+
+    /**
      * Reset the event object before each test.
      */
     public function setup() {

@@ -180,33 +180,10 @@ class Event {
 
         foreach (self::$handlers as $event_name => $nested) {
             $handlers = call_user_func_array('array_merge', static::getHandlers($event_name));
-            $result[$event_name] = array_map([__CLASS__, 'formatCallback'], $handlers);
+            $result[$event_name] = array_map('format_callback', $handlers);
         }
 
         return $result;
-    }
-
-
-    /**
-     * Format a callback function as a string.
-     *
-     * @param callable $callback The callback to format.
-     * @return string Returns a string representation of the callback.
-     * @return string Returns the callback as a string.
-     */
-    protected static function formatCallback(callable $callback) {
-        if (is_string($callback)) {
-            return $callback.'()';
-        } elseif (is_array($callback)) {
-            if (is_object($callback[0])) {
-                return get_class($callback[0]).'->'.$callback[1].'()';
-            } else {
-                return $callback[0].'::'.$callback[1].'()';
-            }
-        } elseif ($callback instanceof Closure) {
-            return 'closure()';
-        }
-        return '';
     }
 
     /**
