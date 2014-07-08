@@ -349,124 +349,31 @@ class Schema implements \JsonSerializable {
         $validType = true;
         switch ($type) {
             case 'boolean':
-                if (is_bool($value)) {
-                    $validType = true;
-                } else {
-                    $bools = [
-                        '0' => false, 'false' => false, 'no' => false, 'off' => false,
-                        '1' => true,  'true'  => true, 'yes' => true,  'on'  => true
-                    ];
-                    if ((is_string($value) || is_numeric($value)) && isset($bools[$value])) {
-                        $value = $bools[$value];
-                        $validType = true;
-                    } else {
-                        $validType = false;
-                    }
-                }
+                $validType &= $this->validateBoolean($value, $field, $validation);
                 break;
             case 'integer':
-                if (is_int($value)) {
-                    $validType = true;
-                } elseif (is_numeric($value)) {
-                    $value = (int)$value;
-                    $validType = true;
-                } else {
-                    $validType = false;
-                }
+                $validType &= $this->validateInteger($value, $field, $validation);
                 break;
             case 'float':
-                if (is_float($value)) {
-                    $validType = true;
-                } elseif (is_numeric($value)) {
-                    $value = (float)$value;
-                    $validType = true;
-                } else {
-                    $validType = false;
-                }
+                $validType &= $this->validateFloat($value, $field, $validation);
                 break;
             case 'string':
-                if (is_string($value)) {
-                    $validType = true;
-                } elseif (is_numeric($value)) {
-                    $value = (string)$value;
-                    $validType = true;
-                } else {
-                    $validType = false;
-                }
+                $validType &= $this->validateString($value, $field, $validation);
                 break;
             case 'timestamp':
-                if (is_numeric($value)) {
-                    $value = (int)$value;
-                    $validType = true;
-                } elseif (is_string($value) && $ts = strtotime($value)) {
-                    $value = $ts;
-                } else {
-                    $validType = false;
-                }
+                $validType &= $this->validateTimestamp($value, $field, $validation);
                 break;
             case 'datetime':
-                if ($value instanceof \DateTime) {
-                    $validType = true;
-                } elseif (is_string($value)) {
-                    try {
-                        $dt = new \DateTime($value);
-                        if ($dt) {
-                            $value = $dt;
-                        } else {
-                            $validType = false;
-                        }
-                    } catch (\Exception $ex) {
-                        $validType = false;
-                    }
-                } elseif (is_numeric($value) && $value > 0) {
-                    $value = new \DateTime('@'.(string)round($value));
-                    $validType = true;
-                } else {
-                    $validType = false;
-                }
+                $validType &= $this->validateDatetime($value, $field, $validation);
                 break;
             case 'base64':
-                if (!is_string($value)) {
-                    $validType = false;
-                } else {
-                    if (!preg_match('`^[a-zA-Z0-9/+]*={0,2}$`', $value)) {
-                        $validType = false;
-                    } else {
-                        $decoded = @base64_decode($value);
-                        if ($decoded === false) {
-                            $validType = false;
-                        } else {
-                            $value = $decoded;
-                            $validType = true;
-                        }
-                    }
-                }
+                $validType &= $this->validateBase64($value, $field, $validation);
                 break;
             case 'array':
-                if (!is_array($value) || (count($value) > 0 && !array_key_exists(0, $value))) {
-                    $validType = false;
-                } else {
-                    // Cast the items into a proper numeric array.
-                    $value = array_values($value);
-
-                    if (isset($field['items'])) {
-                        // Validate each of the types.
-                        $itemField = $field['items'];
-                        $itemField['validatorName'] = array_select(['validatorName', 'path', 'name'], $field).'.items';
-                        foreach ($value as $i => &$item) {
-                            $itemField['path'] = "$path.$i";
-                            $this->validateField($item, $itemField, $validation);
-                        }
-                    }
-                }
+                $validType &= $this->validateArray($value, $field, $validation);
                 break;
             case 'object':
-                if (!is_array($value) || isset($value[0])) {
-                    $validType = false;
-                } elseif (isset($field['properties'])) {
-                    // Validate the data against the internal schema.
-                    $valid &= $this->isValidInternal($value, $field['properties'], $validation, $path.'.');
-                }
+                $validType &= $this->validateObject($value, $field, $validation);
                 break;
             case '':
                 // No type was specified so we are valid.
@@ -497,6 +404,180 @@ class Schema implements \JsonSerializable {
         }
 
         return $valid;
+    }
+
+    /**
+     * Validate an array.
+     *
+     * @param mixed &$value The value to validate.
+     * @param array $field The field definition.
+     * @param Validation $validation The validation results to add.
+     * @return bool Returns true if {@link $value} is valid or false otherwise.
+     */
+    protected function validateArray(&$value, array $field, Validation $validation) {
+        $validType = true;
+
+        if (!is_array($value) || (count($value) > 0 && !array_key_exists(0, $value))) {
+            $validType = false;
+        } else {
+            // Cast the items into a proper numeric array.
+            $value = array_values($value);
+
+            if (isset($field['items'])) {
+                // Validate each of the types.
+                $path = array_select(['path', 'name'], $field);
+                $itemField = $field['items'];
+                $itemField['validatorName'] = array_select(['validatorName', 'path', 'name'], $field).'.items';
+                foreach ($value as $i => &$item) {
+                    $itemField['path'] = "$path.$i";
+                    $this->validateField($item, $itemField, $validation);
+                }
+            }
+        }
+        return $validType;
+    }
+
+    /**
+     * Validate a base64 string.
+     *
+     * @param mixed &$value The value to validate.
+     * @param array $field The field definition.
+     * @param Validation $validation The validation results to add.
+     * @return bool Returns true if {@link $value} is valid or false otherwise.
+     */
+    protected function validateBase64(&$value, array $field, Validation $validation) {
+        if (!is_string($value)) {
+            $validType = false;
+        } else {
+            if (!preg_match('`^[a-zA-Z0-9/+]*={0,2}$`', $value)) {
+                $validType = false;
+            } else {
+                $decoded = @base64_decode($value);
+                if ($decoded === false) {
+                    $validType = false;
+                } else {
+                    $value = $decoded;
+                    $validType = true;
+                }
+            }
+        }
+        return $validType;
+    }
+
+    /**
+     * Validate a boolean value.
+     *
+     * @param mixed &$value The value to validate.
+     * @param array $field The field definition.
+     * @param Validation $validation The validation results to add.
+     * @return bool Returns true if {@link $value} is valid or false otherwise.
+     */
+    protected function validateBoolean(&$value, array $field, Validation $validation) {
+        if (is_bool($value)) {
+            $validType = true;
+        } else {
+            $bools = [
+                '0' => false, 'false' => false, 'no' => false, 'off' => false,
+                '1' => true,  'true'  => true, 'yes' => true,  'on'  => true
+            ];
+            if ((is_string($value) || is_numeric($value)) && isset($bools[$value])) {
+                $value = $bools[$value];
+                $validType = true;
+            } else {
+                $validType = false;
+            }
+        }
+        return $validType;
+    }
+
+    /**
+     * Validate a date time.
+     *
+     * @param mixed &$value The value to validate.
+     * @param array $field The field definition.
+     * @param Validation $validation The validation results to add.
+     * @return bool Returns true if {@link $value} is valid or false otherwise.
+     */
+    protected function validateDatetime(&$value, array $field, Validation $validation) {
+        if ($value instanceof \DateTime) {
+            $validType = true;
+        } elseif (is_string($value)) {
+            try {
+                $dt = new \DateTime($value);
+                if ($dt) {
+                    $value = $dt;
+                } else {
+                    $validType = false;
+                }
+            } catch (\Exception $ex) {
+                $validType = false;
+            }
+        } elseif (is_numeric($value) && $value > 0) {
+            $value = new \DateTime('@'.(string)round($value));
+            $validType = true;
+        } else {
+            $validType = false;
+        }
+        return $validType;
+    }
+
+    /**
+     * Validate a float.
+     *
+     * @param mixed &$value The value to validate.
+     * @param array $field The field definition.
+     * @param Validation $validation The validation results to add.
+     * @return bool Returns true if {@link $value} is valid or false otherwise.
+     */
+    protected function validateFloat(&$value, array $field, Validation $validation) {
+        if (is_float($value)) {
+            $validType = true;
+        } elseif (is_numeric($value)) {
+            $value = (float)$value;
+            $validType = true;
+        } else {
+            $validType = false;
+        }
+        return $validType;
+    }
+
+    /**
+     * Validate and integer.
+     *
+     * @param mixed &$value The value to validate.
+     * @param array $field The field definition.
+     * @param Validation $validation The validation results to add.
+     * @return bool Returns true if {@link $value} is valid or false otherwise.
+     */
+    protected function validateInteger(&$value, array $field, Validation $validation) {
+        if (is_int($value)) {
+            $validType = true;
+        } elseif (is_numeric($value)) {
+            $value = (int)$value;
+            $validType = true;
+        } else {
+            $validType = false;
+        }
+        return $validType;
+    }
+
+    /**
+     * Validate an object.
+     *
+     * @param mixed &$value The value to validate.
+     * @param array $field The field definition.
+     * @param Validation $validation The validation results to add.
+     * @return bool Returns true if {@link $value} is valid or false otherwise.
+     */
+    protected function validateObject(&$value, array $field, Validation $validation) {
+        if (!is_array($value) || isset($value[0])) {
+            return false;
+        } elseif (isset($field['properties'])) {
+            $path = array_select(['path', 'name'], $field);
+            // Validate the data against the internal schema.
+            $this->isValidInternal($value, $field['properties'], $validation, $path.'.');
+        }
+        return true;
     }
 
     /**
@@ -534,6 +615,46 @@ class Schema implements \JsonSerializable {
             return false;
         }
         return null;
+    }
+
+    /**
+     * Validate a string.
+     *
+     * @param mixed &$value The value to validate.
+     * @param array $field The field definition.
+     * @param Validation $validation The validation results to add.
+     * @return bool Returns true if {@link $value} is valid or false otherwise.
+     */
+    protected function validateString(&$value, array $field, Validation $validation) {
+        if (is_string($value)) {
+            $validType = true;
+        } elseif (is_numeric($value)) {
+            $value = (string)$value;
+            $validType = true;
+        } else {
+            $validType = false;
+        }
+        return $validType;
+    }
+
+    /**
+     * Validate a unix timestamp.
+     *
+     * @param mixed &$value The value to validate.
+     * @param array $field The field definition.
+     * @param Validation $validation The validation results to add.
+     * @return bool Returns true if {@link $value} is valid or false otherwise.
+     */
+    protected function validateTimestamp(&$value, array $field, Validation $validation) {
+        $validType = true;
+        if (is_numeric($value)) {
+            $value = (int)$value;
+        } elseif (is_string($value) && $ts = strtotime($value)) {
+            $value = $ts;
+        } else {
+            $validType = false;
+        }
+        return $validType;
     }
 
     /**
