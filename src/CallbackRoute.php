@@ -29,21 +29,7 @@ class CallbackRoute extends Route {
      */
     public function __construct($pattern, callable $callback) {
         $this->pattern($pattern);
-        $this->callback($callback);
-    }
-
-    /**
-     * Gets or sets the callback that is called on a matching pattern.
-     *
-     * @param \callable $callback The callback to call when the url matches.
-     * @return callable|this Returns the current callback or $this for fluent sets.
-     */
-    public function callback(callable $callback = null) {
-        if ($callback !== null) {
-            $this->callback = $callback;
-            return $this;
-        }
-        return $this->callback;
+        $this->setCallback($callback);
     }
 
     /**
@@ -65,6 +51,10 @@ class CallbackRoute extends Route {
      * {@inheritdoc}
      */
     public function matches(Request $request, Application $app) {
+        if (!$this->matchesMethods($request)) {
+            return null;
+        }
+
         $path = $request->getPath();
         $regex = static::patternRegex($this->pattern());
 
@@ -103,6 +93,26 @@ class CallbackRoute extends Route {
 
         $result = '`^'.$result.'$`i';
         return $result;
+    }
+
+    /**
+     * Get the callback for the route.
+     *
+     * @return callable Returns the current callback.
+     */
+    public function getCallback() {
+        return $this->callback;
+    }
+
+    /**
+     * Set the callback for the route.
+     *
+     * @param callable $callback The new callback to set.
+     * @return CallbackRoute Retuns $this for fluent calls.
+     */
+    public function setCallback(callable $callback) {
+        $this->callback = $callback;
+        return $this;
     }
 }
 
