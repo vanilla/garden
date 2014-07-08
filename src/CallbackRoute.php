@@ -55,7 +55,7 @@ class CallbackRoute extends Route {
             return null;
         }
 
-        $path = $request->getPath();
+        $path = $request->getPathExt();
         $regex = static::patternRegex($this->pattern());
 
         if (preg_match($regex, $path, $matches)) {
@@ -83,10 +83,17 @@ class CallbackRoute extends Route {
      * @return string Returns the regex pattern for the route.
      */
     protected static function patternRegex($pattern) {
-        $result = preg_replace_callback('`{([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)}`i', function ($match) {
-            $param = $match[1];
-            $param_pattern = '[^/]+';
-            $result = "(?<$param>$param_pattern)";
+        $result = preg_replace_callback('`{([^}]+)}`i', function ($match) {
+            if (preg_match('`(.*?)([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)(.*?)`', $match[1], $matches)) {
+                $before = preg_quote($matches[1], '`');
+                $param = $matches[2];
+                $after = preg_quote($matches[3], '`');
+            } else {
+                throw new \Exception("Invalid route parameter: $match[1].", 500);
+            }
+
+            $param_pattern = '[^/]+?';
+            $result = "(?<$param>$before{$param_pattern}$after)";
 
             return $result;
         }, $pattern);
