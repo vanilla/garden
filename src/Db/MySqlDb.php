@@ -887,20 +887,13 @@ class MySqlDb extends Db {
      * {@inheritdoc}
      */
     protected function alterTable($tablename, array $alterdef, array $options = []) {
-        $columnOrders = array_flip(array_keys($alterdef['def']['columns']));
-
+        $columnOrders = $this->getColumnOrders($alterdef['def']['columns']);
         $parts = [];
 
         // Add the columns and indexes.
         foreach ($alterdef['add']['columns'] as $cname => $cdef) {
             // Figure out the order of the column.
-            $ord = $columnOrders[$cname];
-            if ($ord == 0) {
-                $pos = ' first';
-            } elseif ($pos = array_search($ord - 1, $columnOrders)) {
-                $pos = ' after '.$pos;
-            }
-
+            $pos = val($cname, $columnOrders, '');
             $parts[] = 'add '.$this->columnDefString($cname, $cdef).$pos;
         }
         foreach ($alterdef['add']['indexes'] as $ixdef) {
@@ -931,6 +924,23 @@ class MySqlDb extends Db {
 
         $result = $this->query($sql, Db::QUERY_DEFINE);
         return $result;
+    }
+
+    /**
+     * Get an array of column orders so that added columns can be slotted into their correct spot.
+     *
+     * @param array $cdefs An array of column definitions.
+     * @return array Returns an array of column orders suitable for an `alter table` statement.
+     */
+    protected function getColumnOrders($cdefs) {
+        $orders = array_flip(array_keys($cdefs));
+
+        $prev = ' first';
+        foreach ($orders as $cname => &$value) {
+            $value = $prev;
+            $prev = ' after '.$this->backtick($cname);
+        }
+        return $orders;
     }
 
     /**
