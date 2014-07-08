@@ -49,7 +49,7 @@ class ResourceRouteTest extends \PHPUnit_Framework_TestCase {
         // Add the resource route.
         $this->app
             ->route('/', '%sController')
-            ->conditions(['id' => '`^\d+(-|$)`']);
+            ->conditions(['id' => '\d+(-|$).*']);
     }
 
     /**

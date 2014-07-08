@@ -349,4 +349,29 @@ class ResourceRoute extends Route {
         );
         return $result;
     }
+
+    /**
+     * Tests whether an argument fails against a condition.
+     *
+     * @param string $name The name of the parameter.
+     * @param string $value The value of the argument.
+     * @return bool|null Returns one of the following:
+     * - true: The condition fails.
+     * - false: The condition passes.
+     * - null: There is no condition.
+     */
+    protected function failsCondition($name, $value) {
+        $name = strtolower($name);
+        if (isset($this->conditions[$name])) {
+            $regex = $this->conditions[$name];
+            return !preg_match("`^$regex$`", $value);
+        }
+
+        if (isset(self::$globalConditions[$name])) {
+            $regex = self::$globalConditions[$name];
+            return !preg_match("`^$regex$`", $value);
+        }
+
+        return null;
+    }
 }

@@ -84,7 +84,7 @@ abstract class Route {
 
             $this->conditions = array_replace(
                 $this->conditions,
-                array_map([__CLASS__, 'makeRegex'], $conditions)
+                $conditions
             );
             return $this;
         }
@@ -123,7 +123,7 @@ abstract class Route {
 
             self::$globalConditions = array_replace(
                 self::$globalConditions,
-                array_map([__CLASS__, 'makeRegex'], $conditions)
+                $conditions
             );
         }
 
@@ -210,23 +210,6 @@ abstract class Route {
     }
 
     /**
-     * Make a string into a regex pattern.
-     *
-     * This method uses the convention where a string that starts with a backtick (`) is assumed to be a regex.
-     * Otherwise, backticks are added.
-     *
-     * @param string $str The string to make.
-     * @return string Returns the string as a regex pattern.
-     */
-    protected static function makeRegex($str) {
-        if ($str[0] === '`') {
-            return $str;
-        } else {
-            return '`^'.$str.'$`';
-        }
-    }
-
-    /**
      * Try matching a route to a request.
      *
      * @param Request $request The request to match the route with.
@@ -247,29 +230,6 @@ abstract class Route {
             return true;
         }
         return in_array($request->getMethod(), $this->methods);
-    }
-
-    /**
-     * Tests whether an argument fails against a condition.
-     *
-     * @param string $name The name of the parameter.
-     * @param string $value The value of the argument.
-     * @return bool|null Returns one of the following:
-     * - true: The condition fails.
-     * - false: The condition passes.
-     * - null: There is no condition.
-     */
-    protected function failsCondition($name, $value) {
-        $name = strtolower($name);
-        if (isset($this->conditions[$name])) {
-            return !preg_match($this->conditions[$name], $value);
-        }
-
-        if (isset(self::$globalConditions[$name])) {
-            return !preg_match(self::$globalConditions[$name], $value);
-        }
-
-        return null;
     }
 
     /**

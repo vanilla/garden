@@ -150,4 +150,32 @@ class CallbackRouteTest extends \PHPUnit_Framework_TestCase {
 
         $this->app->run(new Request('/foo'));
     }
+
+    /**
+     * Test a wrapped parameter that has special characters in it.
+     */
+    public function testWrappedParameters() {
+        $this->app->route('/foo/{id}{.ext}?', function ($id, $ext = '') {
+            return ['id' => $id, 'ext' => $ext];
+        });
+
+        $this->app->run(new Request('/foo/123.json'));
+    }
+
+    /**
+     * Test a parameter with a regex condition.
+     */
+    public function testParamterConditions() {
+        $this->app->route('/foo/{id}', function ($id) {
+            return [$id];
+        })->conditions(['id' => '\d+']);
+
+        $result = $this->app->run(new Request('/foo/123'));
+        $this->assertEquals([123], $result);
+
+        // This run should throw a 404.
+        $this->setExpectedException('\Garden\Exception\NotFoundException', '', 404);
+        $result2 = $this->app->run(new Request('/foo/bar'));
+        $this->fail();
+    }
 }
