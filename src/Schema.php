@@ -499,6 +499,7 @@ class Schema implements \JsonSerializable {
      * @return bool Returns true if {@link $value} is valid or false otherwise.
      */
     protected function validateDatetime(&$value, array $field, Validation $validation) {
+        $validType = true;
         if ($value instanceof \DateTime) {
             $validType = true;
         } elseif (is_string($value)) {
