@@ -373,23 +373,21 @@ class SqliteDb extends MySqlDb {
      * Get the primary or secondary keys from the given rows.
      *
      * @param string $tablename The name of the table.
-     * @param array $rows The rows to examine.
+     * @param array $row The row to examine.
      * @param bool $quick Whether or not to quickly look for <tablename>ID for the primary key.
      * @return array|null Returns the primary keys and values from {@link $rows} or null if the primary key isn't found.
      */
-    protected function getPK($tablename, array $rows, $quick = false) {
-        if ($quick && isset($rows[$tablename.'ID'])) {
-            return [$tablename.'ID' => $rows[$tablename.'ID']];
+    protected function getPKValue($tablename, array $row, $quick = false) {
+        if ($quick && isset($row[$tablename.'ID'])) {
+            return [$tablename.'ID' => $row[$tablename.'ID']];
         }
 
         $tdef = $this->getTableDef($tablename);
-        if (isset($tdef['indexes'])) {
-            foreach ($tdef['indexes'] as $idef) {
-                $cols = array_intersect_key($rows, $idef['columns']);
-                if (count($cols) === count($idef['columns']) &&
-                    val('type', $idef, Db::INDEX_IX) !== Db::INDEX_IX) {
-                    return $cols;
-                }
+        if (isset($tdef['indexes'][Db::INDEX_PK]['columns'])) {
+            $pkColumns = array_flip($tdef['indexes'][Db::INDEX_PK]['columns']);
+            $cols = array_intersect_key($row, $pkColumns);
+            if (count($cols) === count($pkColumns)) {
+                return $cols;
             }
         }
 
@@ -431,7 +429,7 @@ class SqliteDb extends MySqlDb {
         if (val(Db::OPTION_UPSERT, $options)) {
             unset($options[Db::OPTION_UPSERT]);
 
-            $keys = $this->getPK($tablename, $rows, true);
+            $keys = $this->getPKValue($tablename, $rows, true);
             if (!$keys) {
                 throw new \Exception("Cannot upsert with no key.", 500);
             }

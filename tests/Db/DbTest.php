@@ -8,6 +8,7 @@
 namespace Garden\Tests\Db;
 
 use Garden\Db\Db;
+use Garden\Db\DbDef;
 
 /**
  * Test the basic functionality of the Db* classes.
@@ -141,6 +142,48 @@ abstract class DbTest extends BaseDbTest {
 
         $this->assertEquals($user2, array_intersect_key($dbUser2, $user2));
 
+    }
+
+    /**
+     * Test {@link Db::insert()} with the upsert option and a primary key composed of multiple columns.
+     */
+    public function testInsertUpsertMultiKey() {
+        $db = self::$db;
+        $dbdef = new DbDef($db);
+
+        $db->dropTable('userMeta', [Db::OPTION_IGNORE => true]);
+        $dbdef->table('userMeta')
+            ->column('userID', 'int')
+            ->column('key', 'varchar(50)')
+            ->column('value', 'text')
+            ->index(['userID', 'key'], Db::INDEX_PK)
+            ->exec();
+
+        $db->insert(
+            'userMeta',
+            ['userID' => 1, 'key' => 'bio', 'value' => 'Just some dude.'],
+            [Db::OPTION_UPSERT => true]
+        );
+
+        $row = $db->getOne('userMeta', ['userID' => 1, 'key' => 'bio']);
+        $this->assertEquals(
+            ['userID' => 1, 'key' => 'bio', 'value' => 'Just some dude.'],
+            $row
+        );
+
+        $db->insert(
+            'userMeta',
+            ['userID' => 1, 'key' => 'bio', 'value' => 'Master of the universe.'],
+            [Db::OPTION_UPSERT => true]
+        );
+
+        $rows = $db->get('userMeta', ['userID' => 1, 'key' => 'bio']);
+        $this->assertEquals(1, count($rows));
+        $firstRow = reset($rows);
+        $this->assertEquals(
+            ['userID' => 1, 'key' => 'bio', 'value' => 'Master of the universe.'],
+            $firstRow
+        );
     }
 
     /**
