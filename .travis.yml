@@ -17,3 +17,5 @@ before_script:
 after_script:
     - wget https://scrutinizer-ci.com/ocular.phar
     - php ocular.phar code-coverage:upload --format=php-clover coverage.clover
+    - composer require --dev -n satooshi/php-coveralls:dev-master
+    - php vendor/bin/coveralls -v
