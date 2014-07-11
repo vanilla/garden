@@ -14,7 +14,7 @@ namespace Garden;
 class SecureString {
     const SEP = '.';
 
-    protected static $supported = ['aes128', 'hsha1', 'hsha256'];
+//    protected static $supported = ['aes128', 'hsha1', 'hsha256'];
 
     protected $timestampExpiry;
 
@@ -112,9 +112,10 @@ class SecureString {
                 break;
             }
 
-            $supported = $this->supportedInfo($token, $throw);
-            if ($supported === null) {
-                return null;
+            try {
+                $supported = $this->supportedInfo($token, true);
+            } catch (\Exception $ex) {
+                return $this->exception($throw, $ex->getMessage(), 403);
             }
 
             if (!isset($spec[$token])) {

@@ -37,6 +37,7 @@ class SecureStringTest extends \PHPUnit_Framework_TestCase {
      * @param mixed $data The data to test.
      * @param array $spec A secure string spec.
      * @dataProvider provideDataAndSpecs
+     * @throws \Exception Throws an exception when a bad password is encountered.
      * @expectedException \Exception
      * @expectedExceptionCode 403
      */
@@ -58,6 +59,30 @@ class SecureStringTest extends \PHPUnit_Framework_TestCase {
 
         $null = $ss->decode($encoded, $badSpec, false);
         $this->assertNull($null);
+
+        try {
+            $decoded = $ss->decode($encoded, $badSpec, true);
+        } catch (\Exception $ex) {
+            if ($ex->getCode() === 400) {
+                $bad = true;
+            }
+            throw $ex;
+        }
+    }
+
+    /**
+     * Test an edge-case from the bad password test.
+     *
+     * @expectedException \Exception
+     * @expectedExceptionCode 403
+     */
+    public function testBadPasswordEdge() {
+        $ss = new SecureString();
+
+        $data = 1;
+        $spec = ['aes256' => 'pw53bf4508bd3fa7.04556227'];
+        $badSpec = ['aes256' => 'bad53bf4508c386d0.86764110'];
+        $encoded = 'dsJ-cg_yasvDXLroH15Cdw.RD_dr-J8UJRYRDFJt_9MCw.aes256';
 
         $decoded = $ss->decode($encoded, $badSpec, true);
     }
@@ -106,7 +131,7 @@ class SecureStringTest extends \PHPUnit_Framework_TestCase {
      * Test decoding a string with an invalid spec.
      *
      * @expectedException \Exception
-     * @expectedExceptionCode 400
+     * @expectedExceptionCode 403
      */
     public function testUnsupportedSpecDecode() {
         $ss = new SecureString();
