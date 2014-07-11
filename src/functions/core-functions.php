@@ -710,44 +710,6 @@ function php_encode($data, $php_var = 'config') {
 }
 
 /**
- * Calculate the polynomial distribution of a probability.
- *
- * @param float $qn A probability between 0 and 1.
- * @return real
- */
-function pnormaldist($qn) {
-    $b = array(1.570796288, 0.03706987906, -0.8364353589e-3, -0.2250947176e-3, 0.6841218299e-5,
-        0.5824238515e-5, -0.104527497e-5, 0.8360937017e-7, -0.3231081277e-8, 0.3657763036e-10, 0.6936233982e-12);
-
-    if ($qn < 0.0 || 1.0 < $qn) {
-        return 0.0;
-    }
-
-    if ($qn == 0.5) {
-        return 0.0;
-    }
-
-    $w1 = $qn;
-
-    if ($qn > 0.5) {
-        $w1 = 1.0 - $w1;
-    }
-
-    $w3 = -log(4.0 * $w1 * (1.0 - $w1));
-    $w1 = $b[0];
-
-    for ($i = 1; $i <= 10; $i++) {
-        $w1 += $b[$i] * pow($w3, $i);
-    }
-
-    if ($qn > 0.5) {
-        return sqrt($w1 * $w3);
-    }
-
-    return -sqrt($w1 * $w3);
-}
-
-/**
  * Reflect the arguments on a callback and returns them as an associative array.
  *
  * @param callable $callback A callback to the function.
