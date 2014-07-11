@@ -42,22 +42,22 @@ class TypeFunctionsTest extends \PHPUnit_Framework_TestCase {
      * Test {@link force_int()}.
      */
     public function testForceInt() {
-        $this->assertExact(123, force_int(123));
-        $this->assertExact(123, force_int('123'));
-        $this->assertExact(123, force_int(123.2));
-        $this->assertExact(0, force_int(false));
-        $this->assertExact(0, force_int(''));
-        $this->assertExact(0, force_int('false'));
-        $this->assertExact(0, force_int('disabled'));
-        $this->assertExact(0, force_int('off'));
-        $this->assertExact(0, force_int('no'));
-        $this->assertExact(0, force_int([]));
-        $this->assertExact(1, force_int(true));
-        $this->assertExact(1, force_int('true'));
-        $this->assertExact(1, force_int('yes'));
-        $this->assertExact(1, force_int('on'));
-        $this->assertExact(1, force_int('enabled'));
-        $this->assertExact(1, force_int(['enabled']));
+        $this->assertSame(123, force_int(123));
+        $this->assertSame(123, force_int('123'));
+        $this->assertSame(123, force_int(123.2));
+        $this->assertSame(0, force_int(false));
+        $this->assertSame(0, force_int(''));
+        $this->assertSame(0, force_int('false'));
+        $this->assertSame(0, force_int('disabled'));
+        $this->assertSame(0, force_int('off'));
+        $this->assertSame(0, force_int('no'));
+        $this->assertSame(0, force_int([]));
+        $this->assertSame(1, force_int(true));
+        $this->assertSame(1, force_int('true'));
+        $this->assertSame(1, force_int('yes'));
+        $this->assertSame(1, force_int('on'));
+        $this->assertSame(1, force_int('enabled'));
+        $this->assertSame(1, force_int(['enabled']));
     }
 
     /**
@@ -112,11 +112,11 @@ class TypeFunctionsTest extends \PHPUnit_Framework_TestCase {
      * @param mixed $expected The expected value.
      * @param mixed $actual The actual value.
      */
-    protected function assertExact($expected, $actual) {
-        $this->assertEquals($expected, $actual);
-
-        if ($expected == $actual) {
-            $this->assertTrue($expected === $actual, "$expected !== $actual");
-        }
-    }
+//    protected function assertSame($expected, $actual) {
+//        $this->assertEquals($expected, $actual);
+//
+//        if ($expected == $actual) {
+//            $this->assertTrue($expected === $actual, "$expected !== $actual");
+//        }
+//    }
 }
