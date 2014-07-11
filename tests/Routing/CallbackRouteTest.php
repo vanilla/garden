@@ -159,7 +159,8 @@ class CallbackRouteTest extends \PHPUnit_Framework_TestCase {
             return ['id' => $id, 'ext' => $ext];
         });
 
-        $this->app->run(new Request('/foo/123.json'));
+        $result = $this->app->run(new Request('/foo/123.xml'));
+        $this->assertEquals(['id' => '123', 'ext' => '.xml'], $result);
     }
 
     /**
