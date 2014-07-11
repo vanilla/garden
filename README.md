@@ -81,14 +81,13 @@ Addons::bootstrap(); // enables config('addons')
 // Fire the bootstrap event so that overridable function files can be included.
 Event::fire('bootstrap');
 
-// Register some routes.
+// Register routes to functions.
 $app->route('/hello', function () use ($app) {
     echo "Hello World!";
 });
 
-$app->route('/ping', function () use ($app) {
-    return "Pong";
-});
+// Register a route to controllers.
+$app->route('/api/', '%sApiController');
 
 // Run the application.
 $app->run();
