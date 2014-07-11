@@ -12,6 +12,10 @@ namespace Garden\Tests\CoreFunctions;
  * Test the various date/time functions.
  */
 class DateTimeFunctionsTest extends \PHPUnit_Framework_TestCase {
+
+    /**
+     * Test the {@link datecmp()} function.
+     */
     public function testDatecmp() {
         $this->assertLessThan(0, datecmp('yesterday', 'today'));
         $this->assertGreaterThan(0, datecmp('today', 'yesterday'));

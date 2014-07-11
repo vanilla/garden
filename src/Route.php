@@ -177,11 +177,24 @@ abstract class Route {
         return self::$globalMappings;
     }
 
+    /**
+     * Determine whether or not a parameter is mapped to special request data.
+     *
+     * @param string $name The name of the parameter to check.
+     * @return bool Returns true if the parameter is mapped, false otherwise.
+     */
     protected function isMapped($name) {
         $name = strtolower($name);
         return isset($this->mappings[$name]) || isset(self::$globalMappings[$name]);
     }
 
+    /**
+     * Get the mapped data for a parameter.
+     *
+     * @param string $name The name of the parameter.
+     * @param Request $request The {@link Request} to get the data from.
+     * @return array|null Returns the mapped data or null if there is no data.
+     */
     protected function mappedData($name, Request $request) {
         $name = strtolower($name);
 
