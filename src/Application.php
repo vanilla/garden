@@ -173,8 +173,12 @@ class Application {
                     $dispatched = true;
                     break;
                 } catch (Exception\Pass $pex) {
+                    ob_end_clean();
                     // If the route throws a pass then continue on to the next route.
                     continue;
+                } catch (\Exception $ex) {
+                    ob_end_clean();
+                    throw $ex;
                 }
             }
 
