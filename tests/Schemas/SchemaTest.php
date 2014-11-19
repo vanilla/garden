@@ -10,7 +10,7 @@ namespace Garden\Tests\Schemas;
 /**
  * Base class for schema tests.
  */
-class SchemaTest extends \PHPUnit_Framework_TestCase {
+abstract class SchemaTest extends \PHPUnit_Framework_TestCase {
     /**
      * Provides all of the schema types.
      *
