@@ -218,12 +218,12 @@ class Request implements JsonSerializable {
         $env['QUERY'] = $get;
 
         // SERVER_NAME.
-	$host = array_select(
+        $host = array_select(
             ['HTTP_X_FORWARDED_HOST', 'HTTP_HOST', 'SERVER_NAME'],
             $_SERVER
         );
-	list($host) = explode(':', $host, 2);
-	$env['SERVER_NAME'] = $host;
+        list($host) = explode(':', $host, 2);
+        $env['SERVER_NAME'] = $host;
 
         // HTTP_* headers.
         $env = array_replace($env, static::extractHeaders($_SERVER));
@@ -386,7 +386,7 @@ class Request implements JsonSerializable {
      * @return array The extracted headers.
      */
     public static function extractHeaders($arr) {
-        $result = array();
+        $result = [];
 
         foreach ($arr as $key => $value) {
             $key = strtoupper($key);
@@ -395,6 +395,24 @@ class Request implements JsonSerializable {
                     continue;
                 }
                 $result[$key] = $value;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Retrieves all message headers.
+     *
+     * @return array Returns an associative array of the message's headers.
+     * Each key represents a header name, and each value is an array of strings.
+     */
+    public function getHeaders() {
+        $result = [];
+
+        foreach ($this->env as $key => $value) {
+            if (stripos($key, 'HTTP_') === 0 && !str_ends($key, '_RAW')) {
+                $headerKey = static::normalizeHeaderName(substr($key, 5));
+                $result[$headerKey][] = $value;
             }
         }
         return $result;
@@ -658,6 +676,17 @@ class Request implements JsonSerializable {
         }
 
         return $this;
+    }
+
+    /**
+     * Normalize a header field name to follow the general HTTP header `Capital-Dash-Separated` convention.
+     *
+     * @param string $name The header name to normalize.
+     * @return string Returns the normalized header name.
+     */
+    public static function normalizeHeaderName($name) {
+        $result = str_replace(' ', '-', ucwords(str_replace(['-', '_'], ' ', strtolower($name))));
+        return $result;
     }
 
     /**
