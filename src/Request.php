@@ -218,10 +218,12 @@ class Request implements JsonSerializable {
         $env['QUERY'] = $get;
 
         // SERVER_NAME.
-        $env['SERVER_NAME'] = array_select(
+	$host = array_select(
             ['HTTP_X_FORWARDED_HOST', 'HTTP_HOST', 'SERVER_NAME'],
             $_SERVER
         );
+	list($host) = explode(':', $host, 2);
+	$env['SERVER_NAME'] = $host;
 
         // HTTP_* headers.
         $env = array_replace($env, static::extractHeaders($_SERVER));
