@@ -189,9 +189,10 @@ class Application {
             $result = $ex;
         }
 
+        $result = $this->finalize($result);
         Request::current($requestBak);
 
-        return $this->finalize($result);
+        return $result;
     }
 
     /**
@@ -208,6 +209,11 @@ class Application {
         $response->contentAsset($this->request->getEnv('HTTP_X_ASSET'));
 
         $contentType = $response->contentType();
+
+        if ($this->request->getMethod() === Request::METHOD_HEAD) {
+            $response->flushHeaders();
+            return null;
+        }
 
         // Check for known response types.
         switch ($contentType) {
