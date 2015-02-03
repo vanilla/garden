@@ -17,7 +17,7 @@ class Event {
     /// Constants ///
 
     const PRIORITY_LOW = 1000;
-    const PRIORITY_MEDIUM = 100;
+    const PRIORITY_NORMAL = 100;
     const PRIORITY_HIGH = 10;
 
     /// Properties ///
@@ -99,7 +99,7 @@ class Event {
      * @param callback $callback The callback of the event.
      * @param int $priority The priority of the event.
      */
-    public static function bind($event, $callback, $priority = Event::PRIORITY_MEDIUM) {
+    public static function bind($event, $callback, $priority = Event::PRIORITY_NORMAL) {
         $event = strtolower($event);
         self::$handlers[$event][$priority][] = $callback;
         self::$toSort[$event] = true;
@@ -127,7 +127,7 @@ class Event {
      * @param int $priority The priority of the event.
      * @throws \InvalidArgumentException Throws an exception when binding to a class name with no `instance()` method.
      */
-    public static function bindClass($class, $priority = Event::PRIORITY_MEDIUM) {
+    public static function bindClass($class, $priority = Event::PRIORITY_NORMAL) {
         $method_names = get_class_methods($class);
 
         // Grab an instance of the class so there is something to bind to.
