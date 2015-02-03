@@ -220,8 +220,8 @@ class SecureStringTest extends \PHPUnit_Framework_TestCase {
      */
     public function testPartiallySecureString() {
         $ss = new SecureString();
-        $spec = ['aes128' => 'foo', 'hsha1' => 'bar'];
-        $partialSpec = ['hsha1' => $spec['hsha1']];
+        $spec = ['aes128' => 'foo', 'hsha1' => 'bar', 'strict' => true];
+        $partialSpec = ['hsha1' => $spec['hsha1'], 'strict' => true];
 
         $data = 'data';
         $encoded = $ss->encode($data, $partialSpec, false);
@@ -235,6 +235,30 @@ class SecureStringTest extends \PHPUnit_Framework_TestCase {
         $this->assertSame($data, $decoded);
 
         $decoded = $ss->decode($encoded, $spec, true);
+    }
+
+    /**
+     * Test a string that is encoded twice using two different specs.
+     */
+    public function testDoubleEncoding() {
+        $ss = new SecureString();
+
+        $spec1 = ['aes128' => 'pw1', 'hsha1' => 'pw11'];
+        $spec2 = ['aes256' => 'pw2', 'hsha256' => 'pw22'];
+
+        $data = ['data', 123];
+
+        $encoded1 = $ss->encode($data, $spec1);
+        $this->assertNotNull($encoded1);
+
+        $encoded2 = $ss->encode($encoded1, $spec2);
+        $this->assertNotNull($encoded2);
+
+        $decoded2 = $ss->decode($encoded2, $spec2);
+        $this->assertSame($encoded1, $decoded2);
+
+        $decoded1 = $ss->decode($decoded2, $spec1);
+        $this->assertSame($data, $decoded1);
     }
 
     /**
