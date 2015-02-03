@@ -48,6 +48,10 @@ class VanillaPassword extends PhpassPassword {
      * {@inheritdoc}
      */
     public function verify($password, $hash) {
+        if (!$hash) {
+            return false;
+        }
+
         if ($this->hashMethod === static::HASH_BEST &&
             function_exists('password_verify') &&
             password_verify((string)$password, (string)$hash)) {

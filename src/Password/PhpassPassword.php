@@ -304,6 +304,9 @@ class PhpassPassword implements IPassword {
      * {@inheritdoc}
      */
     public function verify($password, $hash) {
+        if (!$hash) {
+            return false;
+        }
         $calc_hash = $this->cryptPrivate($password, $hash);
         if ($calc_hash[0] === '*') {
             $calc_hash = crypt($password, $hash);
