@@ -201,32 +201,40 @@ class SecureStringTest extends \PHPUnit_Framework_TestCase {
      */
     public function testInsecureString() {
         $ss = new SecureString();
-        $str = base64url_encode(json_encode(['foo' => 'bar']));
+        $str = json_encode('fooledYou').SecureString::SEP.SecureString::EOS;
 
         $decoded = $ss->decode($str, [], false);
+        $this->assertNull($decoded);
+
+        $decoded = $ss->decode($str, ['strict' => false], false);
         $this->assertNull($decoded);
 
         $ss->decode($str, [], true);
     }
 
     /**
-     * There is a test case where the string decrypts, but comes up with garbage.
+     * Test a string that was only partially secured.
      *
      * @expectedException \Exception
      * @expectedExceptionCode 403
      */
-    public function testEdgePw() {
+    public function testPartiallySecureString() {
         $ss = new SecureString();
+        $spec = ['aes128' => 'foo', 'hsha1' => 'bar'];
+        $partialSpec = ['hsha1' => $spec['hsha1']];
 
-        $data = 1;
-        $spec = ['aes256' => 'pw53a8f0c6f2fa95.12344432'];
-        $encoded = 'cCAX_rOEtQYn30sFZFVI5g.7eQq12ifs9nDjEQGRHkoiw.aes256';
-        $badSpec = ['aes256' => 'bad53a8f0c704ada8.12162063'];
+        $data = 'data';
+        $encoded = $ss->encode($data, $partialSpec, false);
+        $this->assertNotNull($encoded);
 
-        $decoded = $ss->decode($encoded, $spec);
-        $this->assertEquals($data, $decoded);
+        $decoded = $ss->decode($encoded, $spec, false);
+        $this->assertNull($decoded);
 
-        $badDecoded = $ss->decode($encoded, $badSpec, true);
+        // The string should decode fine when strict is false.
+        $decoded = $ss->decode($encoded, array_merge($spec, ['strict' => false]));
+        $this->assertSame($data, $decoded);
+
+        $decoded = $ss->decode($encoded, $spec, true);
     }
 
     /**
@@ -235,14 +243,25 @@ class SecureStringTest extends \PHPUnit_Framework_TestCase {
      * @return array Returns an array of arrays suitable to pass into tests.
      */
     public function provideSampleData() {
+        $ss = new SecureString();
+
         $result = [
+            'true' => [true],
+            'false' => [false],
             'int' => [1],
             'timestamp' => [time()],
             'string' => ["Hello world"],
             'unicode' => ['Iñtërnâtiônàlizætiøn'],
             'array' => [[1, 2, 3]],
             'dictionary' => [['uid' => 1234567, 't' => sha1(mt_rand())]],
-            'nested' => [['a' => 1234, 'b' => [1, 2, 3]]]
+            'nested' => [['a' => 1234, 'b' => [1, 2, 3]]],
+            'empty' => [[]],
+            'periods' => ['foo.bar'],
+            '...' => ['...........'],
+            'EOS' => ['.'.SecureString::EOS],
+            'EOSX' => ['.'.SecureString::EOS.'.'.SecureString::EOS.'.'.SecureString::EOS],
+            'SecureString' => [$ss->encode('foo', ['aes128' => uniqid('pw', true), 'hsha1' => uniqid('pw', true)])],
+            'user' => [['uniqueid' => '123456', 'name' => 'burr', 'email' => 'burr@noreply.com', 'photo' => 'http://example.com/foo.png']],
         ];
 
         return $result;
@@ -256,7 +275,9 @@ class SecureStringTest extends \PHPUnit_Framework_TestCase {
             'hsha256' => [['hsha256' => uniqid('pw', true)]],
             'aes128-hsha1' => [['aes128' => uniqid('pw', true), 'hsha1' => uniqid('pw', true)]],
             'aes256-hsha256' => [['aes256' => uniqid('pw', true), 'hsha256' => uniqid('pw', true)]],
-            'double sign' => [['hsha1' => uniqid('pw', true), 'hsha256' => uniqid('pw', true)]]
+            'double sign' => [['hsha1' => uniqid('pw', true), 'hsha256' => uniqid('pw', true)]],
+            'hsha1-aes128' => [['hsha1' => uniqid('pw', true), 'aes128' => uniqid('pw', true)]],
+            'double encrypt' => [['aes128' => uniqid('pw', true), 'aes256' => uniqid('pw', true)]],
         ];
 
         return $result;
