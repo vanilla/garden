@@ -13,8 +13,7 @@ namespace Garden;
  */
 class SecureString {
     const SEP = '.';
-
-//    protected static $supported = ['aes128', 'hsha1', 'hsha256'];
+    const EOS = '-';
 
     protected $timestampExpiry;
 
@@ -59,8 +58,11 @@ class SecureString {
 
             list($encode,, $method, $encodeFirst) = $supported;
 
-            if ($encodeFirst && $first) {
-                $str = static::base64urlEncode($str);
+            if ($first) {
+                if ($encodeFirst) {
+                    $str = static::base64urlEncode($str);
+                }
+                $this->pushString($str, self::EOS);
             }
 
             switch ($encode) {
@@ -96,18 +98,13 @@ class SecureString {
      */
     public function decode($str, array $spec, $throw = false) {
         $decodeFirst = false;
-        $last = true;
-        $wstr = $str;
+        $wstr = $str; // wstr means working string
+        $used = [];
 
         while ($token = $this->popString($wstr)) {
-            if ($wstr === '') {
-                if ($last) {
-                    // The string has not been secured in any way.
-                    return $this->exception($throw, "The string is not secure.", 403);
-                } elseif ($decodeFirst) {
-                    $wstr = static::base64urlDecode($token);
-                } else {
-                    $wstr = $token;
+            if ($token === self::EOS) {
+                if ($decodeFirst) {
+                    $wstr = static::base64urlDecode($wstr);
                 }
                 break;
             }
@@ -139,7 +136,6 @@ class SecureString {
             if ($wstr === null) {
                 return null;
             }
-            $last = false;
         }
 
         $data = json_decode($wstr, true);
