@@ -14,6 +14,7 @@ namespace Garden;
 class SecureString {
     const SEP = '.';
     const EOS = '-';
+    const STRICT = 'strict';
 
     protected $timestampExpiry;
 
@@ -51,6 +52,11 @@ class SecureString {
 
         $first = true;
         foreach ($spec as $name => $password) {
+            if ($name === self::STRICT) {
+                // Strict is just an option so continue.
+                continue;
+            }
+
             $supported = $this->supportedInfo($name, $throw);
             if ($supported === null) {
                 return null;
@@ -101,6 +107,12 @@ class SecureString {
         $wstr = $str; // wstr means working string
         $used = [];
 
+        $strict = true;
+        if (array_key_exists(self::STRICT, $spec)) {
+            $strict = (bool)$spec[self::STRICT];
+            unset($spec[self::STRICT]);
+        }
+
         while ($token = $this->popString($wstr)) {
             if ($token === self::EOS) {
                 if ($decodeFirst) {
@@ -119,6 +131,7 @@ class SecureString {
                 return $this->exception($throw, "You did not provide a password for $token.", 403);
             }
             $password = $spec[$token];
+            array_unshift($used, $token);
 
             list(, $decode, $method, $decodeFirst) = $supported;
 
@@ -136,6 +149,13 @@ class SecureString {
             if ($wstr === null) {
                 return null;
             }
+        }
+
+        // Make sure that the string was secured at all.
+        if ($strict && array_keys($spec) != $used) {
+            return $this->exception($throw, 'The string is not fully secure.', 403);
+        } elseif (empty($used)) {
+            return $this->exception($throw, 'The string is not secure.', 403);
         }
 
         $data = json_decode($wstr, true);
