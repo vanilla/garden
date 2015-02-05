@@ -27,7 +27,7 @@ after_script:
 notifications:
     hipchat:
         rooms:
-            secure: "SCIZgC1pb5nhxK4wcGONbFYl+WeRX+Z10kDlkMoxucSFYFke3xuXDHoO+D/EnEPm/Cgychrlu+ck3l6GyNjZ8dPNYAImBoRYY/V3vqFcwNeYkv0OqysxxPRkmRFlJpg6XF2zpLZZww6tgmprnZyAm1+s154Y49dwqkYtMC7zIeE="
+            secure: "hm1gLERnItWUbRBq4hnxA4UbD2/e0RZCSVwWh80ku89dIkJ2xKcI+N+mBSya5opqGYZNXBf4KM0dzpqZa4uNDx1OMZJa/LDWGJ5idnHZcKd5+eyAoNY1ZKTWvUhZB7x3C3OH2e2O/Qumgw1gpho2OS7NR/SkT3GkvLLwfy5vKGc="
         template:
             - >
                 Build <a href="%{build_url}">#%{build_number}</a>
