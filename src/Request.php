@@ -41,6 +41,14 @@ class Request implements JsonSerializable {
      */
     protected static $defaultEnv;
 
+    protected static $knownExtensions = [
+        '' => 'text/html',
+        '.html' => 'text/html',
+        '.json' => 'application/json',
+        '.txt' => 'text/plain',
+        '.xml' => 'application/xml'
+    ];
+
     /**
      * @var array The global environment for the request.
      */
@@ -293,14 +301,20 @@ class Request implements JsonSerializable {
             unset($get['x-method']);
         }
 
+        // Force the path and extension to lowercase.
+        $path = strtolower($env['PATH_INFO']);
+        if ($path !== $env['PATH_INFO']) {
+            static::replaceEnv($env, 'PATH_INFO', $path);
+        }
+
+        $ext = strtolower($env['EXT']);
+        if ($ext !== $env['EXT']) {
+            static::replaceEnv($env, 'EXT', $ext);
+        }
+
         // Check to override the accepts header.
-        switch (strtolower($env['EXT'])) {
-            case '.json':
-                static::replaceEnv($env, 'HTTP_ACCEPT', 'application/json');
-                break;
-            case '.rss':
-                static::replaceEnv($env, 'HTTP_ACCEPT', 'application/rss+xml');
-                break;
+        if (isset(self::$knownExtensions[$ext])) {
+            static::replaceEnv($env, 'HTTP_ACCEPT', self::$knownExtensions[$ext]);
         }
     }
 
