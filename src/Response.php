@@ -195,7 +195,7 @@ class Response implements JsonSerializable {
             } elseif (array_key_exists('response', $result)) {
                 $resultResponse = $result['response'];
                 if (!$resultResponse) {
-                    $response->data([]);
+                    $response->data($result['body']);
                 } else {
                     // This is a dispatched response.
                     $response = static::create($resultResponse);
@@ -253,6 +253,10 @@ class Response implements JsonSerializable {
      * @return Response $this Returns `$this` for fluent calls.
      */
     public function contentTypeFromAccept($accept) {
+        if (!empty($this->headers['Content-Type'])) {
+            return;
+        }
+
         $accept = strtolower($accept);
         if (strpos($accept, ',') === false) {
             list($contentType) = explode(';', $accept);
@@ -521,7 +525,8 @@ class Response implements JsonSerializable {
     public function status($value = null) {
         if ($value !== null) {
             if (!isset(self::$messages[$value])) {
-                throw new \InvalidArgumentException("Response->status(): Invalid http status: $value.", 500);
+                $this->headers('X-Original-Status', $value);
+                $value = 500;
             }
             $this->status = (int)$value;
         }
