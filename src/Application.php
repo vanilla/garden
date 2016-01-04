@@ -233,9 +233,15 @@ class Application {
                 echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                 break;
             default:
-                $response->status(415);
-                $response->flushHeaders();
-                echo "Unsupported response type: $contentType";
+                $data = $response->data();
+                if (is_string($data)) {
+                    $response->flushHeaders();
+                    echo $data;
+                } else {
+                    $response->status(415);
+                    $response->flushHeaders();
+                    echo "Unsupported response type: $contentType";
+                }
                 break;
         }
         return null;
