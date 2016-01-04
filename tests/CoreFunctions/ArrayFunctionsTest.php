@@ -61,30 +61,42 @@ class ArrayFunctionsTest extends \PHPUnit_Framework_TestCase {
     /**
      * Test {@link array_column_php()} errors and warnings.
      *
-     * @expectedException \Throwable
+     * @expectedException \Exception
      */
     public function testArrayColumnError1() {
-        $r = array_column_php(null, null);
+        try {
+            $r = array_column_php(null, null);
+        } catch (\Throwable $ex) {
+            throw new \Exception($ex->getMessage(), $ex->getCode());
+        }
     }
 
     /**
      * Test {@link array_column()} errors and warnings.
      *
-     * @expectedException \Throwable
+     * @expectedException \Exception
      */
     public function testArrayColumnError2() {
-        $r = array_column_php('foo', 'bar');
+        try {
+            $r = array_column_php('foo', 'bar');
+        } catch (\Throwable $ex) {
+            throw new \Exception($ex->getMessage(), $ex->getCode());
+        }
     }
 
     /**
      * Test array_column() errors and warnings.
      *
-     * @expectedException \Throwable
+     * @expectedException \Exception
      */
     public function testArrayColumnError3() {
         $ds = $this->getDataset();
 
-        array_column_php($ds, []);
+        try {
+            array_column_php($ds, []);
+        } catch (\Throwable $ex) {
+            throw new \Exception($ex->getMessage(), $ex->getCode());
+        }
     }
 
     /**
