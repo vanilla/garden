@@ -268,7 +268,7 @@ function array_usearch($needle, array $haystack, callable $cmp) {
  * @param array $keys An array of keys to try.
  * @param array $array The array to select from.
  * @param mixed $default The default value if non of the keys exist.
- * @return mixed Returns the first non-empty value of {@link $default} if non are found.
+ * @return mixed Returns the first non-empty value of {@link $default} if none are found.
  * @category Array Functions
  */
 function array_select(array $keys, array $array, $default = null) {
@@ -860,7 +860,7 @@ function sprintft($formatCode, $arg1 = null) {
  *
  * @param string $dir The name of the directory.
  * @param int $mode The file permissions on the folder if it's created.
- * @throws Exception Throws an exception with {@link $dir} is a file.
+ * @throws Exception Throws an exception when {@link $dir} is a file.
  * @category Filesystem Functions
  */
 function touchdir($dir, $mode = 0777) {

@@ -28,6 +28,7 @@ class PasswordTest extends \PHPUnit_Framework_TestCase {
         $password = 'Iñtërnâtiônàlizætiøn'; // unicode password.
 
         $hash = $alg->hash($password);
+        $this->assertNotSame($password, $hash);
         $this->assertTrue($alg->verify($password, $hash));
     }
 

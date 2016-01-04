@@ -28,7 +28,8 @@ class SecureStringTest extends \PHPUnit_Framework_TestCase {
         $encoded = $ss->encode($data, $spec, true);
         $decoded = $ss->decode($encoded, $spec, true);
 
-        $this->assertEquals($data, $decoded);
+        $this->assertNotSame($encoded, $data);
+        $this->assertSame($data, $decoded);
     }
 
     /**

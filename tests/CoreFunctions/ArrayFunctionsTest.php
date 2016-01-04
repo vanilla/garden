@@ -61,7 +61,7 @@ class ArrayFunctionsTest extends \PHPUnit_Framework_TestCase {
     /**
      * Test {@link array_column_php()} errors and warnings.
      *
-     * @expectedException \Garden\Exception\ErrorException
+     * @expectedException \Throwable
      */
     public function testArrayColumnError1() {
         $r = array_column_php(null, null);
@@ -70,7 +70,7 @@ class ArrayFunctionsTest extends \PHPUnit_Framework_TestCase {
     /**
      * Test {@link array_column()} errors and warnings.
      *
-     * @expectedException \Garden\Exception\ErrorException
+     * @expectedException \Throwable
      */
     public function testArrayColumnError2() {
         $r = array_column_php('foo', 'bar');
@@ -79,7 +79,7 @@ class ArrayFunctionsTest extends \PHPUnit_Framework_TestCase {
     /**
      * Test array_column() errors and warnings.
      *
-     * @expectedException \Garden\Exception\ErrorException
+     * @expectedException \Throwable
      */
     public function testArrayColumnError3() {
         $ds = $this->getDataset();
