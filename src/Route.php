@@ -32,6 +32,11 @@ abstract class Route {
     protected $mappings;
 
     /**
+     * @var bool Whether or not to match the path with the file extension.
+     */
+    protected $matchFullPath;
+
+    /**
      * @var array An array of global parameter mappings.
      */
     protected static $globalMappings = [
@@ -256,5 +261,25 @@ abstract class Route {
             $this->pattern = '/'.ltrim($pattern, '/');
         }
         return $this->pattern;
+    }
+
+    /**
+     * Get whether or not to match the path with the extension.
+     *
+     * @return boolean Returns **true** if the path should be matched with the file extension or **false** otherwise.
+     */
+    public function getMatchFullPath() {
+        return $this->matchFullPath;
+    }
+
+    /**
+     * Set whether or not to match the path with the extension.
+     *
+     * @param boolean $matchFullPath The new value for the property.
+     * @return Route Returns `$this` for fluent calls.
+     */
+    public function setMatchFullPath($matchFullPath) {
+        $this->matchFullPath = $matchFullPath;
+        return $this;
     }
 }

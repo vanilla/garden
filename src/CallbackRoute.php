@@ -55,7 +55,11 @@ class CallbackRoute extends Route {
             return null;
         }
 
-        $path = $request->getPath();
+        if ($this->getMatchFullPath()) {
+            $path = $request->getFullPath();
+        } else {
+            $path = $request->getPath();
+        }
         $regex = $this->getPatternRegex($this->pattern());
 
         if (preg_match($regex, $path, $matches)) {

@@ -157,9 +157,11 @@ class CallbackRouteTest extends \PHPUnit_Framework_TestCase {
     public function testWrappedParameters() {
         $this->app->route('/foo/{id}{.ext}?', function ($id, $ext = '') {
             return ['id' => $id, 'ext' => $ext];
-        });
+        })->setMatchFullPath(true);
 
-        $result = $this->app->run(new Request('/foo/123.xml'));
+        $request = new Request('/foo/123.xml');
+        $request->setEnv('HTTP_ACCEPT', 'application/internal');
+        $result = $this->app->run($request);
         $this->assertEquals(['id' => '123', 'ext' => '.xml'], $result);
     }
 

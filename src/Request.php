@@ -42,7 +42,6 @@ class Request implements JsonSerializable {
     protected static $defaultEnv;
 
     protected static $knownExtensions = [
-        '' => 'text/html',
         '.html' => 'text/html',
         '.json' => 'application/json',
         '.txt' => 'text/plain',

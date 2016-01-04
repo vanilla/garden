@@ -301,7 +301,11 @@ class ResourceRoute extends Route {
             return null;
         }
 
-        $path = (string)$request->getPath();
+        if ($this->getMatchFullPath()) {
+            $path = $request->getFullPath();
+        } else {
+            $path = $request->getPath();
+        }
 
         // If this route is off of a root then check that first.
         if ($root = $this->pattern()) {
