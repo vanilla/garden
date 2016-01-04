@@ -159,9 +159,7 @@ class CallbackRouteTest extends \PHPUnit_Framework_TestCase {
             return ['id' => $id, 'ext' => $ext];
         })->setMatchFullPath(true);
 
-        $request = new Request('/foo/123.xml');
-        $request->setEnv('HTTP_ACCEPT', 'application/internal');
-        $result = $this->app->run($request);
+        $result = $this->app->run(new Request('/foo/123.xml'));
         $this->assertEquals(['id' => '123', 'ext' => '.xml'], $result);
     }
 

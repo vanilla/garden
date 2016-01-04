@@ -312,7 +312,7 @@ class Request implements JsonSerializable {
         }
 
         // Check to override the accepts header.
-        if (isset(self::$knownExtensions[$ext])) {
+        if (isset(self::$knownExtensions[$ext]) && $env['HTTP_ACCEPT'] !== 'application/internal') {
             static::replaceEnv($env, 'HTTP_ACCEPT', self::$knownExtensions[$ext]);
         }
     }
