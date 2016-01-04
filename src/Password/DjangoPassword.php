@@ -26,6 +26,33 @@ class DjangoPassword implements IPassword {
     }
 
     /**
+     * Generate a random salt that is compatible with {@link crypt()}.
+     *
+     * @return string|null Returns the salt as a string or **null** if the crypt algorithm isn't known.
+     */
+    protected function generateCryptSalt() {
+        if (CRYPT_BLOWFISH === 1) {
+            $salt = str_replace('+', '/', base64_encode(openssl_random_pseudo_bytes(12)));
+        } elseif (CRYPT_EXT_DES) {
+            $count_log2 = 24; //min($this->iteration_count_log2 + 8, 24);
+            # This should be odd to not reveal weak DES keys, and the
+            # maximum valid value is (2**24 - 1) which is odd anyway.
+            $count = (1 << $count_log2) - 1;
+
+            $salt = '_';
+            $salt .= $this->itoa64[$count & 0x3f];
+            $salt .= $this->itoa64[($count >> 6) & 0x3f];
+            $salt .= $this->itoa64[($count >> 12) & 0x3f];
+            $salt .= $this->itoa64[($count >> 18) & 0x3f];
+
+            $salt .= substr(base64_encode(openssl_random_pseudo_bytes(3), 0, 3));
+        } else {
+            $salt = null;
+        }
+        return $salt;
+    }
+
+    /**
      * Hashes a plaintext password.
      *
      * @param string $password The password to hash.
@@ -34,8 +61,12 @@ class DjangoPassword implements IPassword {
      */
     public function hash($password) {
         if ($this->hashMethod === 'crypt') {
-            $salt = base64_encode(openssl_random_pseudo_bytes(12));
-            $hash = crypt($password, $salt);
+            $salt = $this->generateCryptSalt();
+            try {
+                $hash = crypt($password, $salt);
+            } catch (\Exception $ex) {
+                throw new \Exception("$salt is an invalid salt.", $ex);
+            }
         } elseif (in_array($this->hashMethod, hash_algos())) {
             $salt = base64_encode(openssl_random_pseudo_bytes(12));
             $hash = hash($this->hashMethod, $salt.$password);
