@@ -60,6 +60,7 @@ A Basic Garden Application
 Most garden applications will make use of an .htaccess file for pretty urls and then have an index.php defined as follows:
 
 ```php
+<?php
 // Put your index.php in the Garden namespace or import the various classes you need.
 namespace Garden;
 
