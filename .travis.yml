@@ -18,6 +18,7 @@ matrix:
 
 install:
     - composer install
+    - composer require phpunit/phpunit ~5
 
 script: phpunit -c tests/phpunit.xml.dist --coverage-clover=coverage.clover
 
