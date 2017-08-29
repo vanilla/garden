@@ -11,7 +11,9 @@ php:
     - 7.2
     - hhvm
 
-matrix:
+ matrix:
+   allow_failures:
+     - php: hhvm
     fast_finish: true
 
 install:
